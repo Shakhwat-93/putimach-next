@@ -177,7 +177,15 @@ export default function Navbar() {
             <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center max-w-[65%] xs:max-w-[70%] sm:max-w-none">
               <Link href="/" className="flex items-center gap-2.5 group">
                 {brandSettings.logoUrl && (
-                  <img src={brandSettings.logoUrl} alt="Logo" className="w-20 h-20 xs:w-24 xs:h-24 md:w-14 md:h-14 lg:w-32 lg:h-32 object-contain group-hover:scale-105 transition-transform shrink-0" />
+                  <img 
+                    src={brandSettings.logoUrl} 
+                    alt="Logo" 
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = '/logo.webp';
+                    }}
+                    className="w-20 h-20 xs:w-24 xs:h-24 md:w-14 md:h-14 lg:w-32 lg:h-32 object-contain group-hover:scale-105 transition-transform shrink-0" 
+                  />
                 )}
                 <span className="hidden md:inline font-serif md:text-lg lg:text-2xl font-black tracking-wider uppercase text-[#1C1613] truncate leading-none">
                   {brandSettings.brandName}
@@ -273,7 +281,15 @@ export default function Navbar() {
               <div className="flex items-center justify-between px-6 py-5 border-b border-[#E9E2D2] bg-white">
                 <Link href="/" onClick={() => setMobileOpen(false)} className="flex items-center gap-2.5">
                   {brandSettings.logoUrl && (
-                    <img src={brandSettings.logoUrl} alt="Logo" className="h-9 w-auto object-contain" />
+                    <img 
+                      src={brandSettings.logoUrl} 
+                      alt="Logo" 
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = '/logo.webp';
+                      }}
+                      className="h-9 w-auto object-contain" 
+                    />
                   )}
                   <span className="font-serif text-lg font-black tracking-wider uppercase text-[#1C1613]">
                     {brandSettings.brandName}
