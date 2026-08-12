@@ -1,5 +1,5 @@
 # Base Node.js image
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 
 # Step 1: Install dependencies
 FROM base AS deps
@@ -7,7 +7,7 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm install --legacy-peer-deps
 
 # Step 2: Build Next.js application
 FROM base AS builder
