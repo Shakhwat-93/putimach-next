@@ -39,3 +39,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# scratch & test artifacts
+fix-*.js
+create-aliases.js
+merge.js
+migrate-*.js
+playwright-report/
+test-results/
+.agents/
+.claude/
+

@@ -1,0 +1,87 @@
+/* ===== BUTTON — Clean Premium Pill Typography ===== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px; /* sp-2 */
+  border-radius: 9999px; /* Pill shape */
+  font-weight: 500;
+  font-size: 0.95rem; /* Clean professional font size */
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  border: none;
+  padding: 0 20px;
+  height: 44px; /* Default height */
+  cursor: pointer;
+  font-family: inherit;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── PRIMARY (Solid Espresso Dark with Gold Hover) ── */
+.btn-primary {
+  background: var(--text-primary); /* Deep Espresso #1C1613 */
+  color: var(--bg-main); /* Rich Cream #FDFBF7 */
+}
+
+@media (hover: hover) {
+  .btn-primary:hover {
+    background: var(--accent); /* Vintage Gold #C5A880 */
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(197, 168, 128, 0.3);
+  }
+}
+
+/* ── SECONDARY (Gold accent) ── */
+.btn-secondary {
+  background: var(--accent); /* Vintage Gold #C5A880 */
+  color: #ffffff;
+}
+
+@media (hover: hover) { 
+  .btn-secondary:hover { 
+    background: var(--accent-hover); /* #B59770 */
+    box-shadow: 0 4px 14px rgba(197, 168, 128, 0.25);
+  } 
+}
+
+/* ── GHOST / OUTLINE (Cancel buttons) ── */
+.btn-ghost {
+  background: var(--bg-elevated); /* #F5F2EB */
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border); /* #E9E2D2 */
+}
+
+[data-theme='dark'] .btn-ghost {
+  background: transparent;
+  color: #d1d5db;
+  border-color: #4b5563;
+}
+
+@media (hover: hover) {
+  .btn-ghost:hover {
+    background: var(--bg-main); /* #FDFBF7 */
+    color: var(--text-primary);
+  }
+  [data-theme='dark'] .btn-ghost:hover {
+    background: rgba(255,255,255,0.05);
+    color: #f9fafb; 
+  }
+}
+
+/* ── STATUS BUTTONS ── */
+/* Simplified for clean aesthetics */
+.btn-confirmed { background: #16a34a; color: #fff; }
+.btn-cancelled { background: #e11d48; color: #fff; }
+.btn-courier { background: #7c3aed; color: #fff; }
+.btn-factory { background: #ea580c; color: #fff; }
+.btn-completed { background: #059669; color: #fff; }
+
+.btn-sm { height: 36px; padding: 0 16px; font-size: 0.85rem; }
+.btn-lg { height: 50px; padding: 0 24px; font-size: 1rem; }
+
+.btn-block-mobile { width: 100%; }
+@media (min-width: 768px) { .btn-block-mobile { width: auto; } }
+
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn:active:not(:disabled) { transform: scale(0.98); }

@@ -1,0 +1,526 @@
+/* Enterprise Print Studio Modal Styles */
+
+.print-studio-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background-color: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.print-studio-container {
+  width: 100%;
+  max-width: 1100px;
+  background: var(--card-background, #ffffff);
+  border-radius: 1rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border-color, #e2e8f0);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+/* Control Header */
+.print-studio-header {
+  padding: 1.25rem 1.5rem;
+  background: var(--header-bg, #0f172a);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.print-studio-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.print-studio-title h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.print-badge {
+  background: var(--primary-color, #0d9488);
+  color: #ffffff;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Toolbar & Options */
+.print-studio-toolbar {
+  padding: 1rem 1.5rem;
+  background: var(--toolbar-bg, #1e293b);
+  color: #e2e8f0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.print-format-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.format-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 0.5rem;
+  font-size: 0.825rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.06);
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.format-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.format-btn.active {
+  background: #0d9488;
+  color: #ffffff;
+  border-color: #14b8a6;
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.35);
+}
+
+.print-action-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-print-now {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #0d9488 0%, #059669 100%);
+  color: #ffffff;
+  padding: 0.55rem 1.35rem;
+  border-radius: 0.5rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.4);
+  transition: all 0.2s ease;
+}
+
+.btn-print-now:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(13, 148, 136, 0.5);
+}
+
+/* Settings Bar / Toggles */
+.print-options-panel {
+  padding: 0.85rem 1.5rem;
+  background: #0f172a;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.option-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.option-toggle input[type="checkbox"] {
+  accent-color: #0d9488;
+  width: 14px;
+  height: 14px;
+}
+
+/* Live Preview Sheet Workspace */
+.print-workspace {
+  padding: 2rem;
+  background: #090d16;
+  min-height: 600px;
+  max-height: calc(85vh - 180px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Document Container */
+.print-document-sheet {
+  background: #ffffff !important;
+  color: #000000 !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  margin-bottom: 2rem;
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* 1. A4 Full Invoice Format */
+.sheet-a4-invoice {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 15mm;
+}
+
+/* 2. 4x6 Thermal Sticker Format */
+.sheet-thermal-4x6 {
+  width: 101.6mm;
+  height: 152.4mm;
+  padding: 6mm;
+  font-size: 11px;
+}
+
+/* 3. 80mm Thermal POS Format */
+.sheet-pos-80mm {
+  width: 80mm;
+  padding: 4mm;
+  font-size: 10px;
+}
+
+/* 4. A4 Grid Formats */
+.sheet-a4-grid-2up {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 10mm;
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 10mm;
+}
+
+.sheet-a4-grid-4up {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 10mm;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 8mm;
+}
+
+/* Document Styling - A4 Invoice */
+.invoice-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2px solid #0f172a;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.invoice-brand-col {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.invoice-brand-logo {
+  max-height: 48px;
+  max-width: 140px;
+  object-fit: contain;
+}
+
+.invoice-brand-name {
+  font-size: 20px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.invoice-brand-sub {
+  font-size: 11px;
+  color: #475569;
+}
+
+.invoice-meta-col {
+  text-align: right;
+}
+
+.invoice-title {
+  font-size: 22px;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: #0d9488;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.invoice-meta-row {
+  font-size: 11px;
+  color: #334155;
+  margin-top: 2px;
+}
+
+/* Customer & Shipping Card */
+.invoice-parties-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.party-box {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #f8fafc;
+}
+
+.party-title {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #0d9488;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 4px;
+}
+
+.party-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.party-detail {
+  font-size: 11px;
+  color: #334155;
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+/* Items Table */
+.invoice-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  font-size: 11px;
+}
+
+.invoice-items-table th {
+  background: #0f172a;
+  color: #ffffff;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 10px;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.invoice-items-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #1e293b;
+  vertical-align: middle;
+}
+
+.invoice-items-table tr:nth-child(even) td {
+  background: #f8fafc;
+}
+
+.item-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  object-fit: cover;
+  border: 1px solid #cbd5e1;
+}
+
+/* Summary Grid */
+.invoice-summary-grid {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  gap: 16px;
+}
+
+.invoice-notes-col {
+  flex: 1;
+  font-size: 10px;
+  color: #475569;
+  border: 1px dashed #cbd5e1;
+  padding: 10px;
+  border-radius: 6px;
+  background: #fafafa;
+}
+
+.invoice-totals-table {
+  width: 220px;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.invoice-totals-table td {
+  padding: 4px 8px;
+  text-align: right;
+}
+
+.invoice-totals-table .total-label {
+  color: #475569;
+  font-weight: 600;
+}
+
+.invoice-totals-table .total-val {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.invoice-totals-table tr.grand-total td {
+  border-top: 2px solid #0f172a;
+  font-size: 14px;
+  font-weight: 800;
+  color: #0d9488;
+  padding-top: 6px;
+}
+
+/* Footer / Barcode & Signature */
+.invoice-footer {
+  margin-top: 24px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.invoice-barcode-box {
+  text-align: center;
+}
+
+.invoice-signature-box {
+  text-align: center;
+  width: 140px;
+}
+
+.signature-line {
+  border-top: 1px solid #0f172a;
+  margin-top: 40px;
+  padding-top: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #334155;
+}
+
+/* Thermal Sticker (4x6) Styling */
+.thermal-sticker-box {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 2px solid #000000;
+  box-sizing: border-box;
+  padding: 8px;
+  background: #ffffff;
+}
+
+.thermal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #000000;
+  padding-bottom: 4px;
+  margin-bottom: 6px;
+}
+
+.thermal-brand {
+  font-weight: 900;
+  font-size: 14px;
+  text-transform: uppercase;
+}
+
+.thermal-cod-banner {
+  background: #000000;
+  color: #ffffff;
+  text-align: center;
+  font-weight: 900;
+  font-size: 16px;
+  padding: 6px 4px;
+  margin-bottom: 6px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.thermal-recipient {
+  border: 2px solid #000000;
+  padding: 6px;
+  margin-bottom: 6px;
+}
+
+.thermal-recipient-title {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  border-bottom: 1px solid #000000;
+  padding-bottom: 2px;
+  margin-bottom: 4px;
+}
+
+.thermal-customer-name {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.thermal-customer-phone {
+  font-size: 13px;
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+.thermal-customer-address {
+  font-size: 10.5px;
+  line-height: 1.3;
+  margin-top: 2px;
+}
+
+.thermal-items {
+  border: 1px solid #000000;
+  padding: 4px;
+  margin-bottom: 6px;
+  font-size: 10px;
+  flex: 1;
+}
+
+.thermal-barcode-area {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 2px solid #000000;
+  padding-top: 4px;
+}
+
+/* Printing handled via new window — no @media print rules needed */
+
