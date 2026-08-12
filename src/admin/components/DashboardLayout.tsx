@@ -12,10 +12,12 @@ import { getSessionStorage } from '../platform/storage';
 import { Download, X } from 'lucide-react';
 import api from '../lib/api';
 import { cn } from '../lib/utils';
+import { useAuth } from '../context/AuthContext';
 import './DashboardLayout.css';
 
 export const DashboardLayout = ({ children }) => {
   const router = useRouter();
+  const { user, loading, isAuthReady } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [updateVersion, setUpdateVersion] = useState(null);
@@ -24,6 +26,12 @@ export const DashboardLayout = ({ children }) => {
   const scrollRef = useRef(null);
   const scrollKey = `route_scroll:${pathname}`;
   const storage = getSessionStorage();
+
+  useEffect(() => {
+    if (isAuthReady && !loading && !user && pathname !== '/admin/login') {
+      router.push('/admin/login');
+    }
+  }, [user, loading, isAuthReady, pathname, router]);
 
   useEffect(() => {
     const checkUpdates = async () => {
@@ -59,6 +67,21 @@ export const DashboardLayout = ({ children }) => {
     window.addEventListener('app:backbutton', handleBackButton);
     return () => window.removeEventListener('app:backbutton', handleBackButton);
   }, [isSidebarOpen]);
+
+  if (loading || !isAuthReady) {
+    return (
+      <div className="min-h-screen bg-[#14100E] text-white flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-[#C5A880] border-t-transparent animate-spin" />
+          <p className="text-xs text-[#C5A880] font-mono uppercase tracking-widest">Loading Dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user && pathname !== '/admin/login') {
+    return null;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
