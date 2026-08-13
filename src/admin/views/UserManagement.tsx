@@ -165,16 +165,15 @@ export const UserManagement = () => {
 
       setIsAddModalOpen(false);
       setAddFormData({ name: '', email: '', password: '', role: 'Call Team' });
+      fetchUsers();
       
       const adminName = currentProfile?.name || currentUser?.email || 'Admin';
-      await api.logActivity({
+      api.logActivity({
         action_type: 'USER_CREATE',
         changed_by_user_id: currentUser?.id,
         changed_by_user_name: adminName,
         action_description: `${adminName} added a new team member: ${addFormData.name} (${addFormData.role})`
-      });
-
-      fetchUsers();
+      }).catch(() => {});
     } catch (error) {
       showError(error.message, 'Add User Failed');
     }

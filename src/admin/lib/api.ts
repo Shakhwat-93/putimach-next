@@ -1854,13 +1854,17 @@ export const api = {
   },
 
   /**
-   * Helper to log activity
+   * Helper to log activity (safely fails silently if DB log table fails)
    */
   async logActivity(logData) {
-    const { error } = await supabase
-      .from('order_activity_logs')
-      .insert([logData]);
-    if (error) console.error('Logging error:', error);
+    try {
+      const { error } = await supabase
+        .from('order_activity_logs')
+        .insert([logData]);
+      if (error) console.warn('[logActivity] Non-fatal log error:', error.message || error);
+    } catch (err) {
+      console.warn('[logActivity] Non-fatal log exception:', err);
+    }
   },
 
   /**
