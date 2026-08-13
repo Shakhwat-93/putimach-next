@@ -68,37 +68,23 @@ const ImageUploadInput = ({ label, value, onChange, placeholder, required = fals
   };
 
   return (
-    <div className="flex flex-col gap-2 md:col-span-2">
+    <div className="flex flex-col gap-2 md:col-span-2 w-full">
       <label className="text-sm font-medium text-foreground">{label}</label>
-      <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch' }}>
+      <div className="flex flex-col sm:flex-row gap-2.5 sm:items-center w-full">
         <input
           type="text"
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-          style={{ flex: 1 }}
+          className="flex h-10 w-full min-w-0 flex-1 rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           required={required}
         />
         <label 
-          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '8px', 
-            cursor: 'pointer',
-            padding: '10px 20px',
-            borderRadius: '100px',
-            fontSize: '13px',
-            fontWeight: 700,
-            whiteSpace: 'nowrap',
-            boxShadow: '0 4px 14px rgba(13, 148, 136, 0.3)',
-            height: '100%'
-          }}
+          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 cursor-pointer shrink-0 shadow-sm transition-all"
         >
           {uploading ? (
             <>
-              <Loader2 size={14} className="spin" />
+              <Loader2 size={14} className="animate-spin" />
               <span>Uploading...</span>
             </>
           ) : (
@@ -110,16 +96,16 @@ const ImageUploadInput = ({ label, value, onChange, placeholder, required = fals
           <input
             type="file"
             accept="image/*"
-            style={{ display: 'none' }}
+            className="hidden"
             onChange={handleUpload}
             disabled={uploading}
           />
         </label>
       </div>
       {value && (
-        <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: 'var(--text-tertiary)' }}>
-          <span style={{ fontWeight: 800, color: 'var(--accent)' }}>Preview:</span>
-          <a href={value} target="_blank" rel="noreferrer" style={{ textDecoration: 'underline', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '280px' }}>{value}</a>
+        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground overflow-hidden">
+          <span className="font-bold text-primary shrink-0">Preview:</span>
+          <a href={value} target="_blank" rel="noreferrer" className="underline truncate text-xs hover:text-foreground">{value}</a>
         </div>
       )}
     </div>
@@ -1290,32 +1276,32 @@ export const StorefrontManagement = () => {
   });
 
   return (
-    <div className="p-6 h-full overflow-y-auto bg-background text-foreground">
+    <div className="p-3.5 sm:p-6 w-full max-w-full overflow-x-hidden h-full overflow-y-auto bg-background text-foreground">
       
       {/* Elite Enterprise Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div className="flex flex-col">
-          <h1 className="text-3xl font-display font-bold tracking-tight flex items-center gap-3">
+          <h1 className="text-xl sm:text-3xl font-display font-bold tracking-tight flex flex-wrap items-center gap-2.5">
             Storefront <span className="text-primary">Management</span>
             {isRefreshing && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20 animate-pulse">
-                <Loader2 size={13} className="animate-spin" /> Live Syncing...
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20 animate-pulse">
+                <Loader2 size={12} className="animate-spin" /> Live Syncing...
               </span>
             )}
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Control products, categories, collections, and custom banners in real time.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 w-full md:w-auto">
           {activeTab === 'products' && (
-            <Button variant="primary" className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2" onClick={() => openProductModal(null)}>
+            <Button variant="primary" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-xs sm:text-sm font-bold bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 shadow-sm" onClick={() => openProductModal(null)}>
               <Plus size={16} /> Add Product
             </Button>
           )}
           {activeTab === 'categories' && (
-            <Button variant="primary" className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2" onClick={() => openCategoryModal(null)}>
+            <Button variant="primary" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-xs sm:text-sm font-bold bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 shadow-sm" onClick={() => openCategoryModal(null)}>
               <Plus size={16} /> Add Category
             </Button>
           )}
@@ -1323,19 +1309,19 @@ export const StorefrontManagement = () => {
       </div>
 
       {/* Tabs navigation */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="mb-6 w-full justify-start overflow-x-auto h-auto p-1 bg-muted/50 rounded-lg flex space-x-2">
-          <TabsTrigger value="products" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-md px-4 py-2">
-            <Package size={16} /> Products ({products.length})
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-full">
+        <TabsList className="mb-6 w-full justify-start overflow-x-auto h-auto p-1 bg-muted/50 rounded-xl flex space-x-1.5 scrollbar-none flex-nowrap max-w-full shrink-0">
+          <TabsTrigger value="products" className="flex items-center gap-1.5 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-lg px-3 py-2 text-xs sm:text-sm font-medium">
+            <Package size={15} /> Products ({products.length})
           </TabsTrigger>
-          <TabsTrigger value="categories" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-md px-4 py-2">
-            <Layers size={16} /> Categories ({categories.length})
+          <TabsTrigger value="categories" className="flex items-center gap-1.5 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-lg px-3 py-2 text-xs sm:text-sm font-medium">
+            <Layers size={15} /> Categories ({categories.length})
           </TabsTrigger>
-          <TabsTrigger value="banners" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-md px-4 py-2">
-            <Sliders size={16} /> Banners & Sections
+          <TabsTrigger value="banners" className="flex items-center gap-1.5 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-lg px-3 py-2 text-xs sm:text-sm font-medium">
+            <Sliders size={15} /> Banners & Sections
           </TabsTrigger>
-          <TabsTrigger value="nav" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-md px-4 py-2">
-            <Menu size={16} /> Navigation Menu
+          <TabsTrigger value="nav" className="flex items-center gap-1.5 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-lg px-3 py-2 text-xs sm:text-sm font-medium">
+            <Menu size={15} /> Navigation Menu
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -1359,19 +1345,19 @@ export const StorefrontManagement = () => {
           {activeTab === 'products' && (
             <div className="space-y-6">
               {/* Filters */}
-              <div className="flex flex-col md:flex-row gap-4 mb-6">
-                <div className="relative flex-1">
+              <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                <div className="relative flex-1 min-w-0">
                   <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <input 
                     type="text" 
                     placeholder="Search products by name or slug..." 
-                    className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-xs sm:text-sm transition-all"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
                 <select 
-                  className="px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 w-full md:w-auto" 
+                  className="px-4 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 w-full sm:w-auto text-xs sm:text-sm" 
                   value={selectedCategoryFilter}
                   onChange={(e) => setSelectedCategoryFilter(e.target.value)}
                 >
@@ -1404,7 +1390,7 @@ export const StorefrontManagement = () => {
                   </div>
                 )
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-6">
                   {filteredProducts.map(p => (
                     <div key={p.id} className="flex flex-col rounded-2xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                       <div className="relative aspect-square bg-muted overflow-hidden flex items-center justify-center">
@@ -1505,8 +1491,31 @@ export const StorefrontManagement = () => {
           {/* 3. BANNERS TAB (SITE CUSTOMIZER) */}
           {activeTab === 'banners' && (
             <div className="flex flex-col md:flex-row gap-6">
-              {/* Sidebar */}
-              <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-visible w-full md:w-64 shrink-0 pb-2 md:pb-0 scrollbar-hide">
+              {/* Mobile Section Selector (< 768px) */}
+              <div className="block md:hidden w-full">
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">Select Section to Edit:</label>
+                <select
+                  value={bannerSection}
+                  onChange={(e) => setBannerSection(e.target.value)}
+                  className="w-full h-11 px-3.5 bg-card border border-border rounded-xl font-semibold text-xs sm:text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                >
+                  <option value="brand">🏷️ Site Brand & Logo</option>
+                  <option value="hero">Hero Banner</option>
+                  <option value="shop_slider">Shop Page Slider</option>
+                  <option value="drops">Collections & Drops</option>
+                  <option value="story">Brand Story</option>
+                  <option value="instagram">Social / Instagram</option>
+                  <option value="shipping">Shipping Charges</option>
+                  <option value="contact">Contact & Popups</option>
+                  <option value="contact_info">📞 Contact Info Page</option>
+                  <option value="faq">❓ FAQ Page</option>
+                  <option value="return_policy">🔄 Returns & Exchanges</option>
+                  <option value="trust">Checkout Trust Badges</option>
+                </select>
+              </div>
+
+              {/* Desktop Sidebar (>= 768px) */}
+              <div className="hidden md:flex flex-col gap-2 w-64 shrink-0">
                 <button 
                   type="button"
                   onClick={() => setBannerSection('brand')} 
@@ -1584,7 +1593,7 @@ export const StorefrontManagement = () => {
               </div>
 
               {/* Editor Card */}
-              <div className="flex-1 bg-card rounded-2xl border border-border p-6 shadow-sm">
+              <div className="flex-1 bg-card rounded-2xl border border-border p-3.5 sm:p-6 shadow-sm min-w-0 overflow-hidden">
                 <form onSubmit={handleSaveHomeSettings} className="space-y-6">
                   
                   {/* Site Brand & Identity section */}
