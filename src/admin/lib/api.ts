@@ -3419,26 +3419,24 @@ export const api = {
   /** Assigned Tasks */
   async getAssignedTasks(userId, isAdmin) {
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('assigned_tasks')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (userId) {
-        query = query.or(`assigned_to.eq.${userId},assigned_by.eq.${userId}`);
+      if (error) {
+        console.warn('getAssignedTasks notice:', error?.message || error);
+        return [];
       }
 
-      const { data, error } = await query;
-      if (error) {
-        if (this.isMissingColumnError(error, 'assigned_to') || this.isMissingTableError(error, 'assigned_tasks')) {
-          const { data: fallbackData } = await supabase
-            .from('assigned_tasks')
-            .select('*');
-          return fallbackData || [];
-        }
-        throw error;
-      }
-      return data || [];
+      if (!data) return [];
+      if (isAdmin || !userId) return data;
+
+      return data.filter(task => 
+        task.assigned_to === userId || 
+        task.assigned_by === userId ||
+        task.user_id === userId
+      );
     } catch (err) {
       console.warn('getAssignedTasks notice:', err?.message || err);
       return [];
