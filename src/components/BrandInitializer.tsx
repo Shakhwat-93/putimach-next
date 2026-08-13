@@ -7,23 +7,32 @@ function updateFavicon(iconUrl: string) {
   if (!iconUrl || typeof document === 'undefined') return;
 
   try {
-    const existingIcons = document.querySelectorAll("link[rel*='icon'], link[rel='apple-touch-icon']");
-    existingIcons.forEach(el => el.parentNode?.removeChild(el));
-
-    const iconLink = document.createElement('link');
-    iconLink.rel = 'icon';
+    let iconLink = document.getElementById('dynamic-favicon') as HTMLLinkElement | null;
+    if (!iconLink) {
+      iconLink = document.createElement('link');
+      iconLink.id = 'dynamic-favicon';
+      iconLink.rel = 'icon';
+      document.head.appendChild(iconLink);
+    }
     iconLink.href = iconUrl;
-    document.head.appendChild(iconLink);
 
-    const shortcutLink = document.createElement('link');
-    shortcutLink.rel = 'shortcut icon';
+    let shortcutLink = document.getElementById('dynamic-shortcut-favicon') as HTMLLinkElement | null;
+    if (!shortcutLink) {
+      shortcutLink = document.createElement('link');
+      shortcutLink.id = 'dynamic-shortcut-favicon';
+      shortcutLink.rel = 'shortcut icon';
+      document.head.appendChild(shortcutLink);
+    }
     shortcutLink.href = iconUrl;
-    document.head.appendChild(shortcutLink);
 
-    const appleLink = document.createElement('link');
-    appleLink.rel = 'apple-touch-icon';
+    let appleLink = document.getElementById('dynamic-apple-icon') as HTMLLinkElement | null;
+    if (!appleLink) {
+      appleLink = document.createElement('link');
+      appleLink.id = 'dynamic-apple-icon';
+      appleLink.rel = 'apple-touch-icon';
+      document.head.appendChild(appleLink);
+    }
     appleLink.href = iconUrl;
-    document.head.appendChild(appleLink);
   } catch (e) {
     console.warn('Failed to update favicon:', e);
   }
