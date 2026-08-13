@@ -1,45 +1,52 @@
-'use client';
-// @ts-nocheck
-import { useEffect } from 'react';
-import './AppLaunchScreen.css';
+import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useBranding } from '../hooks/useBranding';
 import orderflowLogo from '../assets/logo.png';
 import { MOTION_EASE } from '../lib/motion';
+import './AppLaunchScreen.css';
 
-const launchCopyVariants = {
-  hidden: { opacity: 0, y: 18 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { type: 'spring', stiffness: 200, damping: 20, delay: 0.2 },
-  },
-};
+interface AppLaunchScreenProps {
+  onComplete?: () => void;
+  minDurationMs?: number;
+}
 
 const logoVariants = {
-  hidden: { opacity: 0, scale: 0.82, filter: 'blur(10px)' },
+  hidden: { opacity: 0, scale: 0.88, y: 16 },
   visible: {
     opacity: 1,
     scale: 1,
-    filter: 'blur(0px)',
-    transition: { type: 'spring', stiffness: 220, damping: 24, delay: 0.28 },
+    y: 0,
+    transition: { duration: 0.5, ease: MOTION_EASE.spring },
   },
 };
 
-export const AppLaunchScreen = ({ isVisible, onComplete }) => {
+const launchCopyVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, ease: MOTION_EASE.standard, delay: 0.12 },
+  },
+};
+
+export const AppLaunchScreen: React.FC<AppLaunchScreenProps> = ({
+  onComplete,
+  minDurationMs = 1200,
+}) => {
   const { appName } = useBranding();
+  const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
-    if (!isVisible) {
-      return undefined;
-    }
-
+    if (!isVisible) return;
     const timer = window.setTimeout(() => {
+      setIsVisible(false);
       onComplete?.();
-    }, 2200);
+    }, minDurationMs);
 
     return () => window.clearTimeout(timer);
-  }, [isVisible, onComplete]);
+  }, [isVisible, onComplete, minDurationMs]);
+
+  const logoSrc = typeof orderflowLogo === 'object' ? (orderflowLogo as any).src : orderflowLogo;
 
   return (
     <AnimatePresence>
@@ -83,7 +90,7 @@ export const AppLaunchScreen = ({ isVisible, onComplete }) => {
               variants={logoVariants}
             >
               <img
-                src={orderflowLogo}
+                src={logoSrc}
                 alt={`${appName} logo`}
                 className="app-launch-logo"
               />

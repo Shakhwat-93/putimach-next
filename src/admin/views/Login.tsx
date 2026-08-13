@@ -89,7 +89,7 @@ export const Login = () => {
               whileHover={{ scale: 1.05 }}
               className="mx-auto mb-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-border bg-background shadow-md"
             >
-              <img src={orderflowLogo} alt={`${appName} Logo`} className="h-12 w-12 object-contain" />
+              <img src={typeof orderflowLogo === 'object' ? orderflowLogo.src : orderflowLogo} alt={`${appName} Logo`} className="h-12 w-12 object-contain" />
             </Motion.div>
             <h1 className="font-display text-2xl font-black tracking-tight text-foreground">
               {appName}
