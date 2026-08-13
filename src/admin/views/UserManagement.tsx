@@ -364,8 +364,115 @@ export const UserManagement = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[700px]">
+          {/* Mobile Stacked Card View */}
+          <div className="block md:hidden divide-y divide-border">
+            {filteredUsers.map((userItem) => (
+              <div key={userItem.id} className="p-4 space-y-3 bg-card hover:bg-secondary/10 transition-colors">
+                {/* Header: Avatar, Name, Email, Status & Action */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-9 w-9 rounded-full bg-primary/10 text-primary text-xs font-black flex items-center justify-center overflow-hidden shrink-0">
+                      {userItem.avatar_url ? (
+                        <img src={userItem.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        userItem.name?.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-semibold text-sm text-foreground truncate">{userItem.name}</div>
+                      <div className="text-xs text-muted-foreground flex items-center gap-1 truncate mt-0.5">
+                        <Mail size={11} className="shrink-0" /> <span className="truncate">{userItem.email}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${userItem.status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400'}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${userItem.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
+                      {userItem.status === 'active' ? 'Active' : 'Inactive'}
+                    </span>
+
+                    <button 
+                      onClick={() => handleEditUser(userItem)}
+                      className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                      title="Edit Profile"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+
+                    <div className="relative">
+                      <button 
+                        onClick={() => setDropdownOpen(dropdownOpen === userItem.id ? null : userItem.id)}
+                        className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                      >
+                        <MoreHorizontal size={14} />
+                      </button>
+                      
+                      <AnimatePresence>
+                        {dropdownOpen === userItem.id && (
+                          <motion.div 
+                            initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                            transition={{ duration: 0.15 }}
+                            className="absolute right-0 top-full mt-1 w-40 bg-card border border-border rounded-lg shadow-lg z-20 py-1 overflow-hidden"
+                          >
+                            <button 
+                              onClick={() => handleConfirmEmail(userItem)} 
+                              disabled={confirmingUserId === userItem.id}
+                              className="w-full text-left px-3 py-2 text-xs text-foreground hover:bg-secondary flex items-center gap-2 disabled:opacity-50"
+                            >
+                              <Check size={14} /> {confirmingUserId === userItem.id ? 'Confirming...' : 'Confirm Email'}
+                            </button>
+                            <button 
+                              onClick={() => handleResetPasswordClick(userItem)}
+                              className="w-full text-left px-3 py-2 text-xs text-foreground hover:bg-secondary flex items-center gap-2"
+                            >
+                              <Lock size={14} /> Reset Pass
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteUser(userItem)}
+                              className="w-full text-left px-3 py-2 text-xs text-destructive hover:bg-destructive/10 flex items-center gap-2"
+                            >
+                              <Trash2 size={14} /> Remove
+                            </button>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Roles Badges */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <span className="text-[11px] font-medium text-muted-foreground shrink-0">Roles:</span>
+                  {(userRoles[userItem.id] || []).length > 0 ? (
+                    (userRoles[userItem.id] || []).map(r => (
+                      <span 
+                        key={r} 
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${roleColors[r] || 'bg-muted text-muted-foreground'}`}
+                      >
+                        {r}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-muted text-muted-foreground">
+                      Member
+                    </span>
+                  )}
+                </div>
+
+                {/* Footer: Date Joined */}
+                <div className="text-[11px] text-muted-foreground flex items-center justify-between pt-1 border-t border-border/40">
+                  <span>Joined: {new Date(userItem.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-muted/30 text-[10px] font-black uppercase tracking-widest text-muted-foreground border-b border-border">
                   <th className="px-4 py-3">Member</th>
