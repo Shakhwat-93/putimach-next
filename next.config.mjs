@@ -6,6 +6,18 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Make ALL env vars available at runtime in standalone mode
+  env: {
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    NEXT_PUBLIC_SUPABASE_ORDERS_URL: process.env.NEXT_PUBLIC_SUPABASE_ORDERS_URL,
+    NEXT_PUBLIC_SUPABASE_ORDERS_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ORDERS_ANON_KEY,
+    NEXT_PUBLIC_CLOUDFLARE_R2_ACCOUNT_ID: process.env.NEXT_PUBLIC_CLOUDFLARE_R2_ACCOUNT_ID,
+    NEXT_PUBLIC_CLOUDFLARE_R2_ACCESS_KEY_ID: process.env.NEXT_PUBLIC_CLOUDFLARE_R2_ACCESS_KEY_ID,
+    NEXT_PUBLIC_CLOUDFLARE_R2_SECRET_ACCESS_KEY: process.env.NEXT_PUBLIC_CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+    NEXT_PUBLIC_CLOUDFLARE_R2_BUCKET_NAME: process.env.NEXT_PUBLIC_CLOUDFLARE_R2_BUCKET_NAME,
+    NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL: process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL,
+  },
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 86400,
@@ -25,7 +37,15 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'tvoxogfqxxilvudtdfdj.supabase.co',
-      }
+      },
+      {
+        protocol: 'http',
+        hostname: '**',
+      },
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
     ],
   },
   async headers() {
