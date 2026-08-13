@@ -3415,18 +3415,31 @@ export const api = {
 
   /** Assigned Tasks */
   async getAssignedTasks(userId, isAdmin) {
-    let query = supabase
-      .from('assigned_tasks')
-      .select('*')
-      .order('created_at', { ascending: false });
+    try {
+      let query = supabase
+        .from('assigned_tasks')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (userId) {
-      query = query.or(`assigned_to.eq.${userId},assigned_by.eq.${userId}`);
+      if (userId) {
+        query = query.or(`assigned_to.eq.${userId},assigned_by.eq.${userId}`);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        if (this.isMissingColumnError(error, 'assigned_to') || this.isMissingTableError(error, 'assigned_tasks')) {
+          const { data: fallbackData } = await supabase
+            .from('assigned_tasks')
+            .select('*');
+          return fallbackData || [];
+        }
+        throw error;
+      }
+      return data || [];
+    } catch (err) {
+      console.warn('getAssignedTasks notice:', err?.message || err);
+      return [];
     }
-
-    const { data, error } = await query;
-    if (error) throw error;
-    return data || [];
   },
 
   async createAssignedTask(taskData, userId, userName) {
