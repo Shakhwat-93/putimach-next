@@ -19,12 +19,18 @@ const FALLBACK_ANON_KEY = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBh
 let supabaseUrl = rawSupabaseUrl || FALLBACK_URL;
 let ordersUrl = rawOrdersUrl || FALLBACK_URL;
 
+const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
+
 const supabaseOthers = createClient(supabaseUrl, supabaseAnonKey || FALLBACK_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: !isNativeApp(),
     storage: getLocalStorage()
+  },
+  realtime: {
+    // Disable automatic WebSocket connection if on HTTPS to prevent Mixed Content security blocking
+    transport: isHttpsPage && supabaseUrl.startsWith('http://') ? null : undefined,
   },
   global: {
     headers: {
@@ -35,33 +41,46 @@ const supabaseOthers = createClient(supabaseUrl, supabaseAnonKey || FALLBACK_ANO
   }
 });
 
-const supabaseOrders = ordersUrl && ordersAnonKey ? createClient(ordersUrl, ordersAnonKey) : supabaseOthers;
+const supabaseOrders = ordersUrl && ordersAnonKey 
+  ? createClient(ordersUrl, ordersAnonKey, {
+      realtime: {
+        transport: isHttpsPage && ordersUrl.startsWith('http://') ? null : undefined,
+      }
+    }) 
+  : supabaseOthers;
 
-// Helper to create a dummy safe channel if realtime fails due to WSS/Mixed content block
+// Helper to create a dummy safe channel if realtime is disabled or fails due to WSS/Mixed content block
 const createSafeChannel = (targetClient, name, opts) => {
+  const dummyChannel = {
+    on: () => dummyChannel,
+    subscribe: (callback) => {
+      if (callback) setTimeout(() => callback('TIMED_OUT'), 0);
+      return dummyChannel;
+    },
+    unsubscribe: () => {},
+    send: () => {}
+  };
+
+  if (isHttpsPage && (supabaseUrl.startsWith('http://') || ordersUrl.startsWith('http://'))) {
+    return dummyChannel;
+  }
+
   try {
     const ch = targetClient.channel(name, opts);
     const origSubscribe = ch.subscribe.bind(ch);
     ch.subscribe = (callback, timeout) => {
       try {
         return origSubscribe((status, err) => {
-          if (err) console.warn('[Realtime Subscription Warning]', err);
           if (callback) callback(status, err);
         }, timeout);
       } catch (e) {
-        console.warn('[Realtime WebSocket Blocked/Suppressed]', e?.message || e);
         if (callback) callback('CHANNEL_ERROR', e);
-        return ch;
+        return dummyChannel;
       }
     };
     return ch;
   } catch (e) {
-    console.warn('[Realtime Channel Creation Failed]', e?.message || e);
-    return {
-      on: () => createSafeChannel(targetClient, name, opts),
-      subscribe: (cb) => { if (cb) cb('CHANNEL_ERROR'); return this; },
-      unsubscribe: () => {}
-    };
+    return dummyChannel;
   }
 };
 
