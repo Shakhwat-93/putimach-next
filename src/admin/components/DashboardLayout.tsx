@@ -5,7 +5,6 @@ import { usePathname, useRouter } from 'next/navigation';
 
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
-import { MobileBottomNav } from './MobileBottomNav';
 import { MobileQuickFab } from './MobileQuickFab';
 import { UnattendedOrdersAlertModal } from './UnattendedOrdersAlertModal';
 import { getSessionStorage } from '../platform/storage';
@@ -120,15 +119,14 @@ export const DashboardLayout = ({ children }) => {
         {/* Scrollable content */}
         <main
           ref={scrollRef}
-          className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-24 md:pb-4 [-webkit-overflow-scrolling:touch]"
+          className="flex-1 overflow-y-auto overflow-x-hidden p-4 [-webkit-overflow-scrolling:touch]"
         >
           {children}
         </main>
       </div>
 
-      {/* Mobile bottom nav & FAB */}
+      {/* Mobile FAB & Modals */}
       <MobileQuickFab />
-      <MobileBottomNav />
       <UnattendedOrdersAlertModal />
     </div>
   );
