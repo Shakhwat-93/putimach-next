@@ -10,10 +10,13 @@ const ordersUrl = process.env.NEXT_PUBLIC_SUPABASE_ORDERS_URL;
 const ordersAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ORDERS_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("Missing Supabase environment variables. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your Vercel Project Settings.");
+  console.warn('[Admin Supabase] Missing environment variables - some features may not work');
 }
 
-const supabaseOthers = createClient(supabaseUrl, supabaseAnonKey, {
+const FALLBACK_URL = 'http://supabasekong-ghgtfe3p1rtomxjhot908ye7.187.127.220.99.sslip.io';
+const FALLBACK_ANON_KEY = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc4NjI4OTg4MCwiZXhwIjo0OTQxOTYzNDgwLCJyb2xlIjoiYW5vbiJ9.HmcIIGb7nWMtKWnopMW8SENHBHXRC6DE2XRJpC6qIQM';
+
+const supabaseOthers = createClient(supabaseUrl || FALLBACK_URL, supabaseAnonKey || FALLBACK_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
@@ -29,7 +32,7 @@ const supabaseOthers = createClient(supabaseUrl, supabaseAnonKey, {
   }
 });
 
-const supabaseOrders = ordersUrl && ordersAnonKey ? createClient(ordersUrl, ordersAnonKey) : supabaseOthers;
+const supabaseOrders = ordersUrl && ordersAnonKey ? createClient(ordersUrl || FALLBACK_URL, ordersAnonKey || FALLBACK_ANON_KEY) : supabaseOthers;
 
 // Transparent routing proxy to support multi-database split
 export const supabase = new Proxy({}, {
