@@ -18,6 +18,7 @@ import {
 import { ActiveUsers } from '../components/ActiveUsers';
 import { LiveActivityFeed } from '../components/LiveActivityFeed';
 import { AIBriefing } from '../components/AIBriefing';
+import { LiveVisitorCounter } from '../components/LiveVisitorCounter';
 import CurrencyIcon from '../components/CurrencyIcon';
 import { useAuth } from '../context/AuthContext';
 import Link from 'next/link';
@@ -218,6 +219,8 @@ export const DashboardOverview = () => {
           </Link>
         </div>
       )}
+
+      <LiveVisitorCounter />
 
       <AIBriefing stats={stats} avgCallDelay={avgCallDelay} slaRate={slaRate} />
 

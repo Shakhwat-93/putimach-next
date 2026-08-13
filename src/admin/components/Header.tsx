@@ -13,6 +13,7 @@ import { usePathname, useRouter } from 'next/navigation';
 
 import { useState, useRef, useEffect } from 'react';
 import { PresenceStack } from './PresenceStack';
+import { LiveVisitorCounter } from './LiveVisitorCounter';
 import { supabase } from '../lib/supabase';
 import CurrencyIcon from './CurrencyIcon';
 import { cn } from '../lib/utils';
@@ -254,9 +255,12 @@ export const Header = ({ onMenuToggle }) => {
 
       <div className="flex-1" />
 
-      {/* Presence Stack — desktop only unless overview */}
-      <div className={isOverviewPage ? 'block' : 'hidden md:block'}>
-        <PresenceStack />
+      {/* Realtime Live Visitor Counter & Presence Stack */}
+      <div className="flex items-center gap-2">
+        <LiveVisitorCounter compact />
+        <div className={isOverviewPage ? 'block' : 'hidden md:block'}>
+          <PresenceStack />
+        </div>
       </div>
 
       {/* Floating toasts */}
