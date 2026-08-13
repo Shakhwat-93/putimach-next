@@ -531,13 +531,16 @@ export const api = {
       }
 
       // 2. Write user role
-      await supabase
-        .from('user_roles')
-        .insert({
-          user_id: createdUserId,
-          role_id: roleId
-        })
-        .catch(() => {});
+      try {
+        await supabase
+          .from('user_roles')
+          .insert({
+            user_id: createdUserId,
+            role_id: roleId
+          });
+      } catch (roleErr) {
+        console.warn('Role insertion warning:', roleErr);
+      }
 
       return {
         success: true,
