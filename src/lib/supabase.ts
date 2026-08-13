@@ -7,64 +7,41 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const rawOrdersUrl = process.env.NEXT_PUBLIC_SUPABASE_ORDERS_URL;
 const ordersAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ORDERS_ANON_KEY;
 
-if (!rawSupabaseUrl || !supabaseAnonKey) {
-  console.warn('[Supabase] Missing environment variables - using fallback');
-}
-
 const FALLBACK_URL = 'http://supabasekong-ghgtfe3p1rtomxjhot908ye7.187.127.220.99.sslip.io';
 const FALLBACK_ANON_KEY = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc4NjI4OTg4MCwiZXhwIjo0OTQxOTYzNDgwLCJyb2xlIjoiYW5vbiJ9.HmcIIGb7nWMtKWnopMW8SENHBHXRC6DE2XRJpC6qIQM';
 
 let supabaseUrl = rawSupabaseUrl || FALLBACK_URL;
 let ordersUrl = rawOrdersUrl || FALLBACK_URL;
 
-const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
+// If browser is running on HTTPS origin, proxy requests through /supabase-proxy relative path
+// to prevent Mixed Content (HTTPS page requesting HTTP resource) security blocking.
+if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+  if (supabaseUrl.startsWith('http://')) {
+    supabaseUrl = `${window.location.origin}/supabase-proxy`;
+  }
+  if (ordersUrl.startsWith('http://')) {
+    ordersUrl = `${window.location.origin}/supabase-proxy`;
+  }
+}
 
 const supabaseOthers = createClient(supabaseUrl, supabaseAnonKey || FALLBACK_ANON_KEY, {
-  realtime: {
-    transport: isHttpsPage && supabaseUrl.startsWith('http://') ? null : undefined,
-  }
+  realtime: { transport: null }
 });
 const supabaseOrders = ordersUrl && ordersAnonKey 
   ? createClient(ordersUrl, ordersAnonKey, {
-      realtime: {
-        transport: isHttpsPage && ordersUrl.startsWith('http://') ? null : undefined,
-      }
+      realtime: { transport: null }
     }) 
   : supabaseOthers;
 
-// Helper to create a dummy safe channel if realtime is disabled or fails due to WSS/Mixed content block
-const createSafeChannel = (targetClient, name, opts) => {
-  const dummyChannel = {
-    on: () => dummyChannel,
-    subscribe: (callback) => {
-      if (callback) setTimeout(() => callback('TIMED_OUT'), 0);
-      return dummyChannel;
-    },
-    unsubscribe: () => {},
-    send: () => {}
-  };
-
-  if (isHttpsPage && (supabaseUrl.startsWith('http://') || ordersUrl.startsWith('http://'))) {
+// Helper to create a dummy safe channel for realtime
+const dummyChannel = {
+  on: () => dummyChannel,
+  subscribe: (callback) => {
+    if (callback) setTimeout(() => callback('TIMED_OUT'), 0);
     return dummyChannel;
-  }
-
-  try {
-    const ch = targetClient.channel(name, opts);
-    const origSubscribe = ch.subscribe.bind(ch);
-    ch.subscribe = (callback, timeout) => {
-      try {
-        return origSubscribe((status, err) => {
-          if (callback) callback(status, err);
-        }, timeout);
-      } catch (e) {
-        if (callback) callback('CHANNEL_ERROR', e);
-        return dummyChannel;
-      }
-    };
-    return ch;
-  } catch (e) {
-    return dummyChannel;
-  }
+  },
+  unsubscribe: () => {},
+  send: () => {}
 };
 
 // Transparent routing proxy to support multi-database split
@@ -77,7 +54,7 @@ export const supabase = new Proxy({}, {
       return supabaseOthers.storage;
     }
     if (prop === 'channel') {
-      return (name, opts) => createSafeChannel(supabaseOrders, name, opts);
+      return () => dummyChannel;
     }
     if (prop === 'from') {
       return (tableName) => {

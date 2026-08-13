@@ -18,6 +18,14 @@ const nextConfig = {
     NEXT_PUBLIC_CLOUDFLARE_R2_BUCKET_NAME: process.env.NEXT_PUBLIC_CLOUDFLARE_R2_BUCKET_NAME,
     NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL: process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL,
   },
+  async rewrites() {
+    return [
+      {
+        source: '/supabase-proxy/:path*',
+        destination: 'http://supabasekong-ghgtfe3p1rtomxjhot908ye7.187.127.220.99.sslip.io/:path*',
+      },
+    ];
+  },
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 86400,
