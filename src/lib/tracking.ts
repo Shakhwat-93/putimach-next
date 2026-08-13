@@ -21,15 +21,40 @@ let _config = null;
  * Load tracking config from site_settings table.
  * Called once from App.jsx. Cached for the session.
  */
-export async function loadTrackingConfig(supabase) {
+import { supabase } from './supabase';
+
+export async function loadTrackingConfig(customSupabase = null) {
   try {
-    const { data } = await supabase
+    const sb = customSupabase || supabase;
+    let configData = null;
+
+    const siteSettingsRes = await sb
       .from('site_settings')
       .select('data')
       .eq('id', 'tracking_config')
       .maybeSingle();
 
-    _config = data?.data || {};
+    if (siteSettingsRes.data?.data) {
+      configData = siteSettingsRes.data.data;
+    } else {
+      const cbSettingsRes = await sb
+        .from('cb_settings')
+        .select('data')
+        .eq('id', 'tracking_config')
+        .maybeSingle();
+      configData = cbSettingsRes.data?.data;
+    }
+
+    _config = configData || {};
+
+    if (_config.tracking_enabled !== false) {
+      if (_config.gtm_id) {
+        injectGTM(_config.gtm_id);
+      }
+      if (_config.pixel_id) {
+        injectMetaPixel(_config.pixel_id);
+      }
+    }
   } catch (e) {
     console.warn('[Tracking] Could not load config:', e);
     _config = {};
