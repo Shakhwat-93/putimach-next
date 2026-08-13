@@ -17,16 +17,6 @@ const FALLBACK_ANON_KEY = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBh
 let supabaseUrl = rawSupabaseUrl || FALLBACK_URL;
 let ordersUrl = rawOrdersUrl || FALLBACK_URL;
 
-// Ensure HTTPS protocol when running on HTTPS origin to prevent Mixed Content WebSocket errors
-if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
-  if (supabaseUrl.startsWith('http://')) {
-    supabaseUrl = supabaseUrl.replace('http://', 'https://');
-  }
-  if (ordersUrl.startsWith('http://')) {
-    ordersUrl = ordersUrl.replace('http://', 'https://');
-  }
-}
-
 const supabaseOthers = createClient(supabaseUrl, supabaseAnonKey || FALLBACK_ANON_KEY);
 const supabaseOrders = ordersUrl && ordersAnonKey ? createClient(ordersUrl, ordersAnonKey) : supabaseOthers;
 
