@@ -15,13 +15,14 @@ async function getServerData() {
 
   const sb = createClient(supabaseUrl, supabaseKey);
 
-  const [settingsRes, productsRes, categoriesRes] = await Promise.all([
+  const [siteSettingsRes, cbSettingsRes, productsRes, categoriesRes] = await Promise.all([
+    sb.from('site_settings').select('data').eq('id', 'home_page').maybeSingle(),
     sb.from('cb_settings').select('data').eq('id', 'home_page').maybeSingle(),
     sb.from('cb_products').select('id, data, created_at').order('created_at', { ascending: false }).limit(50),
     sb.from('cb_categories').select('id, data, created_at').order('created_at', { ascending: true }).limit(100),
   ]);
 
-  const settings = settingsRes.data?.data ?? null;
+  const settings = siteSettingsRes.data?.data || cbSettingsRes.data?.data || null;
 
   const products = (productsRes.data || []).map(row => ({
     id: row.id,

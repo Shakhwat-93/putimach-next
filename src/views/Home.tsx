@@ -20,7 +20,7 @@ const InstagramIcon = ({ size = 24, className = "" }) => (
 const formatPrice = (p) => `৳${Number(p).toLocaleString('en-BD')}`;
 
 const defaultHome = {
-  heroBgImage: "",
+  heroBgImage: "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=1600&q=80",
   heroBadge: "Vintage Weaves",
   heroSubBadge: "EST 2026",
   heroHeading: "WOVEN IN NOSTALGIA.\nTAILORED FOR TODAY.",
@@ -78,23 +78,44 @@ function Hero({ settings }) {
   const y = useTransform(scrollYProgress, [0, 1], ['0%', '30%']);
   const opacity = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
 
-  const bgImage = settings?.heroBgImage || '';
+  const fallbackImg = "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=1600&q=80";
+
+  const [activeHeroBg, setActiveHeroBg] = useState(() => {
+    if (settings?.heroBgImage) return settings.heroBgImage;
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('pm_hero_bg');
+      if (cached) return cached;
+    }
+    return fallbackImg;
+  });
+
+  useEffect(() => {
+    if (settings?.heroBgImage) {
+      setActiveHeroBg(settings.heroBgImage);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('pm_hero_bg', settings.heroBgImage);
+        } catch (e) {}
+      }
+    }
+  }, [settings?.heroBgImage]);
 
   return (
     <section ref={ref} className="relative h-screen flex items-center justify-center bg-[#1C1613] overflow-hidden border-b border-[#E9E2D2]" style={{ height: '100vh', minHeight: '100vh' }}>
       <motion.div style={{ y }} className="absolute inset-0 z-0 bg-[#1C1613]">
-        {bgImage ? (
-          <img
-            src={bgImage}
-            alt="Hero Banner"
-            className="w-full h-full object-cover transition-opacity duration-500 opacity-100"
-            draggable="false"
-            fetchPriority="high"
-            decoding="async"
-          />
-        ) : (
-          <div className="w-full h-full bg-[#1C1613]" />
-        )}
+        <img
+          src={activeHeroBg}
+          alt="Hero Banner"
+          className="w-full h-full object-cover transition-opacity duration-500 opacity-100"
+          draggable="false"
+          fetchPriority="high"
+          decoding="async"
+          onError={() => {
+            if (activeHeroBg !== fallbackImg) {
+              setActiveHeroBg(fallbackImg);
+            }
+          }}
+        />
         <div className="absolute inset-0 bg-gradient-to-r from-[#1C1613]/40 via-transparent to-[#1C1613]/40"></div>
       </motion.div>
       
@@ -371,20 +392,50 @@ export default function Home({ initialSettings = null, initialProducts = [], ini
   useEffect(() => {
     async function backgroundSync() {
       try {
-        const [settingRes, prodData, catData] = await Promise.all([
-          Promise.resolve(supabase.from('cb_settings').select('data').eq('id', 'home_page').maybeSingle()).catch(() => null),
+        let siteData = null;
+        const { data: sData } = await supabase
+          .from('site_settings')
+          .select('data')
+          .eq('id', 'home_page')
+          .maybeSingle();
+
+        if (sData?.data) {
+          siteData = sData.data;
+        } else {
+          const { data: cbData } = await supabase
+            .from('cb_settings')
+            .select('data')
+            .eq('id', 'home_page')
+            .maybeSingle();
+          siteData = cbData?.data;
+        }
+
+        if (siteData && typeof siteData === 'object') {
+          const freshSettings = mergeSettings(siteData);
+          setSettings(prev => {
+            const finalBg = freshSettings.heroBgImage || prev?.heroBgImage || defaultHome.heroBgImage;
+            return {
+              ...prev,
+              ...freshSettings,
+              heroBgImage: finalBg,
+            };
+          });
+        }
+
+        const [prodData, catData] = await Promise.all([
           getProducts({ forceRefresh: true }).catch(() => null),
           getCategories({ forceRefresh: true }).catch(() => null),
         ]);
-        const freshSettings = mergeSettings(settingRes?.data?.data);
-        setSettings(freshSettings);
+
         if (prodData?.length) {
           setProducts(prodData);
           const top = prodData.find(p => p.badge?.toLowerCase() === 'featured' || p.badge?.toLowerCase() === 'hot') || prodData[0];
           setTopSellingProduct(top || null);
         }
         if (catData?.length) setCategories(catData);
-      } catch {}
+      } catch (err) {
+        console.warn('[Home] Background sync notice:', err);
+      }
     }
     backgroundSync();
   }, []);
