@@ -5,6 +5,7 @@ import Footer from '@/components/layout/Footer';
 import CartDrawer from '@/components/layout/CartDrawer';
 import TrackingInitializer from '@/components/TrackingInitializer';
 import VisitorTracker from '@/components/VisitorTracker';
+import FloatingSocialWidget from '@/components/layout/FloatingSocialWidget';
 
 export default function StorefrontLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -17,6 +18,7 @@ export default function StorefrontLayout({ children }: { children: React.ReactNo
         {children}
       </main>
       <Footer />
+      <FloatingSocialWidget />
     </div>
   );
 }
