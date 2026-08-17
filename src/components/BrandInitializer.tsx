@@ -63,7 +63,7 @@ export default function BrandInitializer() {
           brandData = cbData?.data;
         }
 
-        const logoUrl = brandData?.logoUrl || brandData?.logo_url;
+        const logoUrl = brandData?.logoUrl || brandData?.logo_url || '/logo.webp';
         if (isMounted && logoUrl) {
           updateFavicon(logoUrl);
         }
