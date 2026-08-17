@@ -13,6 +13,7 @@ import { useCartStore } from '../store/cartStore';
 import { formatPrice } from '../lib/utils';
 import { trackViewContent, trackAddToCart } from '../lib/tracking';
 import { ProductCard } from '../components/shop/ProductCard';
+import { supabase } from '../lib/supabase';
 
 export default function ProductDetailView() {
   const { slug } = useParams();
@@ -31,7 +32,30 @@ export default function ProductDetailView() {
   const [featOpen, setFeatOpen] = useState(false);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [sizeError, setSizeError] = useState(false);
+  const [whatsappPhone, setWhatsappPhone] = useState('8801827406756');
   const { addItem, openCart, items } = useCartStore();
+
+  useEffect(() => {
+    async function loadContactPhone() {
+      try {
+        let contactData = null;
+        const { data: sData } = await supabase.from('site_settings').select('data').eq('id', 'contact_info').maybeSingle();
+        if (sData?.data) {
+          contactData = sData.data;
+        } else {
+          const { data: cData } = await supabase.from('cb_settings').select('data').eq('id', 'contact_info').maybeSingle();
+          contactData = cData?.data;
+        }
+        const raw = contactData?.whatsapp || contactData?.phone || '01827406756';
+        const clean = raw.replace(/[^0-9]/g, '');
+        const formatted = clean.startsWith('880') ? clean : clean.startsWith('0') ? `88${clean}` : `880${clean}`;
+        setWhatsappPhone(formatted);
+      } catch (err) {
+        console.warn('Failed to load contact phone:', err);
+      }
+    }
+    loadContactPhone();
+  }, []);
 
   const mainImage = product?.image || (Array.isArray(product?.images) && product.images[0]);
   const otherImages = Array.isArray(product?.images) ? product.images.filter(img => img && img !== mainImage) : [];
@@ -488,6 +512,29 @@ export default function ProductDetailView() {
                     </motion.p>
                   )}
                 </AnimatePresence>
+
+                {/* WhatsApp Size Assistance Guide Banner */}
+                <div className="mt-3.5 p-3 rounded-2xl bg-[#25D366]/10 border border-[#25D366]/30 flex items-center justify-between gap-3 shadow-sm">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-[#25D366] text-white flex items-center justify-center shrink-0 shadow-md">
+                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-1.151 4.204 4.294-1.127z"/>
+                      </svg>
+                    </div>
+                    <div className="text-xs min-w-0">
+                      <p className="font-bold text-[#1C1613] leading-tight">সাইজ বুঝতে সমস্যা হচ্ছে?</p>
+                      <p className="text-[11px] text-[#7C6E65] truncate">আমাদের সাথে হোয়াটসঅ্যাপে সরাসরি কথা বলুন</p>
+                    </div>
+                  </div>
+                  <a
+                    href={`https://wa.me/${whatsappPhone}?text=${encodeURIComponent(`হ্যালো PutiMach! আমি "${product.name}" এর সঠিক সাইজ নির্বাচনে সাহায্য চাচ্ছি।`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 bg-[#25D366] hover:bg-[#20ba5a] text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm hover:shadow transition-all flex items-center gap-1.5 active:scale-95"
+                  >
+                    <span>WhatsApp Help</span>
+                  </a>
+                </div>
               </div>
             )}
 
