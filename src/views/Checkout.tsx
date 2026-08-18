@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import {
   User, Phone, MapPin, MessageSquare, ShoppingBag,
   CheckCircle, Loader2, ChevronRight, Tag, Truck, CreditCard,
-  ArrowLeft, Zap, Package, Mail,
+  ArrowLeft, Zap, Package, Mail, Trash2, Plus, Minus,
 } from 'lucide-react';
 import useCartStore from '../store/cartStore';
 import { supabase } from '../lib/supabase';
@@ -74,31 +74,90 @@ function getTrafficSource() {
 
 /* ─── Order Summary Sidebar ─────────────────────────────────────────────── */
 function OrderSummary({ items, subtotal, shipping, total }) {
+  const { updateQuantity, removeItem } = useCartStore();
+
   return (
     <div className="space-y-4">
-      <h3 className="font-bold text-sm uppercase tracking-widest text-surface-muted">
-        Order Summary
-      </h3>
+      <div className="flex items-center justify-between">
+        <h3 className="font-bold text-xs uppercase tracking-widest text-surface-muted">
+          Order Summary ({items.length} {items.length === 1 ? 'item' : 'items'})
+        </h3>
+      </div>
 
-      {/* Items */}
+      {/* Items List */}
       <div className="space-y-3">
         {items.map((item) => (
-          <div key={item.key} className="flex items-center gap-3">
-            <div className="relative w-14 h-16 rounded-lg overflow-hidden bg-base-500 flex-shrink-0 border border-base-300">
-              <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" />
-              <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-brand text-white text-[10px] font-black flex items-center justify-center shadow-lg">
-                {item.quantity}
-              </span>
+          <div key={item.key} className="flex items-start gap-3 p-2.5 rounded-2xl bg-white dark:bg-[#1C1613]/60 border border-[#E9E2D2] dark:border-white/10 shadow-sm relative">
+            
+            {/* Thumbnail */}
+            <div className="relative w-14 h-16 rounded-xl overflow-hidden bg-base-500 flex-shrink-0 border border-[#E9E2D2]">
+              <img
+                src={item.product.image || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80'}
+                alt={item.product.name}
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80';
+                }}
+                className="w-full h-full object-cover"
+              />
             </div>
+
+            {/* Details & Interactive Controls */}
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-surface-primary line-clamp-2">{item.product.name}</p>
-              <p className="text-[10px] text-surface-muted mt-0.5">
-                Size: {item.size}{item.color && item.color !== 'None' ? ` / Color: ${item.color}` : ''}
+              <div className="flex items-start justify-between gap-1">
+                <p className="text-xs font-bold text-surface-primary line-clamp-1 leading-snug">
+                  {item.product.name}
+                </p>
+
+                {/* Remove / Delete Item Button */}
+                <button
+                  type="button"
+                  onClick={() => removeItem(item.key)}
+                  className="text-gray-400 hover:text-red-500 transition-colors p-1 shrink-0 active:scale-90"
+                  title="Remove item"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+
+              <p className="text-[10px] text-surface-muted mt-0.5 truncate">
+                Size: <span className="font-semibold text-surface-primary">{item.size}</span>
+                {item.color && item.color !== 'None' && (
+                  <> · Color: <span className="font-semibold text-surface-primary">{item.color}</span></>
+                )}
               </p>
+
+              {/* Quantity Stepper & Price Row */}
+              <div className="flex items-center justify-between gap-2 mt-2 pt-1.5 border-t border-[#E9E2D2]/50">
+                {/* Quantity Stepper (- 1 +) */}
+                <div className="flex items-center gap-1 bg-gray-100 dark:bg-white/10 rounded-lg p-0.5 border border-gray-200 dark:border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => updateQuantity(item.key, item.quantity - 1)}
+                    className="w-5 h-5 rounded flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-white/20 transition-all active:scale-90"
+                    title="Decrease quantity"
+                  >
+                    <Minus size={10} />
+                  </button>
+                  <span className="text-[11px] font-black w-4 text-center text-surface-primary">
+                    {item.quantity}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => updateQuantity(item.key, item.quantity + 1)}
+                    className="w-5 h-5 rounded flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-white/20 transition-all active:scale-90"
+                    title="Increase quantity"
+                  >
+                    <Plus size={10} />
+                  </button>
+                </div>
+
+                <span className="text-xs font-black text-brand">
+                  {formatPrice(item.product.price * item.quantity)}
+                </span>
+              </div>
+
             </div>
-            <span className="text-sm font-black text-surface-primary flex-shrink-0">
-              {formatPrice(item.product.price * item.quantity)}
-            </span>
           </div>
         ))}
       </div>

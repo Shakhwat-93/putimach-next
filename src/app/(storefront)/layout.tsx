@@ -3,6 +3,7 @@
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import CartDrawer from '@/components/layout/CartDrawer';
+import FlyToCartAnimator from '@/components/cart/FlyToCartAnimator';
 import TrackingInitializer from '@/components/TrackingInitializer';
 import VisitorTracker from '@/components/VisitorTracker';
 import FloatingSocialWidget from '@/components/layout/FloatingSocialWidget';
@@ -14,6 +15,7 @@ export default function StorefrontLayout({ children }: { children: React.ReactNo
       <VisitorTracker />
       <Navbar />
       <CartDrawer />
+      <FlyToCartAnimator />
       <main className="flex-1 min-h-screen">
         {children}
       </main>

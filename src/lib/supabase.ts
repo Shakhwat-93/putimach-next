@@ -13,13 +13,13 @@ const FALLBACK_ANON_KEY = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBh
 let supabaseUrl = rawSupabaseUrl || FALLBACK_URL;
 let ordersUrl = rawOrdersUrl || FALLBACK_URL;
 
-// If browser is running on HTTPS origin, proxy requests through /supabase-proxy relative path
-// to prevent Mixed Content (HTTPS page requesting HTTP resource) security blocking.
-if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
-  if (supabaseUrl.startsWith('http://')) {
+// On browser client side, route through local /supabase-proxy to eliminate ERR_CERT_AUTHORITY_INVALID
+// and mixed-content/CORS security blocking when connecting to sslip.io / HTTP custom VPS backend.
+if (typeof window !== 'undefined') {
+  if (supabaseUrl.includes('sslip.io') || supabaseUrl.startsWith('http://')) {
     supabaseUrl = `${window.location.origin}/supabase-proxy`;
   }
-  if (ordersUrl.startsWith('http://')) {
+  if (ordersUrl.includes('sslip.io') || ordersUrl.startsWith('http://')) {
     ordersUrl = `${window.location.origin}/supabase-proxy`;
   }
 }

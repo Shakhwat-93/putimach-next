@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Heart, Star } from 'lucide-react';
+import { Heart, ShoppingBag, Zap, Check } from 'lucide-react';
 import { useCartStore } from '../../store/cartStore';
 import { formatPrice } from '../../lib/utils';
 import { trackAddToCart } from '../../lib/tracking';
@@ -39,12 +39,11 @@ export function ProductCard({ product, index = 0 }) {
     e.stopPropagation();
     if (!inStock) return;
     setAdding(true);
-    addItem(product, product.sizes?.[0] || 'Free Size', product.colors?.[0] || 'Default', 1);
+    addItem(product, product.sizes?.[0] || 'Free Size', product.colors?.[0] || 'Default', 1, e);
     trackAddToCart(product, 1, product.sizes?.[0] || 'Free Size');
     setTimeout(() => {
       setAdding(false);
-      openCart();
-    }, 600);
+    }, 800);
   };
 
   const handleBuyNow = (e) => {
@@ -133,39 +132,10 @@ export function ProductCard({ product, index = 0 }) {
             />
           </button>
 
-          {/* Hover/Always Actions */}
-          {inStock && (
-            <motion.div
-              initial={{ y: isMobile ? 0 : 12, opacity: isMobile ? 1 : 0 }}
-              animate={{
-                y: (isMobile || hovered) ? 0 : 12,
-                opacity: (isMobile || hovered) ? 1 : 0
-              }}
-              transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="absolute bottom-3 left-2 right-2 flex gap-1.5 z-20"
-            >
-              <button
-                onClick={handleQuickAdd}
-                className={`flex-1 flex items-center justify-center gap-1 py-1.5 px-1 rounded-full font-bold text-[9px] uppercase tracking-wider transition-all duration-300 ${
-                  adding 
-                    ? 'bg-emerald-600 text-white' 
-                    : 'bg-white/95 hover:bg-brand hover:text-white text-surface-primary border border-brand/20 shadow-sm'
-                }`}
-              >
-                {adding ? (isMobile ? 'Added' : 'Added!') : (isMobile ? '+ Cart' : 'Add to Cart')}
-              </button>
-              <button
-                onClick={handleBuyNow}
-                className="flex-1 flex items-center justify-center gap-1 py-1.5 px-1 rounded-full font-bold text-[9px] uppercase tracking-wider bg-brand text-white hover:bg-brand/90 transition-all duration-300 shadow-sm"
-              >
-                {isMobile ? 'Buy' : 'Buy Now'}
-              </button>
-            </motion.div>
-          )}
         </div>
 
-        {/* Info */}
-        <div className="mt-3 px-1">
+        {/* Info & Action Buttons Below Image */}
+        <div className="mt-3 px-1 space-y-2">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-small text-surface-primary group-hover:text-brand transition-colors duration-200 line-clamp-1">
@@ -181,19 +151,36 @@ export function ProductCard({ product, index = 0 }) {
             </div>
           </div>
 
-          {/* Rating */}
-          <div className="flex items-center gap-1.5 mt-2">
-            <div className="flex items-center gap-0.5">
-              {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  size={10}
-                  className={i < Math.floor(rating) ? 'fill-brand text-brand' : 'text-base-300'}
-                />
-              ))}
+          {/* Action Buttons Below Image */}
+          {inStock && (
+            <div className="flex items-center gap-1.5 pt-1">
+              <motion.button
+                whileTap={{ scale: 0.92 }}
+                onClick={handleQuickAdd}
+                className={`flex-1 flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1.5 rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-wider transition-all duration-300 border shadow-sm ${
+                  adding 
+                    ? 'bg-emerald-600 text-white border-emerald-600 scale-105 shadow-emerald-500/20' 
+                    : 'bg-white text-[#1C1613] border-[#E9E2D2] hover:border-[#1C1613] hover:bg-[#FDFBF7]'
+                }`}
+              >
+                {adding ? (
+                  <Check size={13} className="animate-bounce shrink-0 text-white" />
+                ) : (
+                  <ShoppingBag size={12} className="shrink-0" />
+                )}
+                <span>{adding ? 'Added!' : 'Cart'}</span>
+              </motion.button>
+
+              <motion.button
+                whileTap={{ scale: 0.92 }}
+                onClick={handleBuyNow}
+                className="flex-1 flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1.5 rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-wider bg-[#1C1613] text-[#C5A880] hover:bg-[#2A221E] transition-all duration-200 shadow-sm border border-[#C5A880]/30"
+              >
+                <Zap size={12} className="shrink-0" />
+                <span>Buy</span>
+              </motion.button>
             </div>
-            <span className="text-[10px] text-surface-muted">({reviewsCount})</span>
-          </div>
+          )}
         </div>
       </Link>
     </motion.div>

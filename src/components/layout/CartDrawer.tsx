@@ -10,7 +10,11 @@ export default function CartDrawer() {
   const { isOpen, closeCart, items, updateQuantity, removeItem, getSubtotal, getTotal } = useCartStore();
   const router = useRouter();
 
-  const handleCheckout = () => {
+  const handleCheckout = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     closeCart();
     router.push('/checkout');
   };
@@ -36,7 +40,7 @@ export default function CartDrawer() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
             onClick={closeCart}
-            className="fixed inset-0 z-50 bg-[#1C1613]/75 backdrop-blur-sm"
+            className="fixed inset-0 z-[10000] bg-[#1C1613]/75 backdrop-blur-sm"
           />
 
           {/* Drawer Container */}
@@ -46,7 +50,7 @@ export default function CartDrawer() {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-            className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md flex flex-col bg-[#FDFBF7] border-l border-[#E9E2D2] shadow-2xl text-[#1C1613]"
+            className="fixed right-0 top-0 bottom-0 z-[10001] w-full max-w-md flex flex-col bg-[#FDFBF7] border-l border-[#E9E2D2] shadow-2xl text-[#1C1613]"
           >
             {/* Drawer Header */}
             <div className="px-6 py-5 border-b border-[#E9E2D2] bg-white flex items-center justify-between">
@@ -227,8 +231,10 @@ export default function CartDrawer() {
 
                 {/* Checkout Primary Button */}
                 <button
+                  type="button"
+                  id="cart-proceed-checkout-btn"
                   onClick={handleCheckout}
-                  className="w-full py-4 bg-[#1C1613] hover:bg-[#FF5533] text-white font-black text-xs uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md active:scale-98 group cursor-pointer"
+                  className="w-full py-4 bg-[#1C1613] hover:bg-[#FF5533] text-white font-black text-xs uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md active:scale-98 group cursor-pointer relative z-[10002]"
                 >
                   Proceed to Checkout
                   <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />

@@ -33,7 +33,31 @@ export default function ProductDetailView() {
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [sizeError, setSizeError] = useState(false);
   const [whatsappPhone, setWhatsappPhone] = useState('8801827406756');
+  const [headerVisible, setHeaderVisible] = useState(true);
   const { addItem, openCart, items } = useCartStore();
+
+  useEffect(() => {
+    let lastScrollY = window.scrollY;
+
+    const handleWindowScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > 80) {
+        if (currentScrollY > lastScrollY + 6) {
+          // Scroll DOWN -> Hide item name header
+          setHeaderVisible(false);
+        } else if (currentScrollY < lastScrollY - 6) {
+          // Scroll UP -> Show item name header
+          setHeaderVisible(true);
+        }
+      } else {
+        setHeaderVisible(true);
+      }
+      lastScrollY = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleWindowScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleWindowScroll);
+  }, []);
 
   useEffect(() => {
     async function loadContactPhone() {
@@ -196,7 +220,7 @@ export default function ProductDetailView() {
   const sizeGuide = product?.size_guide;
   const sizeChartImageUrl = sizeGuide?.image_url || sizeGuide?.chart_image || product?.size_chart_image || null;
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (e) => {
     if (!inStock) return;
     if (!selectedSize && product.sizes?.length > 0) {
       setSizeError(true);
@@ -204,7 +228,7 @@ export default function ProductDetailView() {
       return;
     }
     setAdding(true);
-    addItem(product, selectedSize || 'One Size', selectedColor || 'None', 1);
+    addItem(product, selectedSize || 'One Size', selectedColor || 'None', 1, e);
     trackAddToCart(product, 1, selectedSize || 'One Size');
     
     setTimeout(() => {
@@ -212,8 +236,7 @@ export default function ProductDetailView() {
       setAdded(true);
       setTimeout(() => {
         setAdded(false);
-        openCart();
-      }, 800);
+      }, 1200);
     }, 300);
   };
 
@@ -233,13 +256,18 @@ export default function ProductDetailView() {
     <div className="min-h-screen bg-[#FDFBF7] pt-16 lg:pt-24 pb-28 lg:pb-20 text-[#1C1613]">
       
       {/* Mobile Sticky Navigation Header Bar */}
-      <div className="lg:hidden sticky top-14 z-30 bg-[#FDFBF7]/90 backdrop-blur-md border-b border-[#E9E2D2] px-4 py-3 flex items-center justify-between shadow-sm">
+      <motion.div
+        initial={{ y: 0 }}
+        animate={{ y: headerVisible ? 0 : -140, opacity: headerVisible ? 1 : 0 }}
+        transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+        className="lg:hidden fixed top-16 left-0 right-0 z-40 bg-[#FDFBF7]/95 backdrop-blur-md border-b border-[#E9E2D2] px-4 py-2.5 flex items-center justify-between shadow-sm transition-all duration-300"
+      >
         <button 
           onClick={() => router.back()} 
-          className="w-10 h-10 rounded-full bg-white border border-[#E9E2D2] flex items-center justify-center text-[#1C1613] active:scale-95 transition-transform"
+          className="w-9 h-9 rounded-full bg-white border border-[#E9E2D2] flex items-center justify-center text-[#1C1613] active:scale-95 transition-transform"
           aria-label="Go Back"
         >
-          <ChevronLeft size={20} />
+          <ChevronLeft size={18} />
         </button>
 
         <span className="font-serif font-black text-sm text-[#1C1613] truncate max-w-[55%]">
@@ -249,17 +277,17 @@ export default function ProductDetailView() {
         <div className="flex items-center gap-2">
           <button
             onClick={handleShare}
-            className="w-10 h-10 rounded-full bg-white border border-[#E9E2D2] flex items-center justify-center text-[#1C1613] active:scale-95 transition-transform"
+            className="w-9 h-9 rounded-full bg-white border border-[#E9E2D2] flex items-center justify-center text-[#1C1613] active:scale-95 transition-transform"
             aria-label="Share product"
           >
-            <Share2 size={16} />
+            <Share2 size={15} />
           </button>
           <button 
             onClick={openCart} 
-            className="relative w-10 h-10 rounded-full bg-white border border-[#E9E2D2] flex items-center justify-center text-[#1C1613] active:scale-95 transition-transform"
+            className="relative w-9 h-9 rounded-full bg-white border border-[#E9E2D2] flex items-center justify-center text-[#1C1613] active:scale-95 transition-transform"
             aria-label="View Cart"
           >
-            <ShoppingBag size={18} />
+            <ShoppingBag size={17} />
             {totalCartCount > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#FF5533] text-white text-[9px] font-bold rounded-full flex items-center justify-center animate-scale-in">
                 {totalCartCount}
@@ -267,7 +295,7 @@ export default function ProductDetailView() {
             )}
           </button>
         </div>
-      </div>
+      </motion.div>
 
       <div className="container-site py-4 lg:py-8">
         
@@ -289,7 +317,7 @@ export default function ProductDetailView() {
           <div className="lg:col-span-7 space-y-4 lg:sticky lg:top-28">
             
             {/* Main Hero Card Container */}
-            <div className="relative w-full rounded-[2.2rem] bg-gradient-to-b from-[#F7F4EE] via-[#F4EFE6] to-[#EFEADF] border border-[#E9E2D2] shadow-sm overflow-hidden flex items-center justify-center p-3 sm:p-6 min-h-[380px] sm:min-h-[480px]">
+            <div className="relative w-full rounded-2xl sm:rounded-[2.2rem] bg-gradient-to-b from-[#F7F4EE] via-[#F4EFE6] to-[#EFEADF] border border-[#E9E2D2] shadow-sm overflow-hidden flex items-center justify-center p-2 sm:p-6 min-h-[320px] sm:min-h-[480px]">
               
               <div 
                 ref={sliderRef}
@@ -300,7 +328,7 @@ export default function ProductDetailView() {
                 {images.map((img, i) => (
                   <div 
                     key={i} 
-                    className="w-full flex-shrink-0 snap-start flex items-center justify-center p-2"
+                    className="w-full flex-shrink-0 snap-start flex items-center justify-center p-1 sm:p-2"
                   >
                     <img
                       src={img}
@@ -309,7 +337,7 @@ export default function ProductDetailView() {
                         e.target.onerror = null;
                         e.target.src = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80';
                       }}
-                      className="w-full h-auto max-h-[62vh] object-contain rounded-2xl drop-shadow-md select-none hover:scale-105 transition-transform duration-500 cursor-zoom-in"
+                      className="w-full h-auto max-h-[52vh] sm:max-h-[62vh] object-contain rounded-xl sm:rounded-2xl drop-shadow-md select-none hover:scale-105 transition-transform duration-500 cursor-zoom-in"
                     />
                   </div>
                 ))}
@@ -368,12 +396,12 @@ export default function ProductDetailView() {
 
             {/* Thumbnail Row */}
             {images.length > 1 && (
-              <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none px-1">
+              <div className="flex gap-2 sm:gap-2.5 overflow-x-auto pb-2 scrollbar-none px-1 max-w-full touch-pan-x snap-x scroll-smooth items-center">
                 {images.map((img, i) => (
                   <button
                     key={i}
                     onClick={() => handleThumbnailClick(i)}
-                    className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 flex-shrink-0 transition-all duration-200 bg-[#F7F4EE] p-1 ${
+                    className={`w-14 h-14 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl overflow-hidden border-2 shrink-0 snap-start transition-all duration-200 bg-[#F7F4EE] p-1 flex-shrink-0 ${
                       activeImg === i ? 'border-[#FF5533] scale-105 shadow-sm' : 'border-transparent opacity-60 hover:opacity-100'
                     }`}
                   >
@@ -384,7 +412,7 @@ export default function ProductDetailView() {
                         e.target.onerror = null;
                         e.target.src = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80';
                       }}
-                      className="w-full h-full object-contain rounded-xl"
+                      className="w-full h-full object-contain rounded-lg sm:rounded-xl"
                     />
                   </button>
                 ))}
@@ -440,16 +468,16 @@ export default function ProductDetailView() {
                 <p className="font-serif font-bold text-xs uppercase tracking-wider text-[#1C1613] mb-2.5">
                   Select Color
                 </p>
-                <div className="flex flex-wrap gap-2.5">
+                <div className="flex flex-wrap gap-2">
                   {product.colors.map((color) => {
                     const isSelected = selectedColor === color;
                     return (
                       <button
                         key={color}
                         onClick={() => setSelectedColor(color)}
-                        className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all duration-200 border ${
+                        className={`max-w-full px-3.5 py-2 rounded-xl font-bold text-xs text-left transition-all duration-200 border whitespace-normal break-words leading-snug ${
                           isSelected
-                            ? 'border-[#1C1613] bg-[#1C1613] text-white shadow-sm scale-105'
+                            ? 'border-[#1C1613] bg-[#1C1613] text-white shadow-sm'
                             : 'border-[#E9E2D2] bg-white text-[#1C1613] hover:border-[#1C1613]/50'
                         }`}
                       >
@@ -464,21 +492,21 @@ export default function ProductDetailView() {
             {/* Size Selector */}
             {product.sizes?.length > 0 && (
               <div>
-                <div className="flex items-center justify-between mb-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
                   <p className="font-serif font-bold text-xs uppercase tracking-wider text-[#1C1613]">
                     Select Size
                   </p>
                   <button
                     type="button"
                     onClick={() => setSizeGuideOpen(true)}
-                    className="text-[11px] font-bold text-[#C5A880] hover:text-[#1C1613] transition-colors flex items-center gap-1.5 bg-white border border-[#E9E2D2] px-3.5 py-1.5 rounded-full active:scale-95 shadow-sm"
+                    className="text-[10px] sm:text-[11px] font-bold text-[#C5A880] hover:text-[#1C1613] transition-colors flex items-center gap-1 bg-white border border-[#E9E2D2] px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-full active:scale-95 shadow-sm shrink-0"
                   >
-                    <Ruler size={13} className="text-[#C5A880]" />
+                    <Ruler size={12} className="text-[#C5A880]" />
                     <span>Size Guide & Chart</span>
                   </button>
                 </div>
 
-                <div className="flex flex-wrap gap-2.5">
+                <div className="flex flex-wrap gap-2 sm:gap-2.5">
                   {product.sizes.map((size) => {
                     const isSelected = selectedSize === size;
                     return (
@@ -488,7 +516,7 @@ export default function ProductDetailView() {
                           setSelectedSize(size);
                           setSizeError(false);
                         }}
-                        className={`min-w-[52px] h-12 px-4 rounded-xl font-black text-xs uppercase transition-all duration-200 border ${
+                        className={`min-w-[46px] sm:min-w-[52px] h-10 sm:h-12 px-3 sm:px-4 rounded-xl font-black text-xs uppercase transition-all duration-200 border ${
                           isSelected
                             ? 'border-[#1C1613] bg-[#1C1613] text-white shadow-md scale-105'
                             : 'border-[#E9E2D2] bg-white text-[#1C1613] hover:border-[#1C1613]/50'
@@ -514,8 +542,8 @@ export default function ProductDetailView() {
                 </AnimatePresence>
 
                 {/* WhatsApp Size Assistance Guide Banner */}
-                <div className="mt-3.5 p-3 rounded-2xl bg-[#25D366]/10 border border-[#25D366]/30 flex items-center justify-between gap-3 shadow-sm">
-                  <div className="flex items-center gap-2.5 min-w-0">
+                <div className="mt-3.5 p-3 rounded-2xl bg-[#25D366]/10 border border-[#25D366]/30 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 shadow-sm">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     <div className="w-8 h-8 rounded-full bg-[#25D366] text-white flex items-center justify-center shrink-0 shadow-md">
                       <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                         <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-1.151 4.204 4.294-1.127z"/>
@@ -530,7 +558,7 @@ export default function ProductDetailView() {
                     href={`https://wa.me/${whatsappPhone}?text=${encodeURIComponent(`হ্যালো PutiMach! আমি "${product.name}" এর সঠিক সাইজ নির্বাচনে সাহায্য চাচ্ছি।`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="shrink-0 bg-[#25D366] hover:bg-[#20ba5a] text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm hover:shadow transition-all flex items-center gap-1.5 active:scale-95"
+                    className="shrink-0 bg-[#25D366] hover:bg-[#20ba5a] text-white text-[11px] sm:text-xs font-bold px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl shadow-sm hover:shadow transition-all flex items-center gap-1 active:scale-95"
                   >
                     <span>WhatsApp Help</span>
                   </a>
@@ -698,24 +726,24 @@ export default function ProductDetailView() {
 
       </div>
 
-      {/* Floating Sticky Bottom Mobile Action Bar (Mobile Only - Matching App Reference) */}
-      <div className="lg:hidden fixed bottom-4 left-4 right-4 z-40">
-        <div className="bg-[#1C1613]/95 backdrop-blur-xl border border-white/10 p-2.5 rounded-full shadow-2xl flex items-center gap-2">
+      {/* Floating Sticky Bottom Mobile Action Bar (Mobile Only - Sleek & Compact) */}
+      <div className="lg:hidden fixed bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 z-40">
+        <div className="bg-[#1C1613]/95 backdrop-blur-xl border border-white/10 p-1.5 sm:p-2.5 rounded-full shadow-2xl flex items-center gap-1.5 sm:gap-2">
           
           {/* Wishlist / Heart Button */}
           <button
             onClick={() => setLiked(!liked)}
-            className="w-12 h-12 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition-transform shrink-0"
+            className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition-transform shrink-0"
             aria-label="Wishlist"
           >
-            <Heart size={20} className={liked ? 'fill-[#FF5533] text-[#FF5533]' : 'text-white'} />
+            <Heart size={18} className={liked ? 'fill-[#FF5533] text-[#FF5533]' : 'text-white'} />
           </button>
 
           {/* Add to Cart Button */}
           <button
             disabled={!inStock}
             onClick={handleAddToCart}
-            className={`flex-1 h-12 rounded-full font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95 ${
+            className={`flex-1 h-10 sm:h-12 rounded-full font-black text-[11px] sm:text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
               !inStock
                 ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
                 : added
@@ -727,11 +755,11 @@ export default function ProductDetailView() {
               'Sold Out'
             ) : added ? (
               <>
-                <Check size={16} /> Added!
+                <Check size={14} /> Added!
               </>
             ) : (
               <>
-                <ShoppingBag size={16} /> Cart
+                <ShoppingBag size={14} /> Cart
               </>
             )}
           </button>
@@ -740,13 +768,13 @@ export default function ProductDetailView() {
           <button
             disabled={!inStock}
             onClick={handleBuyNow}
-            className={`flex-1 h-12 rounded-full font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md ${
+            className={`flex-1 h-10 sm:h-12 rounded-full font-black text-[11px] sm:text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-md ${
               !inStock
                 ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
                 : 'bg-[#FF5533] text-white hover:bg-[#e04422]'
             }`}
           >
-            <Zap size={16} /> Buy Now
+            <Zap size={14} /> Buy Now
           </button>
 
         </div>

@@ -71,7 +71,7 @@ export default function FloatingSocialWidget() {
   const facebookUrl = contact?.facebook_url || 'https://www.facebook.com/share/1HitDwyphD';
 
   return (
-    <div ref={widgetRef} className="fixed bottom-6 right-6 z-[999] flex flex-col items-end gap-3 select-none">
+    <div ref={widgetRef} className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-[999] flex flex-col items-end gap-3 select-none">
       
       {/* ── EXPANDED SPEED-DIAL SOCIAL BUTTONS ── */}
       <div 
@@ -141,22 +141,22 @@ export default function FloatingSocialWidget() {
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Contact and Social Support Options"
-        className={`relative group flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-[#1C1613] to-[#2E241F] text-[#C5A880] border-2 border-[#C5A880]/60 shadow-2xl hover:border-[#C5A880] hover:shadow-[#C5A880]/30 transition-all duration-300 cursor-pointer ${
+        className={`relative group flex items-center justify-center w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-[#1C1613] to-[#2E241F] text-[#C5A880] border-2 border-[#C5A880]/60 shadow-2xl hover:border-[#C5A880] hover:shadow-[#C5A880]/30 transition-all duration-300 cursor-pointer ${
           isOpen ? 'rotate-90 bg-[#C5A880] text-[#1C1613] border-[#C5A880]' : 'hover:scale-110'
         }`}
       >
         {/* Pulse Dot Indicator */}
         {!isOpen && (
-          <span className="absolute top-0 right-0 flex h-3.5 w-3.5 -mt-0.5 -mr-0.5">
+          <span className="absolute top-0 right-0 flex h-3 w-3 -mt-0.5 -mr-0.5 sm:h-3.5 sm:w-3.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border-2 border-[#1C1613]"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 sm:h-3.5 sm:w-3.5 bg-emerald-500 border-2 border-[#1C1613]"></span>
           </span>
         )}
 
         {isOpen ? (
-          <X className="w-6 h-6 stroke-[2.5]" />
+          <X className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
         ) : (
-          <MessageCircle className="w-6 h-6 stroke-[2] group-hover:scale-110 transition-transform" />
+          <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2] group-hover:scale-110 transition-transform" />
         )}
       </button>
     </div>

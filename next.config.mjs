@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const isProd = process.env.NODE_ENV === 'production';
+
 const nextConfig = {
   output: 'standalone',
   compress: true,
@@ -57,27 +59,34 @@ const nextConfig = {
     ],
   },
   async headers() {
+    const securityHeaders = [
+      {
+        key: 'X-Content-Type-Options',
+        value: 'nosniff',
+      },
+      {
+        key: 'X-Frame-Options',
+        value: 'SAMEORIGIN',
+      },
+    ];
+
+    if (isProd) {
+      securityHeaders.push(
+        {
+          key: 'Content-Security-Policy',
+          value: 'upgrade-insecure-requests',
+        },
+        {
+          key: 'Strict-Transport-Security',
+          value: 'max-age=63072000; includeSubDomains; preload',
+        }
+      );
+    }
+
     return [
       {
         source: '/:path*',
-        headers: [
-          {
-            key: 'Content-Security-Policy',
-            value: 'upgrade-insecure-requests',
-          },
-          {
-            key: 'Strict-Transport-Security',
-            value: 'max-age=63072000; includeSubDomains; preload',
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'SAMEORIGIN',
-          },
-        ],
+        headers: securityHeaders,
       },
       {
         source: '/:all*(svg|jpg|png|webp|avif|woff2)',

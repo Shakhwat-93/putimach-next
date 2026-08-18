@@ -22,7 +22,7 @@ export default function Navbar() {
     brandName: 'PutiMach'
   });
 
-  const { openCart, items } = useCartStore();
+  const { openCart, items, badgeBouncing } = useCartStore();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -120,8 +120,30 @@ export default function Navbar() {
     loadAnnouncement();
   }, []);
 
+  const [navVisible, setNavVisible] = useState(true);
+
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
+    let lastScrollY = window.scrollY;
+
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      setScrolled(currentScrollY > 20);
+
+      if (currentScrollY > 80) {
+        if (currentScrollY > lastScrollY + 6) {
+          // Scrolling DOWN -> Hide Navbar
+          setNavVisible(false);
+        } else if (currentScrollY < lastScrollY - 6) {
+          // Scrolling UP -> Show Navbar
+          setNavVisible(true);
+        }
+      } else {
+        setNavVisible(true);
+      }
+
+      lastScrollY = currentScrollY;
+    };
+
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -143,8 +165,8 @@ export default function Navbar() {
     <>
       <motion.header
         initial={{ y: -100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
+        animate={{ y: navVisible ? 0 : -110, opacity: navVisible ? 1 : 0 }}
+        transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled ? 'bg-[#FDFBF7]/95 backdrop-blur-md border-b border-[#E9E2D2]' : 'bg-transparent border-transparent'
         }`}
@@ -202,18 +224,21 @@ export default function Navbar() {
               >
                 <Search size={20} />
               </button>
-              <button
+              <motion.button
+                id="global-navbar-cart-btn"
                 onClick={openCart}
-                className="relative text-[#1C1613] hover:text-[#C5A880] transition-colors p-1.5 flex items-center"
+                animate={badgeBouncing ? { scale: [1, 1.45, 1], rotate: [0, -10, 10, 0] } : { scale: 1 }}
+                transition={{ duration: 0.35 }}
+                className="relative text-[#1C1613] hover:text-[#C5A880] transition-colors p-1.5 flex items-center cursor-pointer"
                 aria-label="Shopping Cart"
               >
                 <ShoppingBag size={22} />
                 {totalItems > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#1C1613] text-[#C5A880] text-[10px] font-bold flex items-center justify-center border border-[#FDFBF7]">
+                  <span className={`absolute -top-1 -right-1 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center border border-[#FDFBF7] transition-all duration-300 ${badgeBouncing ? 'scale-125 bg-[#FF5533] text-white shadow-lg' : 'bg-[#1C1613] text-[#C5A880]'}`}>
                     {totalItems}
                   </span>
                 )}
-              </button>
+              </motion.button>
             </div>
           </div>
         </div>
