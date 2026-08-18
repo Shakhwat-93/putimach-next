@@ -233,15 +233,17 @@ export const OrderProvider = ({ children }) => {
     try {
       await api.updateOrderStatus(orderId, newStatus, noteText);
       try {
-        await api.addActivityLog({
-          order_id: orderId,
-          action_type: 'STATUS_CHANGE',
-          old_status: oldStatus || 'Unknown',
-          new_status: newStatus,
-          changed_by_user_id: userId,
-          changed_by_user_name: currentUserName,
-          action_description: noteText ? `Status changed to ${newStatus}: ${noteText}` : `Status updated to ${newStatus}`
-        });
+        if (typeof api.logActivity === 'function') {
+          await api.logActivity({
+            order_id: orderId,
+            action_type: 'STATUS_CHANGE',
+            old_status: oldStatus || 'Unknown',
+            new_status: newStatus,
+            changed_by_user_id: userId,
+            changed_by_user_name: currentUserName,
+            action_description: noteText ? `Status changed to ${newStatus}: ${noteText}` : `Status updated to ${newStatus}`
+          });
+        }
       } catch (logErr) {
         console.warn('Non-fatal activity log write failed:', logErr);
       }

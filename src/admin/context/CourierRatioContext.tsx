@@ -61,11 +61,15 @@ export const CourierRatioProvider = ({ children }) => {
       });
       const resData = await res.json();
       if (!res.ok || !resData.success) {
+        if (resData.configured === false) {
+          return null;
+        }
         throw new Error(resData.error || 'Ratio check failed');
       }
       const data = resData.stats;
       return api.normalizeCourierRatioPayload(data, phone);
     } catch (err) {
+      if (err.message && err.message.includes('not configured')) return null;
       console.warn('[BD Courier Context] Server-side check failed or timed out. Attempting client-side direct check...', err.message);
       lastError = err.message || 'Server check failed';
 

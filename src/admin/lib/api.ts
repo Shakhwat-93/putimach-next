@@ -755,7 +755,9 @@ export const api = {
     return (
       this.isMissingColumnError(error, 'delivery_charge') ||
       this.isMissingColumnError(error, 'pricing_summary') ||
-      this.isMissingColumnError(error, 'order_lines_payload')
+      this.isMissingColumnError(error, 'order_lines_payload') ||
+      this.isMissingColumnError(error, 'internal_notes') ||
+      String(error?.message || '').toLowerCase().includes('internal_notes')
     );
   },
 
@@ -779,6 +781,7 @@ export const api = {
     delete fallbackPayload.delivery_charge;
     delete fallbackPayload.pricing_summary;
     delete fallbackPayload.order_lines_payload;
+    delete fallbackPayload.internal_notes;
     return fallbackPayload;
   },
 
@@ -1456,7 +1459,7 @@ export const api = {
   async updateOrderStatus(orderId, newStatus, noteText = '', userId = null, userName = '') {
     const { data: oldData } = await supabase
       .from('orders')
-      .select('status, first_call_time')
+      .select('status, first_call_time, notes')
       .eq('id', orderId)
       .single();
 
@@ -1465,8 +1468,10 @@ export const api = {
       updated_at: new Date().toISOString() 
     };
 
-    if (noteText) {
-      updatePayload.internal_notes = noteText;
+    if (noteText && String(noteText).trim()) {
+      const cleanNote = String(noteText).trim();
+      const entry = this.formatOrderNoteEntry(cleanNote, newStatus, userName || 'Call Team');
+      updatePayload.notes = this.mergeOrderNotes(oldData?.notes || '', entry);
     }
 
     if (!oldData?.first_call_time && ['Confirmed', 'Cancelled', 'Fake Order'].includes(newStatus)) {
@@ -1476,6 +1481,8 @@ export const api = {
     let writeUpdates = this.orderModernColumnsState === false
       ? this.stripUnsupportedOrderModernFields(updatePayload)
       : updatePayload;
+
+    delete writeUpdates.internal_notes;
 
     let { data, error } = await supabase
       .from('orders')
@@ -1487,6 +1494,7 @@ export const api = {
     if (error && this.hasUnsupportedOrderModernColumns(error)) {
       this.orderModernColumnsState = false;
       writeUpdates = this.stripUnsupportedOrderModernFields(updatePayload);
+      delete writeUpdates.internal_notes;
       ({ data, error } = await supabase
         .from('orders')
         .update(writeUpdates)
@@ -1889,6 +1897,10 @@ export const api = {
     } catch (err) {
       console.warn('[logActivity] Non-fatal log exception:', err);
     }
+  },
+
+  async addActivityLog(logData) {
+    return this.logActivity(logData);
   },
 
   /**

@@ -7,12 +7,19 @@ const supabaseOthers = createClient(catalogUrl, catalogKey);
 
 const getSystemConfig = async (key: string) => {
   try {
-    const { data } = await supabaseOthers
+    const { data: sData } = await supabaseOthers
+      .from('site_settings')
+      .select('data')
+      .eq('id', key)
+      .maybeSingle();
+    if (sData && sData.data) return sData.data;
+
+    const { data: cData } = await supabaseOthers
       .from('cb_settings')
       .select('data')
       .eq('id', key)
       .maybeSingle();
-    if (data && data.data) return data.data;
+    if (cData && cData.data) return cData.data;
   } catch (e) {}
   return null;
 };
@@ -26,7 +33,7 @@ export async function POST(request: Request) {
 
     const config = await getSystemConfig('courier_steadfast');
     if (!config || !config.api_key) {
-      return NextResponse.json({ success: false, error: 'Steadfast configuration not found' }, { status: 400 });
+      return NextResponse.json({ success: false, configured: false, error: 'Steadfast configuration not found' }, { status: 200 });
     }
 
     let response: Response;
