@@ -285,7 +285,7 @@ export default function ProductDetailView() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] pt-32 lg:pt-24 pb-28 lg:pb-20 text-[#1C1613]">
+    <div className="min-h-screen bg-[#FDFBF7] pt-32 lg:pt-24 pb-28 lg:pb-20 text-[#1C1613] w-full max-w-full overflow-x-hidden">
       
       {/* Mobile Sticky Navigation Header Bar */}
       <motion.div
@@ -329,7 +329,7 @@ export default function ProductDetailView() {
         </div>
       </motion.div>
 
-      <div className="container-site py-4 lg:py-8">
+      <div className="container-site py-4 lg:py-8 w-full max-w-full min-w-0 overflow-x-hidden">
         
         {/* Desktop Breadcrumb Navigation */}
         <nav className="hidden lg:flex items-center gap-2 text-xs text-gray-500 mb-8">
@@ -343,13 +343,13 @@ export default function ProductDetailView() {
         </nav>
 
         {/* Main Product Layout Grid */}
-        <div className="grid lg:grid-cols-12 gap-8 lg:gap-14 items-start">
+        <div className="grid lg:grid-cols-12 gap-8 lg:gap-14 items-start w-full max-w-full min-w-0">
 
           {/* Left Column: Product Image Gallery Showcase (lg:col-span-7) */}
-          <div className="lg:col-span-7 space-y-4 lg:sticky lg:top-28">
+          <div className="lg:col-span-7 space-y-4 lg:sticky lg:top-28 w-full max-w-full min-w-0 overflow-hidden">
             
             {/* Main Hero Card Container */}
-            <div className="relative w-full rounded-2xl sm:rounded-[2.2rem] bg-gradient-to-b from-[#F7F4EE] via-[#F4EFE6] to-[#EFEADF] border border-[#E9E2D2] shadow-sm overflow-hidden flex items-center justify-center p-2 sm:p-6 min-h-[320px] sm:min-h-[480px]">
+            <div className="relative w-full max-w-full min-w-0 rounded-2xl sm:rounded-[2.2rem] bg-gradient-to-b from-[#F7F4EE] via-[#F4EFE6] to-[#EFEADF] border border-[#E9E2D2] shadow-sm overflow-hidden flex items-center justify-center p-2 sm:p-6 min-h-[320px] sm:min-h-[480px]">
               
               <div 
                 ref={sliderRef}
@@ -428,7 +428,7 @@ export default function ProductDetailView() {
 
             {/* Thumbnail Row */}
             {images.length > 1 && (
-              <div className="flex gap-2 sm:gap-2.5 overflow-x-auto pb-2 scrollbar-none px-1 max-w-full touch-pan-x snap-x scroll-smooth items-center">
+              <div className="flex gap-2 sm:gap-2.5 overflow-x-auto pb-2 scrollbar-none px-1 w-full max-w-full min-w-0 touch-pan-x snap-x scroll-smooth items-center">
                 {images.map((img, i) => (
                   <button
                     key={i}
@@ -453,7 +453,7 @@ export default function ProductDetailView() {
           </div>
 
           {/* Right Column: Product Information & Purchase Controls (lg:col-span-5) */}
-          <div className="lg:col-span-5 space-y-6">
+          <div className="lg:col-span-5 space-y-6 w-full max-w-full min-w-0 overflow-hidden">
             
             {/* Header Info */}
             <div>
@@ -472,13 +472,13 @@ export default function ProductDetailView() {
                 )}
               </div>
 
-              <h1 className="font-serif text-2xl sm:text-4xl font-black text-[#1C1613] tracking-wide mb-4 leading-tight">
+              <h1 className="font-serif text-2xl sm:text-4xl font-black text-[#1C1613] tracking-wide mb-4 leading-tight break-words">
                 {product.name}
               </h1>
             </div>
 
             {/* Price Tag Container */}
-            <div className="flex items-baseline gap-3 bg-[#F4EFE6]/60 p-4 sm:p-5 rounded-2xl border border-[#E9E2D2]">
+            <div className="flex flex-wrap items-baseline gap-2.5 sm:gap-3 bg-[#F4EFE6]/60 p-4 sm:p-5 rounded-2xl border border-[#E9E2D2] w-full max-w-full min-w-0">
               <span className="font-serif font-black text-3xl sm:text-4xl text-[#1C1613]">
                 {formatPrice(product.price)}
               </span>
@@ -574,23 +574,23 @@ export default function ProductDetailView() {
                 </AnimatePresence>
 
                 {/* WhatsApp Size Assistance Guide Banner */}
-                <div className="mt-3.5 p-3 rounded-2xl bg-[#25D366]/10 border border-[#25D366]/30 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 shadow-sm">
+                <div className="mt-3.5 p-3 rounded-2xl bg-[#25D366]/10 border border-[#25D366]/30 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 shadow-sm w-full max-w-full min-w-0 overflow-hidden">
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     <div className="w-8 h-8 rounded-full bg-[#25D366] text-white flex items-center justify-center shrink-0 shadow-md">
                       <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                         <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-1.151 4.204 4.294-1.127z"/>
                       </svg>
                     </div>
-                    <div className="text-xs min-w-0">
-                      <p className="font-bold text-[#1C1613] leading-tight">সাইজ বুঝতে সমস্যা হচ্ছে?</p>
-                      <p className="text-[11px] text-[#7C6E65] truncate">আমাদের সাথে হোয়াটসঅ্যাপে সরাসরি কথা বলুন</p>
+                    <div className="text-xs min-w-0 flex-1">
+                      <p className="font-bold text-[#1C1613] leading-tight truncate">সাইজ বুঝতে সমস্যা হচ্ছে?</p>
+                      <p className="text-[11px] text-[#7C6E65] truncate">আমাদের সাথে হোয়াটসঅ্যাপে কথা বলুন</p>
                     </div>
                   </div>
                   <a
                     href={`https://wa.me/${whatsappPhone}?text=${encodeURIComponent(`হ্যালো PutiMach! আমি "${product.name}" এর সঠিক সাইজ নির্বাচনে সাহায্য চাচ্ছি।`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="shrink-0 bg-[#25D366] hover:bg-[#20ba5a] text-white text-[11px] sm:text-xs font-bold px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl shadow-sm hover:shadow transition-all flex items-center gap-1 active:scale-95"
+                    className="shrink-0 bg-[#25D366] hover:bg-[#20ba5a] text-white text-[11px] sm:text-xs font-bold px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl shadow-sm hover:shadow transition-all flex items-center justify-center gap-1 active:scale-95 text-center"
                   >
                     <span>WhatsApp Help</span>
                   </a>
