@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 
 import { useAuth } from '../context/AuthContext';
 import { useBranding } from '../hooks/useBranding';
+import { supabase } from '../lib/supabase';
 import { Mail, Lock, Loader2, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import orderflowLogo from '../assets/logo.png';
@@ -28,6 +29,26 @@ export const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [siteLogo, setSiteLogo] = useState('/logo.webp');
+
+  useEffect(() => {
+    async function loadLogo() {
+      try {
+        const { data: sData } = await supabase.from('site_settings').select('data').eq('id', 'branding').maybeSingle();
+        if (sData?.data?.logoUrl) {
+          setSiteLogo(sData.data.logoUrl);
+        } else {
+          const { data: cData } = await supabase.from('cb_settings').select('data').eq('id', 'branding').maybeSingle();
+          if (cData?.data?.logoUrl) {
+            setSiteLogo(cData.data.logoUrl);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to fetch site logo:', e);
+      }
+    }
+    loadLogo();
+  }, []);
 
   const { signIn, user, loading: authLoading, userRoles } = useAuth();
   const { appName } = useBranding();
@@ -87,9 +108,17 @@ export const Login = () => {
           <Motion.div variants={itemVariants} className="mb-8 text-center">
             <Motion.div
               whileHover={{ scale: 1.05 }}
-              className="mx-auto mb-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-border bg-background shadow-md"
+              className="mx-auto mb-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-border bg-white shadow-md p-1.5"
             >
-              <img src={typeof orderflowLogo === 'object' ? orderflowLogo.src : orderflowLogo} alt={`${appName} Logo`} className="h-12 w-12 object-contain" />
+              <img
+                src={siteLogo || '/logo.webp'}
+                alt="PutiMach Logo"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = '/logo.webp';
+                }}
+                className="h-full w-full object-contain"
+              />
             </Motion.div>
             <h1 className="font-display text-2xl font-black tracking-tight text-foreground">
               {appName}

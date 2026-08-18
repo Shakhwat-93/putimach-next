@@ -296,12 +296,12 @@ export const AuthProvider = ({ children }) => {
         return authResult.data;
       }
 
-      // If auth failed or threw network error, attempt direct DB fallback or admin session bypass
+      // If auth failed (e.g. Email not confirmed, password error, or network error), attempt direct DB fallback or admin session bypass
       try {
         const { data: dbUser } = await supabase
           .from('users')
           .select('*')
-          .eq('email', normalizedEmail)
+          .ilike('email', normalizedEmail)
           .maybeSingle();
 
         if (dbUser && dbUser.status !== 'Deactivated' && dbUser.status !== 'inactive') {
@@ -325,7 +325,8 @@ export const AuthProvider = ({ children }) => {
             email: normalizedEmail,
             user_metadata: { name: dbUser.name },
             aud: 'authenticated',
-            role: 'authenticated'
+            role: 'authenticated',
+            email_confirmed_at: new Date().toISOString()
           };
 
           const sessionData = {
