@@ -303,6 +303,164 @@ const MultipleImageUploadInput = ({ label, value = [], onChange }) => {
   );
 };
 
+// Reusable Color-Wise Image Manager Component with Direct Image Uploading and Color Tagging
+const ColorImagesEditor = ({ colors = '', colorImages = {}, onChange, onColorsChange }) => {
+  const [uploadingColor, setUploadingColor] = useState(null);
+
+  // Extract all active unique colors from either the comma text or colorImages map
+  const colorList = Array.from(new Set([
+    ...colors.split(',').map(c => c.trim()).filter(Boolean),
+    ...Object.keys(colorImages || {})
+  ]));
+
+  const [newColorInput, setNewColorInput] = useState('');
+
+  const handleAddColor = () => {
+    const trimmed = newColorInput.trim();
+    if (!trimmed) return;
+    if (!colorList.includes(trimmed)) {
+      const updatedColors = [...colorList, trimmed].join(', ');
+      onColorsChange(updatedColors);
+      onChange({ ...(colorImages || {}), [trimmed]: '' });
+    }
+    setNewColorInput('');
+  };
+
+  const handleRemoveColor = (colorToRemove) => {
+    const updatedMap = { ...(colorImages || {}) };
+    delete updatedMap[colorToRemove];
+    onChange(updatedMap);
+    const updatedColors = colorList.filter(c => c !== colorToRemove).join(', ');
+    onColorsChange(updatedColors);
+  };
+
+  const handleImageUrlChange = (color, url) => {
+    onChange({ ...(colorImages || {}), [color]: url });
+  };
+
+  const handleUploadFile = async (color, e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingColor(color);
+    try {
+      const url = await uploadImage(file);
+      if (url) {
+        onChange({ ...(colorImages || {}), [color]: url });
+      }
+    } catch (err) {
+      console.error('Color image upload error:', err);
+      alert('Upload failed: ' + (err.message || 'Error'));
+    } finally {
+      setUploadingColor(null);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-3 md:col-span-2 p-4 rounded-2xl bg-primary/5 border border-primary/20" style={{ gridColumn: '1 / -1' }}>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <label className="text-sm font-bold text-foreground flex items-center gap-2">
+            <span>🎨 Color-Wise Photos (Color Image Upload)</span>
+          </label>
+          <p className="text-xs text-muted-foreground">
+            Add colors (e.g. Black, Orange). Upload a specific photo for each color so clicking that color pill on the storefront loads its exact image!
+          </p>
+        </div>
+      </div>
+
+      {/* Quick Add Color Bar */}
+      <div className="flex gap-2">
+        <input
+          type="text"
+          placeholder="Type color name (e.g. Black, Orange, Navy Blue)..."
+          value={newColorInput}
+          onChange={(e) => setNewColorInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddColor(); } }}
+          className="flex h-9 w-full max-w-sm rounded-xl border border-input bg-background px-3 py-1.5 text-xs font-semibold"
+        />
+        <button
+          type="button"
+          onClick={handleAddColor}
+          className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-3.5 shadow-sm transition-all cursor-pointer"
+        >
+          <Plus size={14} /> Add Color
+        </button>
+      </div>
+
+      {/* Color Cards List */}
+      {colorList.length === 0 ? (
+        <div className="py-4 text-center border border-dashed border-border rounded-xl bg-background/50">
+          <p className="text-xs text-muted-foreground">No colors added yet. Type a color name above to upload color-wise photos.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+          {colorList.map((color) => {
+            const currentImg = colorImages?.[color] || '';
+            const isUploading = uploadingColor === color;
+            return (
+              <div key={color} className="p-3 rounded-xl border border-border bg-background shadow-sm flex items-center gap-3">
+                {/* Thumbnail Preview */}
+                <div className="w-12 h-12 rounded-lg border border-border overflow-hidden bg-secondary/30 shrink-0 flex items-center justify-center relative">
+                  {currentImg ? (
+                    <img src={currentImg} alt={color} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-[9px] font-bold text-muted-foreground text-center px-1">No Pic</span>
+                  )}
+                </div>
+
+                {/* Color Details & Upload */}
+                <div className="flex-1 min-w-0 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-foreground truncate">{color}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveColor(color)}
+                      className="text-muted-foreground hover:text-destructive text-[11px] p-0.5 transition-colors cursor-pointer"
+                      title="Remove this color"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      placeholder={`Photo URL for ${color}`}
+                      value={currentImg}
+                      onChange={(e) => handleImageUrlChange(color, e.target.value)}
+                      className="flex h-7 w-full min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-[11px] font-mono"
+                    />
+                    <label className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white h-7 px-2.5 cursor-pointer shrink-0 shadow-sm transition-all">
+                      {isUploading ? (
+                        <>
+                          <Loader2 size={11} className="animate-spin" />
+                          <span>...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload size={11} />
+                          <span>Upload</span>
+                        </>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={isUploading}
+                        onChange={(e) => handleUploadFile(color, e)}
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Interactive Size Guide (Size Chart) Editor Table Component
 const SizeGuideTableEditor = ({ value, onChange }) => {
   const columns = value?.columns || [];
@@ -712,6 +870,14 @@ export const StorefrontManagement = () => {
         rows: [],
         material: 'Cotton 100%'
       };
+      const existingColorImages = product.color_images || {};
+      const existingVariants = Array.isArray(product.variants) ? product.variants : [];
+      existingVariants.forEach(v => {
+        if (v.color && v.image_url && !existingColorImages[v.color]) {
+          existingColorImages[v.color] = v.image_url;
+        }
+      });
+
       setProdForm({
         name: product.name || '',
         slug: product.slug || '',
@@ -721,10 +887,11 @@ export const StorefrontManagement = () => {
         badge: product.badge || '',
         image: product.image || '',
         images: Array.isArray(product.images) ? product.images : [],
+        color_images: existingColorImages,
         size_guide: product.size_guide && typeof product.size_guide === 'object' && Array.isArray(product.size_guide.columns) ? product.size_guide : defaultSizeGuide,
         features: Array.isArray(product.features) ? product.features.join(', ') : '',
         material: product.material || '',
-        variants: Array.isArray(product.variants) ? product.variants : [],
+        variants: existingVariants,
         description: product.description || '',
         long_description: product.long_description || '',
         in_stock: product.in_stock !== false,
@@ -741,11 +908,11 @@ export const StorefrontManagement = () => {
       setEditingProduct(null);
       setProdForm({
         name: '', slug: '', category: categories[0]?.slug || '', price: '', original_price: '',
-        badge: '', image: '', images: [], size_guide: defaultSizeGuide, 
+        badge: '', image: '', images: [], color_images: {}, size_guide: defaultSizeGuide, 
         features: '100% Premium Material, Custom Oversized Fit, Garment Washed', material: 'Cotton 100%',
         variants: [],
         description: '', long_description: '',
-        in_stock: true, sizes: 'S, M, L, XL', colors: 'Black, White', inventory_id: ''
+        in_stock: true, sizes: 'S, M, L, XL', colors: '', inventory_id: ''
       });
     }
     setIsProductModalOpen(true);
@@ -926,13 +1093,23 @@ export const StorefrontManagement = () => {
 
     // Format tags arrays
     const formattedSizes = prodForm.sizes.split(',').map(s => s.trim()).filter(Boolean);
-    const formattedColors = prodForm.colors.split(',').map(c => c.trim()).filter(Boolean);
+    const colorFromInput = prodForm.colors.split(',').map(c => c.trim()).filter(Boolean);
+    const colorFromMap = Object.keys(prodForm.color_images || {});
+    const formattedColors = Array.from(new Set([...colorFromInput, ...colorFromMap]));
     const formattedFeatures = prodForm.features ? prodForm.features.split(',').map(f => f.trim()).filter(Boolean) : [];
 
+    // Sync color_images to variants if variant is missing image_url
+    const syncedVariants = (prodForm.variants || []).map(v => {
+      if (v.color && !v.image_url && prodForm.color_images?.[v.color]) {
+        return { ...v, image_url: prodForm.color_images[v.color] };
+      }
+      return v;
+    });
+
     // Calculate total variants stock and override in_stock
-    const hasVariants = Array.isArray(prodForm.variants) && prodForm.variants.length > 0;
+    const hasVariants = Array.isArray(syncedVariants) && syncedVariants.length > 0;
     const totalVariantsStock = hasVariants 
-      ? prodForm.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
+      ? syncedVariants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
       : 0;
     
     const isProductInStock = hasVariants ? (totalVariantsStock > 0) : prodForm.in_stock;
@@ -946,10 +1123,11 @@ export const StorefrontManagement = () => {
       badge: prodForm.badge || null,
       image: prodForm.image,
       images: prodForm.images,
+      color_images: prodForm.color_images || {},
       size_guide: prodForm.size_guide,
       features: formattedFeatures,
       material: prodForm.material || null,
-      variants: prodForm.variants || [],
+      variants: syncedVariants,
       description: prodForm.description,
       long_description: prodForm.long_description,
       in_stock: isProductInStock,
@@ -2762,6 +2940,13 @@ export const StorefrontManagement = () => {
                 label="Product Additional Images"
                 value={prodForm.images || []}
                 onChange={(urls) => setProdForm({ ...prodForm, images: urls })}
+              />
+
+              <ColorImagesEditor
+                colors={prodForm.colors}
+                colorImages={prodForm.color_images || {}}
+                onChange={(newMap) => setProdForm({ ...prodForm, color_images: newMap })}
+                onColorsChange={(newColors) => setProdForm({ ...prodForm, colors: newColors })}
               />
 
               <SizeGuideTableEditor
