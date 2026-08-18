@@ -168,10 +168,23 @@ export const InventoryPage = () => {
   };
 
   const handleOpenProductModal = (product = null) => {
-    setSizesInput('S, M, L, XL');
-    setColorsInput('Black, White, Grey');
     if (product) {
       setEditingProduct(product);
+      const existingVariants = Array.isArray(product.variants) ? product.variants : [];
+      const extractedColors = Array.from(new Set([
+        ...(Array.isArray(product.colors) ? product.colors : []),
+        ...existingVariants.map(v => v.color).filter(Boolean),
+        ...Object.keys(product.color_images || {})
+      ])).join(', ');
+
+      const extractedSizes = Array.from(new Set([
+        ...(Array.isArray(product.sizes) ? product.sizes : []),
+        ...existingVariants.map(v => v.size).filter(Boolean)
+      ])).join(', ');
+
+      setSizesInput(extractedSizes || 'S, M, L, XL');
+      setColorsInput(extractedColors || 'Black, Off White, Grey/Ash');
+
       setFormData({
         name: product.name,
         sku: product.sku || '',
@@ -182,14 +195,19 @@ export const InventoryPage = () => {
         selling_price: Number(product.selling_price) || Number(product.unit_price) || 0,
         making_cost: Number(product.making_cost) || 0,
         supports_serial_tracking: Boolean(product.supports_serial_tracking ?? (product.category === 'TOY BOX')),
-        variants: Array.isArray(product.variants) ? product.variants : []
+        image: product.image || '',
+        images: Array.isArray(product.images) ? product.images : [],
+        color_images: product.color_images || {},
+        variants: existingVariants
       });
     } else {
+      setSizesInput('S, M, L, XL');
+      setColorsInput('Black, Off White, Grey/Ash');
       setEditingProduct(null);
       setFormData({
         name: '', sku: '', category: 'Other', current_stock: 0, min_stock_level: 5,
         unit_price: 0, selling_price: 0, making_cost: 0, supports_serial_tracking: false,
-        variants: []
+        image: '', images: [], color_images: {}, variants: []
       });
     }
     setIsProductModalOpen(true);
@@ -769,6 +787,109 @@ export const InventoryPage = () => {
                   placeholder="Your cost to produce"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Section: Product Media & Color-Wise Photos */}
+          <div className="space-y-4 pt-2">
+            <h4 className="text-xs font-bold uppercase tracking-wider border-b border-border pb-1.5 text-muted-foreground font-sans flex items-center justify-between">
+              <span>🖼️ Product Media & Color-Wise Photos</span>
+              <span className="text-[10px] normal-case text-primary font-normal">Add general gallery images + color specific photos</span>
+            </h4>
+
+            {/* Main Cover Image URL */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">Main Cover Image URL</label>
+              <Input
+                value={formData.image || ''}
+                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                placeholder="https://... main product photo URL"
+                className="h-9 text-xs font-mono"
+              />
+            </div>
+
+            {/* Additional Gallery Image URLs */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">Additional Gallery Images (Comma or Newline separated)</label>
+              <textarea
+                rows={2}
+                value={Array.isArray(formData.images) ? formData.images.join('\n') : (formData.images || '')}
+                onChange={(e) => {
+                  const urls = e.target.value.split(/[\n,]/).map(u => u.trim()).filter(Boolean);
+                  setFormData({ ...formData, images: urls });
+                }}
+                placeholder="https://... photo 1&#10;https://... photo 2"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs font-mono ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              />
+            </div>
+
+            {/* Color-Specific Photos Mapping */}
+            <div className="p-3.5 rounded-xl bg-primary/5 border border-primary/20 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  🎨 Color-Wise Specific Photos
+                </span>
+                <span className="text-[10px] text-muted-foreground">Selecting a color on single product page will show these photos</span>
+              </div>
+
+              {/* Grid of detected colors */}
+              {(() => {
+                const uniqueColors = Array.from(new Set([
+                  ...colorsInput.split(',').map(c => c.trim()).filter(Boolean),
+                  ...((formData.variants || []).map(v => v.color).filter(Boolean)),
+                  ...Object.keys(formData.color_images || {})
+                ]));
+
+                if (uniqueColors.length === 0) {
+                  return (
+                    <p className="text-xs text-muted-foreground italic py-1">
+                      Enter colors in the Variations generator below to map color-wise photos.
+                    </p>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {uniqueColors.map((color) => {
+                      const currentUrl = formData.color_images?.[color] || '';
+                      return (
+                        <div key={color} className="p-2.5 rounded-lg border border-border bg-background flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-md border border-border overflow-hidden bg-secondary/30 shrink-0 flex items-center justify-center">
+                            {currentUrl ? (
+                              <img src={currentUrl} alt={color} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-[9px] font-bold text-muted-foreground text-center px-1">No Pic</span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <span className="text-xs font-bold text-foreground block truncate">{color}</span>
+                            <Input
+                              className="h-7 text-[11px] px-2 font-mono"
+                              placeholder={`Photo URL for ${color}`}
+                              value={currentUrl}
+                              onChange={(e) => {
+                                const newUrl = e.target.value;
+                                const updatedColorImages = { ...(formData.color_images || {}), [color]: newUrl };
+                                const updatedVariants = (formData.variants || []).map(v => {
+                                  if (v.color?.toLowerCase() === color.toLowerCase()) {
+                                    return { ...v, image_url: newUrl };
+                                  }
+                                  return v;
+                                });
+                                setFormData({
+                                  ...formData,
+                                  color_images: updatedColorImages,
+                                  variants: updatedVariants
+                                });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           </div>
 

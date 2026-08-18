@@ -141,6 +141,17 @@ export default function ProductDetailView() {
     }
   };
 
+  // Auto-sync selected color pill when scrolling or clicking gallery thumbnails
+  useEffect(() => {
+    const currentImg = images[activeImg];
+    if (currentImg && colorImageMap) {
+      const foundColor = Object.keys(colorImageMap).find(c => colorImageMap[c] === currentImg);
+      if (foundColor && foundColor !== selectedColor) {
+        setSelectedColor(foundColor);
+      }
+    }
+  }, [activeImg, images, colorImageMap]);
+
   const handleShare = async () => {
     if (navigator.share) {
       try {
