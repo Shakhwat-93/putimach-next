@@ -202,13 +202,13 @@ function OrderSummary({ items, subtotal, shipping, total }) {
 /* ─── Field Component ───────────────────────────────────────────────────── */
 function Field({ label, icon: Icon, required, children, hint }) {
   return (
-    <div>
+    <div className="w-full min-w-0">
       <label className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-surface-secondary mb-1.5">
-        <Icon size={11} className="text-brand" />
-        {label} {required && <span className="text-brand">*</span>}
+        <Icon size={11} className="text-brand shrink-0" />
+        <span className="truncate">{label}</span> {required && <span className="text-brand">*</span>}
       </label>
       {children}
-      {hint && <p className="text-[10px] text-surface-muted mt-1">{hint}</p>}
+      {hint && <p className="text-[10px] text-surface-muted mt-1 leading-tight break-words">{hint}</p>}
     </div>
   );
 }
@@ -682,18 +682,18 @@ export default function Checkout() {
   }
 
   return (
-    <div className="min-h-screen relative">
+    <div className="min-h-screen relative w-full max-w-full overflow-x-hidden">
       {/* Subtle background glows */}
       <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-brand/5 rounded-full blur-[160px] pointer-events-none" />
       <div className="fixed bottom-0 left-0 w-[400px] h-[400px] bg-orange-900/10 rounded-full blur-[140px] pointer-events-none" />
 
-      <div className="container-site py-8 lg:py-12 relative z-10">
+      <div className="container-site py-6 sm:py-8 lg:py-12 relative z-10 w-full max-w-full min-w-0 px-3.5 sm:px-6 lg:px-8">
         {/* Back button */}
         <motion.button
           onClick={() => router.back()}
           initial={{ opacity: 0, x: -12 }}
           animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-2 text-surface-muted hover:text-surface-primary text-sm font-medium transition-colors mb-8 group"
+          className="flex items-center gap-2 text-surface-muted hover:text-surface-primary text-sm font-medium transition-colors mb-6 sm:mb-8 group"
         >
           <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
           Back
@@ -704,22 +704,22 @@ export default function Checkout() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="mb-8"
+          className="mb-6 sm:mb-8 w-full max-w-full min-w-0"
         >
           <p className="section-label mb-1">Secure Checkout</p>
-          <h1 className="font-black text-3xl sm:text-4xl text-surface-primary">Complete Your Order</h1>
+          <h1 className="font-black text-2xl sm:text-3xl md:text-4xl text-surface-primary tracking-tight">Complete Your Order</h1>
         </motion.div>
 
-        <form onSubmit={handleSubmit} className="grid lg:grid-cols-5 gap-8 xl:gap-12">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8 xl:gap-12 w-full max-w-full min-w-0">
           {/* ── Left: Form ───────────────────────────────────────────────── */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="lg:col-span-3 space-y-5"
+            className="lg:col-span-3 space-y-4 sm:space-y-5 w-full max-w-full min-w-0"
           >
             {/* Delivery Info Card */}
-            <div className="card p-5 sm:p-6 space-y-5">
+            <div className="card p-4 sm:p-6 space-y-4 sm:space-y-5 rounded-2xl w-full max-w-full min-w-0 overflow-hidden">
               <div className="flex items-center gap-2.5 mb-1">
                 <div className="w-7 h-7 rounded-lg bg-brand/15 border border-brand/20 flex items-center justify-center">
                   <Truck size={14} className="text-brand" />
@@ -769,7 +769,7 @@ export default function Checkout() {
               </Field>
 
               <Field label="Shipping Area" icon={Truck} required>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 w-full min-w-0">
                   {[
                     { id: 'inside', label: 'Inside Dhaka', fee: shippingRates.inside },
                     { id: 'sub', label: 'Sub Dhaka', subtitle: 'Narayanganj, Gazipur, Keraniganj', fee: shippingRates.sub },
@@ -780,19 +780,19 @@ export default function Checkout() {
                       <div
                         key={area.id}
                         onClick={() => setShippingArea(area.id)}
-                        className={`cursor-pointer p-4 rounded-xl border-2 transition-all duration-200 flex flex-col justify-between ${
+                        className={`cursor-pointer p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 flex sm:flex-col justify-between items-center sm:items-start gap-2 w-full min-w-0 ${
                           isSelected
                             ? 'border-brand bg-brand/5 shadow-glow-sm'
                             : 'border-base-300 bg-base-950/40 hover:border-base-400'
                         }`}
                       >
-                        <div>
-                          <p className="font-bold text-xs text-surface-primary">{area.label}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-xs text-surface-primary leading-snug">{area.label}</p>
                           {area.subtitle && (
                             <p className="text-[10px] font-semibold text-brand mt-0.5 leading-tight">{area.subtitle}</p>
                           )}
                         </div>
-                        <p className="font-black text-sm text-brand mt-3">৳{area.fee}</p>
+                        <p className="font-black text-sm text-brand shrink-0 sm:mt-3">৳{area.fee}</p>
                       </div>
                     );
                   })}
@@ -842,7 +842,7 @@ export default function Checkout() {
             </div>
 
             {/* Payment Method Card */}
-            <div className="card p-5 sm:p-6">
+            <div className="card p-4 sm:p-6 rounded-2xl w-full max-w-full min-w-0 overflow-hidden">
               <div className="flex items-center gap-2.5 mb-4">
                 <div className="w-7 h-7 rounded-lg bg-brand/15 border border-brand/20 flex items-center justify-center">
                   <CreditCard size={14} className="text-brand" />
@@ -850,11 +850,11 @@ export default function Checkout() {
                 <h2 className="font-black text-base text-surface-primary">Payment Method</h2>
               </div>
 
-              <div className="p-4 rounded-xl border-2 border-brand/40 bg-brand/5 flex items-center gap-3">
+              <div className="p-3.5 sm:p-4 rounded-xl border-2 border-brand/40 bg-brand/5 flex items-center gap-3 w-full min-w-0">
                 <div className="w-10 h-10 rounded-xl bg-brand/20 flex items-center justify-center flex-shrink-0">
                   <Zap size={18} className="text-brand" />
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="font-bold text-sm text-surface-primary">Cash on Delivery</p>
                   <p className="text-[10px] text-surface-muted mt-0.5">Pay when you receive your order</p>
                 </div>
@@ -870,20 +870,20 @@ export default function Checkout() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            className="lg:col-span-2"
+            className="lg:col-span-2 w-full max-w-full min-w-0"
           >
-            <div className="card p-5 sm:p-6 sticky top-24 space-y-5">
+            <div className="card p-4 sm:p-6 lg:sticky lg:top-24 space-y-4 sm:space-y-5 rounded-2xl w-full max-w-full min-w-0 overflow-hidden">
               {/* WhatsApp Size Assistance / Help Banner */}
-              <div className="p-3.5 rounded-xl bg-[#25D366]/10 border border-[#25D366]/30 flex items-center justify-between gap-3 shadow-sm">
-                <div className="flex items-center gap-2.5 min-w-0">
+              <div className="p-3 sm:p-3.5 rounded-xl bg-[#25D366]/10 border border-[#25D366]/30 flex items-center justify-between gap-2.5 sm:gap-3 shadow-sm w-full min-w-0">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
                   <div className="w-8 h-8 rounded-full bg-[#25D366] text-white flex items-center justify-center shrink-0 shadow-md">
                     <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                       <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-1.151 4.204 4.294-1.127z"/>
                     </svg>
                   </div>
-                  <div className="text-xs min-w-0">
+                  <div className="text-xs min-w-0 flex-1">
                     <p className="font-bold text-[#1C1613] dark:text-white leading-tight">সাইজ বা অর্ডার নিয়ে কনফিউশন?</p>
-                    <p className="text-[11px] text-surface-muted truncate">হোয়াটসঅ্যাপে আমাদের সাথে সরাসরি কথা বলুন</p>
+                    <p className="text-[10px] text-surface-muted truncate">হোয়াটসঅ্যাপে সরাসরি কথা বলুন</p>
                   </div>
                 </div>
                 <a
@@ -904,7 +904,7 @@ export default function Checkout() {
                 disabled={submitting || items.length === 0}
                 whileHover={!submitting ? { scale: 1.015, y: -2 } : {}}
                 whileTap={!submitting ? { scale: 0.98 } : {}}
-                className="w-full py-4 rounded-xl bg-brand hover:bg-brand-400 text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all duration-300 shadow-glow hover:shadow-glow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3.5 sm:py-4 rounded-xl bg-brand hover:bg-brand-400 text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all duration-300 shadow-glow hover:shadow-glow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submitting ? (
                   <>
