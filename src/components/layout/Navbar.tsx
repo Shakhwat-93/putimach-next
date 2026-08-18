@@ -21,10 +21,15 @@ export default function Navbar() {
     logoUrl: '/logo.webp',
     brandName: 'PutiMach'
   });
+  const [mounted, setMounted] = useState(false);
 
   const { openCart, items, badgeBouncing } = useCartStore();
   const pathname = usePathname();
   const router = useRouter();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     async function fetchCategories() {
@@ -233,7 +238,7 @@ export default function Navbar() {
                 aria-label="Shopping Cart"
               >
                 <ShoppingBag size={22} />
-                {totalItems > 0 && (
+                {mounted && totalItems > 0 && (
                   <span className={`absolute -top-1 -right-1 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center border border-[#FDFBF7] transition-all duration-300 ${badgeBouncing ? 'scale-125 bg-[#FF5533] text-white shadow-lg' : 'bg-[#1C1613] text-[#C5A880]'}`}>
                     {totalItems}
                   </span>
