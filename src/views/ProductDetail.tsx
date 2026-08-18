@@ -253,7 +253,7 @@ export default function ProductDetailView() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] pt-16 lg:pt-24 pb-28 lg:pb-20 text-[#1C1613]">
+    <div className="min-h-screen bg-[#FDFBF7] pt-32 lg:pt-24 pb-28 lg:pb-20 text-[#1C1613]">
       
       {/* Mobile Sticky Navigation Header Bar */}
       <motion.div
