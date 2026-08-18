@@ -815,8 +815,9 @@ export const InventoryPage = () => {
                     <tr>
                       <th className="p-2 font-medium">Size</th>
                       <th className="p-2 font-medium">Color</th>
+                      <th className="p-2 font-medium min-w-[160px]">Color Image URL</th>
                       <th className="p-2 font-medium">SKU</th>
-                      <th className="p-2 font-medium w-24">Stock</th>
+                      <th className="p-2 font-medium w-20">Stock</th>
                       <th className="p-2 font-medium text-right">Action</th>
                     </tr>
                   </thead>
@@ -828,6 +829,9 @@ export const InventoryPage = () => {
                         </td>
                         <td className="p-2">
                           <Input className="h-7 text-xs px-2" placeholder="Black" value={v.color || ''} onChange={(e) => handleVariantChange(idx, 'color', e.target.value)} />
+                        </td>
+                        <td className="p-2">
+                          <Input className="h-7 text-xs px-2" placeholder="https://... photo URL" value={v.image_url || v.image || ''} onChange={(e) => handleVariantChange(idx, 'image_url', e.target.value)} />
                         </td>
                         <td className="p-2">
                           <Input className="h-7 text-xs px-2 font-mono" placeholder="SKU" value={v.sku || ''} onChange={(e) => handleVariantChange(idx, 'sku', e.target.value)} />

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -81,9 +81,30 @@ export default function ProductDetailView() {
     loadContactPhone();
   }, []);
 
+  // Map images by color variant for fast color lookup
+  const colorImageMap = useMemo(() => {
+    const map = {};
+    if (product?.color_images) {
+      Object.assign(map, product.color_images);
+    }
+    if (Array.isArray(product?.variants)) {
+      product.variants.forEach((v) => {
+        const img = v.image_url || v.image;
+        if (v.color && img && !map[v.color]) {
+          map[v.color] = img;
+        }
+      });
+    }
+    return map;
+  }, [product]);
+
   const mainImage = product?.image || (Array.isArray(product?.images) && product.images[0]);
   const otherImages = Array.isArray(product?.images) ? product.images.filter(img => img && img !== mainImage) : [];
-  const images = product ? [mainImage, ...otherImages].filter(Boolean) : [];
+  const variantImageList = Object.values(colorImageMap);
+  const images = product
+    ? Array.from(new Set([mainImage, ...variantImageList, ...otherImages].filter(Boolean)))
+    : [];
+
   const sliderRef = useRef(null);
 
   const totalCartCount = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -106,6 +127,17 @@ export default function ProductDetailView() {
         left: width * index,
         behavior: 'smooth'
       });
+    }
+  };
+
+  const handleSelectColor = (color) => {
+    setSelectedColor(color);
+    const colorImg = colorImageMap[color] || product?.variants?.find(v => String(v.color).toLowerCase() === String(color).toLowerCase() && (v.image_url || v.image))?.image_url;
+    if (colorImg) {
+      const matchIndex = images.indexOf(colorImg);
+      if (matchIndex !== -1) {
+        handleThumbnailClick(matchIndex);
+      }
     }
   };
 
@@ -474,7 +506,7 @@ export default function ProductDetailView() {
                     return (
                       <button
                         key={color}
-                        onClick={() => setSelectedColor(color)}
+                        onClick={() => handleSelectColor(color)}
                         className={`max-w-full px-3.5 py-2 rounded-xl font-bold text-xs text-left transition-all duration-200 border whitespace-normal break-words leading-snug ${
                           isSelected
                             ? 'border-[#1C1613] bg-[#1C1613] text-white shadow-sm'
