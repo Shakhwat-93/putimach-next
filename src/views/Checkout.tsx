@@ -369,6 +369,11 @@ function SuccessScreen({ orderNumber, items, total, onContinue }) {
 export default function Checkout() {
   const router = useRouter();
   const { items, clearCart } = useCartStore();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [form, setForm] = useState({
     name: '',
@@ -664,6 +669,17 @@ export default function Checkout() {
 
   if (success) {
     return <SuccessScreen orderNumber={orderNumber} items={orderedItems} total={total} onContinue={() => router.push('/')} />;
+  }
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="animate-spin text-brand" size={32} />
+          <p className="text-xs text-surface-muted">Loading your order details...</p>
+        </div>
+      </div>
+    );
   }
 
   if (items.length === 0) {

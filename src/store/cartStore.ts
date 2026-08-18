@@ -1,20 +1,47 @@
 // @ts-nocheck
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
+
+const CART_STORAGE_KEY = 'putimach-cart';
+
+const getInitialItems = () => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(CART_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed?.state?.items)) {
+        return parsed.state.items;
+      }
+      if (Array.isArray(parsed?.items)) {
+        return parsed.items;
+      }
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.warn('[CartStore] Initial cache load skipped:', e);
+  }
+  return [];
+};
 
 const useCartStore = create(
   persist(
     (set, get) => ({
-      items: [],
+      items: getInitialItems(),
       isOpen: false,
       flyingItems: [],
       badgeBouncing: false,
+      _hasHydrated: typeof window !== 'undefined',
 
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
       openCart: () => set({ isOpen: true }),
       closeCart: () => set({ isOpen: false }),
       toggleCart: () => set(state => ({ isOpen: !state.isOpen })),
 
       triggerFlyToCart: (imageSrc, clickEventOrRect) => {
+        if (typeof window === 'undefined') return;
         let startX = window.innerWidth / 2;
         let startY = window.innerHeight / 2;
 
@@ -68,16 +95,22 @@ const useCartStore = create(
         const key = `${product.id}-${size}-${color || 'None'}`;
         const existing = items.find(i => i.key === key);
 
+        let newItems;
         if (existing) {
-          set({
-            items: items.map(i =>
-              i.key === key ? { ...i, quantity: i.quantity + quantity } : i
-            ),
-          });
+          newItems = items.map(i =>
+            i.key === key ? { ...i, quantity: i.quantity + quantity } : i
+          );
         } else {
-          set({
-            items: [...items, { key, product, size, color, quantity }],
-          });
+          newItems = [...items, { key, product, size, color, quantity }];
+        }
+
+        set({ items: newItems });
+
+        // Save fallback immediately
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ state: { items: newItems }, version: 0 }));
+          } catch (e) {}
         }
 
         // Trigger Fly To Cart animation
@@ -95,7 +128,13 @@ const useCartStore = create(
       },
 
       removeItem: (key) => {
-        set(state => ({ items: state.items.filter(i => i.key !== key) }));
+        const newItems = get().items.filter(i => i.key !== key);
+        set({ items: newItems });
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ state: { items: newItems }, version: 0 }));
+          } catch (e) {}
+        }
       },
 
       updateQuantity: (key, quantity) => {
@@ -103,12 +142,23 @@ const useCartStore = create(
           get().removeItem(key);
           return;
         }
-        set(state => ({
-          items: state.items.map(i => i.key === key ? { ...i, quantity } : i),
-        }));
+        const newItems = get().items.map(i => i.key === key ? { ...i, quantity } : i);
+        set({ items: newItems });
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ state: { items: newItems }, version: 0 }));
+          } catch (e) {}
+        }
       },
 
-      clearCart: () => set({ items: [] }),
+      clearCart: () => {
+        set({ items: [] });
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ state: { items: [] }, version: 0 }));
+          } catch (e) {}
+        }
+      },
 
       // Derived selectors
       getTotalItems: () => get().items.reduce((sum, i) => sum + i.quantity, 0),
@@ -123,8 +173,16 @@ const useCartStore = create(
       },
     }),
     {
-      name: 'putimach-cart',
+      name: CART_STORAGE_KEY,
+      storage: createJSONStorage(() => (typeof window !== 'undefined' ? localStorage : {
+        getItem: () => null,
+        setItem: () => {},
+        removeItem: () => {},
+      })),
       partialize: (state) => ({ items: state.items }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );
