@@ -488,6 +488,30 @@ export const api = {
     const roleId = String(userData?.role || 'Call Team').trim() || 'Call Team';
 
     try {
+      // 1. Call server-side admin API route to auto-confirm and create user
+      try {
+        const res = await fetch('/admin-api/create-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: normalizedEmail,
+            password: userData?.password,
+            name: displayName,
+            role: roleId
+          })
+        });
+        const resData = await res.json();
+        if (resData?.success && resData?.user?.id) {
+          return {
+            user: { id: resData.user.id, email: normalizedEmail },
+            profile: { id: resData.user.id, name: displayName, email: normalizedEmail, status: 'Active' },
+            role: roleId
+          };
+        }
+      } catch (apiErr) {
+        console.warn('[Admin Create User] API route fallback notice:', apiErr);
+      }
+
       let createdUserId = null;
 
       try {
