@@ -4,10 +4,24 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 
 const CART_STORAGE_KEY = 'putimach-cart';
 
+function getInitialCartItems() {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(CART_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed?.state?.items) 
+      ? parsed.state.items 
+      : (Array.isArray(parsed?.items) ? parsed.items : []);
+  } catch (e) {
+    return [];
+  }
+}
+
 const useCartStore = create(
   persist(
     (set, get) => ({
-      items: [],
+      items: getInitialCartItems(),
       isOpen: false,
       flyingItems: [],
       badgeBouncing: false,
@@ -159,7 +173,15 @@ const useCartStore = create(
       })),
       partialize: (state) => ({ items: state.items }),
       onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
+        if (state) {
+          state.setHasHydrated(true);
+          if ((!state.items || state.items.length === 0) && typeof window !== 'undefined') {
+            const localItems = getInitialCartItems();
+            if (localItems.length > 0) {
+              state.items = localItems;
+            }
+          }
+        }
       },
     }
   )

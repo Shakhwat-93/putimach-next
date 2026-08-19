@@ -682,6 +682,15 @@ export default function Checkout() {
     );
   }
 
+  if (!mounted) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-[#FDFBF7]">
+        <Loader2 className="animate-spin text-[#C5A880]" size={36} />
+        <p className="text-xs uppercase tracking-widest text-[#1C1613]/60 font-mono">Loading Checkout...</p>
+      </div>
+    );
+  }
+
   if (items.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
