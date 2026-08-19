@@ -793,38 +793,31 @@ export default function Checkout() {
                   ].map((area) => {
                     const isSelected = shippingArea === area.id;
                     return (
-                      <label
+                      <button
+                        type="button"
                         key={area.id}
                         onClick={() => setShippingArea(area.id)}
-                        className={`relative cursor-pointer select-none p-3.5 sm:p-4 rounded-2xl border-2 transition-all duration-200 flex sm:flex-col justify-between items-center sm:items-start gap-2.5 w-full min-w-0 active:scale-[0.98] ${
+                        className={`w-full text-left p-3.5 sm:p-4 rounded-2xl border-2 transition-all duration-150 flex sm:flex-col justify-between items-center sm:items-start gap-2.5 min-w-0 cursor-pointer select-none active:scale-[0.98] ${
                           isSelected
-                            ? 'border-brand bg-brand/10 shadow-sm ring-1 ring-brand'
-                            : 'border-base-300 bg-white hover:border-brand/40 hover:bg-base-50/50'
+                            ? 'border-[#C5A880] bg-[#C5A880]/15 shadow-sm ring-2 ring-[#C5A880]/30'
+                            : 'border-[#E9E2D2] bg-white hover:border-[#C5A880]/50 hover:bg-[#FDFBF7]'
                         }`}
                       >
-                        <input
-                          type="radio"
-                          name="shipping_area"
-                          value={area.id}
-                          checked={isSelected}
-                          onChange={() => setShippingArea(area.id)}
-                          className="sr-only"
-                        />
-                        <div className="min-w-0 flex-1 flex items-start gap-2.5 pointer-events-none">
+                        <div className="min-w-0 flex-1 flex items-start gap-2.5">
                           <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                            isSelected ? 'border-brand' : 'border-gray-300'
+                            isSelected ? 'border-[#C5A880]' : 'border-gray-300'
                           }`}>
-                            {isSelected && <div className="w-2 h-2 rounded-full bg-brand" />}
+                            {isSelected && <div className="w-2 h-2 rounded-full bg-[#C5A880]" />}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="font-bold text-xs text-surface-primary leading-snug">{area.label}</p>
+                            <p className="font-bold text-xs text-[#1C1613] leading-snug">{area.label}</p>
                             {area.subtitle && (
-                              <p className="text-[10px] font-semibold text-brand mt-0.5 leading-tight">{area.subtitle}</p>
+                              <p className="text-[10px] font-semibold text-[#C5A880] mt-0.5 leading-tight">{area.subtitle}</p>
                             )}
                           </div>
                         </div>
-                        <p className="font-black text-sm text-brand shrink-0 sm:mt-2 sm:pl-6.5 pointer-events-none">৳{area.fee}</p>
-                      </label>
+                        <p className="font-black text-sm text-[#C5A880] shrink-0 sm:mt-2 sm:pl-6.5">৳{area.fee}</p>
+                      </button>
                     );
                   })}
                 </div>
