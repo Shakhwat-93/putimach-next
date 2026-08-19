@@ -89,7 +89,7 @@ const DialogContent = ({ className, children, title, subtitle, onClose, size = '
               exit={{ opacity: 0, scale: 0.95, y: 8 }}
               transition={{ duration: 0.22, ease: "easeOut" }}
               className={cn(
-                "relative z-10 w-full max-h-[85vh] max-h-[85dvh] flex flex-col overflow-hidden rounded-3xl border border-border/80 bg-card p-5 sm:p-7 shadow-2xl",
+                "relative z-10 w-full max-w-[calc(100vw-24px)] max-h-[85vh] max-h-[85dvh] flex flex-col overflow-hidden rounded-2xl sm:rounded-3xl border border-border/80 bg-card p-4 sm:p-6 shadow-2xl my-auto",
                 sizeClass,
                 className
               )}

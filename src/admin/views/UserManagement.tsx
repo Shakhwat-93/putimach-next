@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Modal } from '../components/Modal';
 import { Input } from '../components/ui/input';
+import { StatusBadge } from '../components/StatusBadge';
 import { PremiumSearch } from '../components/PremiumSearch';
 import { useConfirmDialog } from '../hooks/useConfirmDialog';
 
@@ -386,10 +387,7 @@ export const UserManagement = () => {
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${userItem.status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400'}`}>
-                      <span className={`h-1.5 w-1.5 rounded-full ${userItem.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
-                      {userItem.status === 'active' ? 'Active' : 'Inactive'}
-                    </span>
+                    <StatusBadge status={userItem.status === 'active' ? 'Active' : 'Inactive'} size="sm" />
 
                     <button 
                       onClick={() => handleEditUser(userItem)}
@@ -520,10 +518,7 @@ export const UserManagement = () => {
                       </div>
                     </td>
                     <td className="px-4 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold ${userItem.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${userItem.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
-                        {userItem.status === 'active' ? 'Active' : 'Inactive'}
-                      </span>
+                      <StatusBadge status={userItem.status === 'active' ? 'Active' : 'Inactive'} size="sm" />
                     </td>
                     <td className="px-4 py-4 text-sm text-muted-foreground whitespace-nowrap">
                       {new Date(userItem.created_at).toLocaleDateString(undefined, {

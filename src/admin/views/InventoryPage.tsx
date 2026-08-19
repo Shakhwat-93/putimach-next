@@ -22,6 +22,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
+import { StatusBadge } from '../components/StatusBadge';
 
 const DEFAULT_CATEGORIES = ['TOY BOX', 'ORGANIZER', 'Bags', 'Accessories', 'Religious', 'Other'];
 
@@ -536,22 +537,7 @@ export const InventoryPage = () => {
                   <div className="aspect-square bg-muted overflow-hidden relative p-4 flex items-center justify-center">
                      <Package size={48} className="text-muted-foreground/30 group-hover:scale-110 transition-transform duration-300" />
                      <div className="absolute top-2 right-2">
-                        <Badge 
-                           variant="outline" 
-                           className={cn(
-                             "border-transparent font-medium shadow-sm",
-                             stockStatus === 'Out of Stock' ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : 
-                             stockStatus === 'Low Stock' ? "bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900/50 dark:text-amber-400" : 
-                             "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-400"
-                           )}
-                        >
-                           <div className={cn(
-                             "w-1.5 h-1.5 rounded-full mr-1.5",
-                             stockStatus === 'Out of Stock' ? "bg-current" : 
-                             stockStatus === 'Low Stock' ? "bg-amber-500" : "bg-emerald-500"
-                           )} />
-                           {stockStatus}
-                        </Badge>
+                        <StatusBadge status={stockStatus} size="sm" />
                      </div>
                   </div>
                   <div className="p-4 space-y-2 flex-1 flex flex-col">

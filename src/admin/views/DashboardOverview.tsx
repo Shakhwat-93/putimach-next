@@ -212,7 +212,7 @@ export const DashboardOverview = () => {
             </div>
           </div>
           <Link 
-            href="/orders" 
+            href="/admin/orders" 
             className="inline-flex items-center justify-center rounded-lg bg-destructive text-destructive-foreground px-4 py-2 text-sm font-bold shadow transition-colors hover:bg-destructive/90 shrink-0"
           >
             Take Action Now →

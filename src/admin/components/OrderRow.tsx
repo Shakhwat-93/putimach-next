@@ -6,6 +6,7 @@ import ReactDOM from 'react-dom';
 import { FileText, AlertTriangle, Phone, Copy, MessageCircle, Edit2, Printer, Trash2 } from 'lucide-react';
 import CurrencyIcon from './CurrencyIcon';
 import { ResponseTimer } from './ResponseTimer';
+import { StatusBadge } from './StatusBadge';
 import './OrderRow.css';
 
 /**
@@ -268,11 +269,12 @@ export const OrderRow = ({ order, onDetails, onStatusChange, onEdit, onPrint, on
       <td className="px-3 py-2.5 whitespace-nowrap align-middle" onClick={(e) => e.stopPropagation()}>
         <div className="relative inline-block" ref={statusBtnRef}>
           <button 
-            className={`saas-badge saas-badge-${getStatusBadgeVariant(order.status)} clickable`}
+            type="button"
+            className="cursor-pointer hover:opacity-85 transition-opacity"
             onClick={toggleStatusMenu}
+            title="Click to change status"
           >
-            <span className="dot"></span>
-            {order.status}
+            <StatusBadge status={order.status} size="sm" />
           </button>
           
           {showStatusMenu && ReactDOM.createPortal(

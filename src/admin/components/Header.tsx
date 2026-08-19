@@ -198,7 +198,7 @@ export const Header = ({ onMenuToggle }) => {
 
         {/* Search dropdown */}
         {isSearchDropdownOpen && searchQuery.trim() && (
-          <div className="absolute top-full left-0 mt-2 w-full min-w-[320px] rounded-2xl border border-border bg-card shadow-xl z-50 overflow-hidden animate-slide-up">
+          <div className="absolute top-full left-0 mt-2 w-full min-w-[260px] sm:min-w-[320px] max-w-[calc(100vw-24px)] rounded-2xl border border-border bg-card shadow-xl z-50 overflow-hidden animate-slide-up">
             {searchResults.orders.length > 0 && (
               <div>
                 <div className="flex items-center gap-1.5 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground border-b border-border/50">
@@ -337,7 +337,7 @@ export const Header = ({ onMenuToggle }) => {
         </button>
 
         {isNotifOpen && (
-          <div className="absolute right-0 top-full mt-2 w-80 rounded-2xl border border-border bg-card shadow-2xl z-50 overflow-hidden animate-slide-up">
+          <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-24px)] rounded-2xl border border-border bg-card shadow-2xl z-50 overflow-hidden animate-slide-up">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
               <h3 className="font-display text-sm font-bold text-foreground">Notifications</h3>
@@ -430,7 +430,7 @@ export const Header = ({ onMenuToggle }) => {
         </button>
 
         {isDropdownOpen && (
-          <div className="absolute right-0 top-full mt-2 w-52 rounded-2xl border border-border bg-card shadow-2xl z-50 overflow-hidden animate-slide-up">
+          <div className="absolute right-0 top-full mt-2 w-52 max-w-[calc(100vw-24px)] rounded-2xl border border-border bg-card shadow-2xl z-50 overflow-hidden animate-slide-up">
             <div className="border-b border-border px-4 py-3">
               <p className="text-sm font-bold text-foreground">{profile?.name || 'User'}</p>
               <p className="text-xs text-muted-foreground">{primaryRole}</p>

@@ -9,8 +9,10 @@ import { DateRangePicker } from '../components/DateRangePicker';
 import { 
   Search, PhoneCall, CheckCircle, XCircle, Clock, PhoneMissed, 
   PhoneOff, Edit2, Loader2, ShieldCheck, ShieldAlert, Shield, 
-  UserCheck, RotateCcw, Truck, Zap, Calendar, TrendingUp, Settings2, PauseCircle
+  UserCheck, RotateCcw, Truck, Zap, Calendar, TrendingUp, Settings2, PauseCircle,
+  Phone, Copy, MessageCircle
 } from 'lucide-react';
+import { StatusBadge } from '../components/StatusBadge';
 import { useAuth } from '../context/AuthContext';
 import { useCourierRatio } from '../context/CourierRatioContext';
 import api from '../lib/api';
@@ -112,26 +114,7 @@ const getCallStatusToneClass = (value = '') => {
   return 'bg-gray-100 text-gray-700 border-gray-200';
 };
 
-const StatusBadge = ({ status }) => {
-  let dotColor = 'bg-gray-500';
-  let textColor = 'text-gray-700';
-  let bgColor = 'bg-gray-50';
-  let borderColor = 'border-gray-200';
-  
-  if (status.includes('Pending')) { dotColor = 'bg-amber-500'; textColor = 'text-amber-700'; bgColor = 'bg-amber-50'; borderColor = 'border-amber-200'; }
-  if (status === 'Confirmed') { dotColor = 'bg-emerald-500'; textColor = 'text-emerald-700'; bgColor = 'bg-emerald-50'; borderColor = 'border-emerald-200'; }
-  if (status === 'Cancelled') { dotColor = 'bg-rose-500'; textColor = 'text-rose-700'; bgColor = 'bg-rose-50'; borderColor = 'border-rose-200'; }
-  if (status === 'Fake Order') { dotColor = 'bg-red-500'; textColor = 'text-red-700'; bgColor = 'bg-red-50'; borderColor = 'border-red-200'; }
-  if (status.includes('Final Call')) { dotColor = 'bg-orange-500'; textColor = 'text-orange-700'; bgColor = 'bg-orange-50'; borderColor = 'border-orange-200'; }
-  if (status === 'In Transit') { dotColor = 'bg-sky-500'; textColor = 'text-sky-700'; bgColor = 'bg-sky-50'; borderColor = 'border-sky-200'; }
 
-  return (
-    <div className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border", bgColor, textColor, borderColor)}>
-      <span className={cn("h-1.5 w-1.5 rounded-full", dotColor)} />
-      {status}
-    </div>
-  );
-};
 
 export const CallTeamPanel = () => {
   const { orders, stats, inventory, updateOrderStatus, fetchOrders } = useOrders();
@@ -743,22 +726,22 @@ export const CallTeamPanel = () => {
           const isActionable = order.status === 'New' || order.status === 'Pending Call' || order.status === 'Final Call Pending';
           
           return (
-            <div key={order.id} className="rounded-2xl border border-border bg-card p-4 space-y-3 shadow-sm" onClick={() => handleRowClick(order)}>
+            <div key={order.id} className="rounded-2xl border border-border bg-card p-4 space-y-3 shadow-sm transition-all active:scale-[0.99] cursor-pointer" onClick={() => handleRowClick(order)}>
               <div className="flex justify-between items-start gap-3">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center justify-center w-10 h-10 rounded-full bg-secondary text-muted-foreground font-bold shrink-0">
                     {getInitials(order.customer_name)}
                   </div>
                   <div>
-                    <div className="font-semibold text-foreground">{order.customer_name}</div>
-                    <div className="text-sm font-bold flex items-center gap-1 text-foreground">
-                      <CurrencyIcon size={12} className="text-muted-foreground" />
+                    <div className="font-semibold text-sm text-foreground">{order.customer_name}</div>
+                    <div className="text-xs font-bold flex items-center gap-1 text-foreground">
+                      <CurrencyIcon size={11} className="text-muted-foreground" />
                       {Number(order.amount || 0).toLocaleString()}
                     </div>
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-1">
-                  <StatusBadge status={order.status} />
+                  <StatusBadge status={order.status} size="sm" />
                   {order.last_call_status && !['Confirmed', 'Cancelled'].includes(order.status) && (
                     <span className={cn(
                       "px-2 py-0.5 rounded text-[10px] font-bold border",
@@ -766,6 +749,44 @@ export const CallTeamPanel = () => {
                     )}>
                       {order.last_call_status}
                     </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Phone quick actions */}
+              <div className="flex items-center justify-between bg-secondary/30 rounded-xl px-3 py-2 text-xs" onClick={e => e.stopPropagation()}>
+                <span className="font-mono text-muted-foreground font-medium">{order.phone || 'No Phone'}</span>
+                <div className="flex items-center gap-1.5">
+                  {order.phone && (
+                    <>
+                      <button 
+                        type="button"
+                        className="p-1.5 rounded-lg bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+                        onClick={() => {
+                          navigator.clipboard.writeText(order.phone);
+                          showSuccess?.('Phone copied to clipboard');
+                        }}
+                        title="Copy phone"
+                      >
+                        <Copy size={12} />
+                      </button>
+                      <a 
+                        href={`tel:${order.phone}`}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary text-primary-foreground font-bold text-[11px] hover:bg-primary/90 transition-colors shadow-2xs"
+                        title="Call"
+                      >
+                        <PhoneCall size={12} /> Call
+                      </a>
+                      <a 
+                        href={`https://wa.me/${String(order.phone).replace(/\D/g, '').startsWith('0') ? `88${String(order.phone).replace(/\D/g, '')}` : String(order.phone).replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 hover:opacity-80 transition-opacity"
+                        title="WhatsApp"
+                      >
+                        <MessageCircle size={12} />
+                      </a>
+                    </>
                   )}
                 </div>
               </div>

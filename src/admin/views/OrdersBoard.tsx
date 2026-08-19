@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Card } from '../components/Card';
 import { Badge } from '../components/Badge';
+import { StatusBadge } from '../components/StatusBadge';
 import { Search, Globe, ChevronDown, ChevronLeft, ChevronRight, CheckCircle, Clock, Printer, Trash2, X, AlertTriangle, Edit2, Plus, Download, Calendar, MoreHorizontal, Phone, Sparkles, Copy, MessageCircle } from 'lucide-react';
 import CurrencyIcon from '../components/CurrencyIcon';
 import { useConfirmDialog } from '../hooks/useConfirmDialog';
@@ -1055,94 +1056,123 @@ export const OrdersBoard = () => {
         {Array.isArray(pagedOrders) && pagedOrders.map(order => (
           <div
             key={order.id}
-            className={`rounded-2xl border border-border bg-card p-4 shadow-sm relative ${isOrderUnread(order) ? 'ring-2 ring-primary/20' : ''}`}
+            className={`rounded-2xl border border-border bg-card p-4 shadow-sm relative transition-all active:scale-[0.99] cursor-pointer ${isOrderUnread(order) ? 'ring-2 ring-primary/30' : ''}`}
             onClick={() => handleRowClick(order)}
           >
-            <div className="flex justify-between items-start mb-3">
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  {isOrderUnread(order) && <span className="w-2 h-2 rounded-full bg-primary" />}
-                  <span className="text-xs font-medium text-muted-foreground">#{String(order.id).replace('ORD-', '').replace('STB-', '').replace('MGB-', '').slice(0, 8)}</span>
+            <div className="flex justify-between items-start gap-2 mb-2.5">
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-1.5">
+                  {isOrderUnread(order) && <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
+                  <span className="text-xs font-mono font-bold text-foreground">#{String(order.id).replace('ORD-', '').replace('STB-', '').replace('MGB-', '').slice(0, 8)}</span>
                 </div>
-                <div className="text-xs text-muted-foreground">
+                <span className="text-[11px] text-muted-foreground">
                   {order.created_at ? new Date(order.created_at).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }) : 'N/A'}
-                </div>
+                </span>
               </div>
-              <Badge variant={getStatusBadgeVariant(order.status)}>
-                {order.status}
-              </Badge>
+              <StatusBadge status={order.status} size="sm" />
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               <div>
-                <h3 className="font-semibold text-foreground text-lg">{order.customer_name}</h3>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                  <Phone size={14} />
-                  <span>{order.phone}</span>
-                  <div className="flex items-center gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
-                    <button className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground" onClick={(e) => copyPhoneNumber(e, order.phone)}><Copy size={14} /></button>
-                    <a href={order.phone ? `tel:${order.phone}` : undefined} className="p-1.5 rounded-md hover:bg-secondary text-primary" onClick={(e) => e.stopPropagation()}><Phone size={14} /></a>
+                <h3 className="font-bold text-sm text-foreground">{order.customer_name}</h3>
+                <div className="flex items-center justify-between gap-2 mt-1">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
+                    <Phone size={12} className="text-muted-foreground/60" />
+                    <span>{order.phone}</span>
+                  </div>
+                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    <button 
+                      type="button"
+                      className="p-1.5 rounded-lg bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors cursor-pointer" 
+                      onClick={(e) => copyPhoneNumber(e, order.phone)}
+                      title="Copy phone"
+                    >
+                      <Copy size={13} />
+                    </button>
+                    {order.phone && (
+                      <a 
+                        href={`tel:${order.phone}`} 
+                        className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors" 
+                        onClick={(e) => e.stopPropagation()}
+                        title="Call customer"
+                      >
+                        <Phone size={13} />
+                      </a>
+                    )}
                     {getWhatsAppLink(order.phone) && (
-                      <a href={getWhatsAppLink(order.phone)} target="_blank" rel="noreferrer" className="p-1.5 rounded-md hover:bg-green-50 text-green-600" onClick={(e) => e.stopPropagation()}><MessageCircle size={14} /></a>
+                      <a 
+                        href={getWhatsAppLink(order.phone)} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 hover:opacity-80 transition-opacity" 
+                        onClick={(e) => e.stopPropagation()}
+                        title="WhatsApp chat"
+                      >
+                        <MessageCircle size={13} />
+                      </a>
                     )}
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 p-3 bg-secondary/30 rounded-xl">
+              <div className="grid grid-cols-2 gap-2 p-2.5 bg-secondary/40 rounded-xl border border-border/50">
                 <div>
-                  <span className="text-xs text-muted-foreground block mb-1">Product</span>
-                  <span className="text-sm font-medium text-foreground block">{order.product_name}</span>
-                  <span className="text-xs text-muted-foreground">{order.size || 'No Size'}</span>
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">Item</span>
+                  <span className="text-xs font-semibold text-foreground truncate block">{order.product_name}</span>
+                  <span className="text-[10px] text-muted-foreground">{order.size || 'Standard'}</span>
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground block mb-1">Total</span>
-                  <span className="text-sm font-bold text-foreground flex items-center gap-1">
-                    <CurrencyIcon size={12} />
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">Amount</span>
+                  <span className="text-xs font-black text-foreground flex items-center gap-0.5">
+                    <CurrencyIcon size={11} />
                     {Number(order.amount || 0).toLocaleString()}
                   </span>
-                  <span className="text-xs text-muted-foreground">{order.shipping_zone || 'Outside Dhaka'}</span>
+                  <span className="text-[10px] text-muted-foreground truncate block">{order.shipping_zone || 'Standard'}</span>
                 </div>
               </div>
               
               {duplicateWarnings[order.id] && (
-                <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 p-2 rounded-lg">
-                  <AlertTriangle size={14} />
-                  <span>Duplicate: {duplicateWarnings[order.id].label}</span>
+                <div className="flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300 p-2 rounded-lg border border-amber-200 dark:border-amber-800/60">
+                  <AlertTriangle size={13} className="shrink-0" />
+                  <span className="text-[11px] font-medium truncate">Duplicate: {duplicateWarnings[order.id].label}</span>
                 </div>
               )}
             </div>
 
-            <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-border">
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="rounded-xl"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRowClick(order);
-                }}
-              >
-                View Details
-              </Button>
-              <Button 
-                variant="secondary" 
-                size="sm"
-                className="rounded-xl"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleOpenEditModal(order);
-                }}
-              >
-                <Edit2 size={16} />
-              </Button>
+            <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-border">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{order.source || 'Website'}</span>
+              <div className="flex items-center gap-1.5">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="rounded-xl h-8 px-3 text-xs font-bold"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRowClick(order);
+                  }}
+                >
+                  View Details
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  size="sm"
+                  className="rounded-xl h-8 w-8 p-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenEditModal(order);
+                  }}
+                  title="Edit Order"
+                >
+                  <Edit2 size={13} />
+                </Button>
+              </div>
             </div>
           </div>
         ))}
         {(!pagedOrders || pagedOrders.length === 0) && !loading && (
           <div className="p-8 text-center text-muted-foreground border border-border rounded-2xl bg-card">No orders found.</div>
         )}
-        {loading && <div className="p-8 text-center text-muted-foreground border border-border rounded-2xl bg-card">Loading...</div>}
+        {loading && <div className="p-8 text-center text-muted-foreground border border-border rounded-2xl bg-card">Loading orders...</div>}
       </div>
 
       {totalPages > 1 && (
