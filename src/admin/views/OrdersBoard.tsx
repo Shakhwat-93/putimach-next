@@ -11,7 +11,7 @@ import { supabase } from '../lib/supabase';
 import { Card } from '../components/Card';
 import { Badge } from '../components/Badge';
 import { StatusBadge } from '../components/StatusBadge';
-import { Search, Globe, ChevronDown, ChevronLeft, ChevronRight, CheckCircle, Clock, Printer, Trash2, X, AlertTriangle, Edit2, Plus, Download, Calendar, MoreHorizontal, Phone, Sparkles, Copy, MessageCircle } from 'lucide-react';
+import { Search, Globe, ChevronDown, ChevronLeft, ChevronRight, CheckCircle, Clock, Printer, Trash2, X, AlertTriangle, Edit2, Plus, Download, Calendar, MoreHorizontal, Phone, Sparkles, Copy, MessageCircle, RefreshCw } from 'lucide-react';
 import CurrencyIcon from '../components/CurrencyIcon';
 import { useConfirmDialog } from '../hooks/useConfirmDialog';
 import { Button } from '../components/Button';
