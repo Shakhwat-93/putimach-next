@@ -793,17 +793,24 @@ export default function Checkout() {
                   ].map((area) => {
                     const isSelected = shippingArea === area.id;
                     return (
-                      <button
-                        type="button"
+                      <label
                         key={area.id}
                         onClick={() => setShippingArea(area.id)}
-                        className={`text-left cursor-pointer p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 flex sm:flex-col justify-between items-center sm:items-start gap-2 w-full min-w-0 active:scale-[0.98] ${
+                        className={`relative cursor-pointer select-none p-3.5 sm:p-4 rounded-2xl border-2 transition-all duration-200 flex sm:flex-col justify-between items-center sm:items-start gap-2.5 w-full min-w-0 active:scale-[0.98] ${
                           isSelected
                             ? 'border-brand bg-brand/10 shadow-sm ring-1 ring-brand'
-                            : 'border-base-300 bg-white hover:border-brand/40'
+                            : 'border-base-300 bg-white hover:border-brand/40 hover:bg-base-50/50'
                         }`}
                       >
-                        <div className="min-w-0 flex-1 flex items-start gap-2.5">
+                        <input
+                          type="radio"
+                          name="shipping_area"
+                          value={area.id}
+                          checked={isSelected}
+                          onChange={() => setShippingArea(area.id)}
+                          className="sr-only"
+                        />
+                        <div className="min-w-0 flex-1 flex items-start gap-2.5 pointer-events-none">
                           <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                             isSelected ? 'border-brand' : 'border-gray-300'
                           }`}>
@@ -816,8 +823,8 @@ export default function Checkout() {
                             )}
                           </div>
                         </div>
-                        <p className="font-black text-sm text-brand shrink-0 sm:mt-2 sm:pl-6.5">৳{area.fee}</p>
-                      </button>
+                        <p className="font-black text-sm text-brand shrink-0 sm:mt-2 sm:pl-6.5 pointer-events-none">৳{area.fee}</p>
+                      </label>
                     );
                   })}
                 </div>
