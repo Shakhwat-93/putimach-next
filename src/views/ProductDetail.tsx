@@ -178,6 +178,10 @@ export default function ProductDetailView() {
   };
 
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [slug]);
+
+  useEffect(() => {
     let isMounted = true;
     async function loadProduct() {
       setLoading(true);
@@ -191,6 +195,7 @@ export default function ProductDetailView() {
           setSelectedColor(prod?.colors?.[0] || null);
           trackViewContent(prod);
           setLoading(false);
+          window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
 
           if (prod?.category) {
             getProducts({ category: prod.category })
