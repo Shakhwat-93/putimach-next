@@ -149,9 +149,6 @@ export function ContactUs() {
   const address = c?.address || 'House 42, Road 11, Banani, Dhaka, Bangladesh';
   const facebook = c?.facebook_url || 'https://www.facebook.com/share/1HitDwyphD';
   const instagram = c?.instagram_url || 'https://www.instagram.com/putimachhh?igsh=dnYxeXhhdHhodzdn';
-  const mapsUrl = c?.google_maps_url || 'https://maps.google.com/?q=House+42,+Road+11,+Banani,+Dhaka';
-  const flagName = c?.flagship_name || 'PUTIMACH BANANI FLAGSHIP';
-  const flagAddr = c?.flagship_address || 'House 42, Road 11, Banani, Dhaka';
   return (
     <div className="min-h-screen pt-24 pb-16 bg-[#FDFBF7] text-[#1C1613]">
       <div className="container-site max-w-3xl">
@@ -175,11 +172,6 @@ export function ContactUs() {
                 <div className="space-y-1"><p className="font-bold text-[#1C1613]">Instagram</p><a href={instagram} target="_blank" rel="noreferrer" className="text-[#C5A880] hover:underline font-bold">Follow Us →</a></div>
                 <div className="space-y-1"><p className="font-bold text-[#1C1613]">Facebook</p><a href={facebook} target="_blank" rel="noreferrer" className="text-[#C5A880] hover:underline font-bold">Connect →</a></div>
               </div>
-            </div>
-            <div className="border-t border-[#E9E2D2] pt-6">
-              <h2 className="font-serif text-[#C5A880] text-xs uppercase tracking-widest mb-1">Find Us</h2>
-              <h3 className="font-serif text-lg text-[#1C1613] uppercase tracking-wider mb-2">{flagName}</h3>
-              <p className="text-xs text-[#7C6E65] normal-case">{flagAddr}</p>
             </div>
           </div>
         )}
