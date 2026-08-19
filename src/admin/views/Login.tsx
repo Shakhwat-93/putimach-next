@@ -29,19 +29,19 @@ export const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [siteLogo, setSiteLogo] = useState('/logo.webp');
+  const [siteLogo, setSiteLogo] = useState('/api/media/uploads/img_1786602897193_2103.webp');
 
   useEffect(() => {
     async function loadLogo() {
       try {
-        const { data: sData } = await supabase.from('site_settings').select('data').eq('id', 'branding').maybeSingle();
+        const { data: sData } = await supabase.from('site_settings').select('data').eq('id', 'brand_settings').maybeSingle();
         if (sData?.data?.logoUrl) {
           setSiteLogo(sData.data.logoUrl);
-        } else {
-          const { data: cData } = await supabase.from('cb_settings').select('data').eq('id', 'branding').maybeSingle();
-          if (cData?.data?.logoUrl) {
-            setSiteLogo(cData.data.logoUrl);
-          }
+          return;
+        }
+        const { data: cData } = await supabase.from('cb_settings').select('data').eq('id', 'brand_settings').maybeSingle();
+        if (cData?.data?.logoUrl) {
+          setSiteLogo(cData.data.logoUrl);
         }
       } catch (e) {
         console.warn('Failed to fetch site logo:', e);
@@ -111,11 +111,10 @@ export const Login = () => {
               className="mx-auto mb-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-border bg-white shadow-md p-1.5"
             >
               <img
-                src={siteLogo || '/logo.webp'}
+                src={siteLogo || '/api/media/uploads/img_1786602897193_2103.webp'}
                 alt="PutiMach Logo"
                 onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = '/logo.webp';
+                  e.currentTarget.style.opacity = '0';
                 }}
                 className="h-full w-full object-contain"
               />

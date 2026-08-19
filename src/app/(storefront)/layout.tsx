@@ -1,26 +1,14 @@
-'use client';
-// @ts-nocheck
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
-import CartDrawer from '@/components/layout/CartDrawer';
-import FlyToCartAnimator from '@/components/cart/FlyToCartAnimator';
-import TrackingInitializer from '@/components/TrackingInitializer';
-import VisitorTracker from '@/components/VisitorTracker';
-import FloatingSocialWidget from '@/components/layout/FloatingSocialWidget';
+import { getStorefrontCmsData } from '@/lib/serverCms';
+import StorefrontClientLayout from '@/components/layout/StorefrontClientLayout';
 
-export default function StorefrontLayout({ children }: { children: React.ReactNode }) {
+export const dynamic = 'force-dynamic';
+
+export default async function StorefrontLayout({ children }: { children: React.ReactNode }) {
+  const cmsData = await getStorefrontCmsData();
+
   return (
-    <div className="storefront-root flex flex-col min-h-screen">
-      <TrackingInitializer />
-      <VisitorTracker />
-      <Navbar />
-      <CartDrawer />
-      <FlyToCartAnimator />
-      <main className="flex-1 min-h-screen">
-        {children}
-      </main>
-      <Footer />
-      <FloatingSocialWidget />
-    </div>
+    <StorefrontClientLayout cmsData={cmsData}>
+      {children}
+    </StorefrontClientLayout>
   );
 }

@@ -20,7 +20,7 @@ const InstagramIcon = ({ size = 24, className = "" }) => (
 const formatPrice = (p) => `৳${Number(p).toLocaleString('en-BD')}`;
 
 const defaultHome = {
-  heroBgImage: "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=1600&q=80",
+  heroBgImage: "/api/media/uploads/img_1786604752550_8584.webp",
   heroBadge: "Vintage Weaves",
   heroSubBadge: "EST 2026",
   heroHeading: "WOVEN IN NOSTALGIA.\nTAILORED FOR TODAY.",
@@ -78,25 +78,15 @@ function Hero({ settings }) {
   const y = useTransform(scrollYProgress, [0, 1], ['0%', '30%']);
   const opacity = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
 
-  const fallbackImg = "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=1600&q=80";
+  const fallbackImg = "/api/media/uploads/img_1786604752550_8584.webp";
 
   const [activeHeroBg, setActiveHeroBg] = useState(() => {
-    if (settings?.heroBgImage) return settings.heroBgImage;
-    if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem('pm_hero_bg');
-      if (cached) return cached;
-    }
-    return fallbackImg;
+    return settings?.heroBgImage || fallbackImg;
   });
 
   useEffect(() => {
     if (settings?.heroBgImage) {
       setActiveHeroBg(settings.heroBgImage);
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('pm_hero_bg', settings.heroBgImage);
-        } catch (e) {}
-      }
     }
   }, [settings?.heroBgImage]);
 

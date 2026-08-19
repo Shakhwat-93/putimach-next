@@ -33,7 +33,7 @@ export default function AdminSidebar({ mobileOpen, onClose }) {
       <div className="p-6 border-b border-base-300/80 flex items-center justify-between bg-gradient-to-b from-brand/5 to-transparent">
         <Link href="/admin" onClick={onClose} className="flex items-center gap-3 group">
           <div className="w-12 h-12 rounded-2xl overflow-hidden flex items-center justify-center bg-base-900 border border-brand/20 shadow-glow-sm group-hover:scale-105 transition-transform duration-300 flex-shrink-0">
-            <img src="/logo.webp" alt="PutiMach Logo" className="w-full h-full object-cover" />
+            <img src="/api/media/uploads/img_1786602897193_2103.webp" alt="PutiMach Logo" className="w-full h-full object-cover" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">

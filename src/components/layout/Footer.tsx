@@ -14,55 +14,60 @@ const helpLinks = [
   { label: 'Contact Us', to: '/contact-us' },
 ];
 
-export default function Footer() {
-  const [contact, setContact] = useState(null);
-  const [categories, setCategories] = useState([]);
-  const [brandSettings, setBrandSettings] = useState({
-    logoUrl: '/logo.webp',
+export default function Footer({
+  initialBrand,
+  initialContact,
+  initialCategories,
+}: {
+  initialBrand?: { logoUrl: string; brandName: string; tagline?: string; copyright?: string };
+  initialContact?: any;
+  initialCategories?: any[];
+} = {}) {
+  const [contact, setContact] = useState(initialContact || null);
+  const [categories, setCategories] = useState(initialCategories || []);
+  const [brandSettings, setBrandSettings] = useState(initialBrand || {
+    logoUrl: '/api/media/uploads/img_1786602897193_2103.webp',
     brandName: 'PutiMach',
     copyright: '© 2026 PutiMach. All rights reserved.'
   });
 
   useEffect(() => {
-    async function loadContact() {
+    if (initialBrand) setBrandSettings(initialBrand);
+  }, [initialBrand]);
+
+  useEffect(() => {
+    if (initialContact) setContact(initialContact);
+  }, [initialContact]);
+
+  useEffect(() => {
+    if (initialCategories && initialCategories.length > 0) setCategories(initialCategories);
+  }, [initialCategories]);
+
+  useEffect(() => {
+    async function syncFreshFooterData() {
       try {
-        const { data } = await supabase
-          .from('cb_settings')
-          .select('data')
-          .eq('id', 'contact_info')
-          .maybeSingle();
-        if (data && data.data) {
-          setContact(data.data);
-        }
-      } catch (err) {
-        console.error('Failed to load footer contact info:', err);
-      }
-    }
-    async function loadCategories() {
-      try {
-        const data = await getCategories();
-        if (data) setCategories(data);
-      } catch (err) {
-        console.error('Failed to load footer categories:', err);
-      }
-    }
-    async function loadBrandSettings() {
-      try {
-        const { data, error } = await supabase
+        const { data: bData } = await supabase
           .from('cb_settings')
           .select('data')
           .eq('id', 'brand_settings')
           .maybeSingle();
-        if (!error && data?.data) {
-          setBrandSettings(prev => ({ ...prev, ...data.data }));
+        if (bData?.data?.brandName || bData?.data?.copyright) {
+          setBrandSettings(prev => ({ ...prev, ...bData.data }));
+        }
+
+        const { data: cData } = await supabase
+          .from('cb_settings')
+          .select('data')
+          .eq('id', 'contact_info')
+          .maybeSingle();
+        if (cData?.data) {
+          setContact(cData.data);
         }
       } catch (err) {
-        console.error('Failed to load footer brand settings:', err);
+        // Non-critical background sync
       }
     }
-    loadContact();
-    loadCategories();
-    loadBrandSettings();
+    syncFreshFooterData();
   }, []);
 
   const shopLinks = [

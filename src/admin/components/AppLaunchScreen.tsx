@@ -46,7 +46,7 @@ export const AppLaunchScreen: React.FC<AppLaunchScreenProps> = ({
     return () => window.clearTimeout(timer);
   }, [isVisible, onComplete, minDurationMs]);
 
-  const logoSrc = typeof orderflowLogo === 'object' ? (orderflowLogo as any).src : orderflowLogo;
+  const logoSrc = '/api/media/uploads/img_1786602897193_2103.webp';
 
   return (
     <AnimatePresence>

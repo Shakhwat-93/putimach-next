@@ -9,17 +9,26 @@ import CartDrawer from './CartDrawer';
 import { getCategories } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
 
-export default function Navbar() {
+export default function Navbar({
+  initialBrand,
+  initialNavMenu,
+  initialCategories,
+}: {
+  initialBrand?: { logoUrl: string; brandName: string; tagline?: string; copyright?: string };
+  initialNavMenu?: any[];
+  initialCategories?: any[];
+} = {}) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [categories, setCategories] = useState([]);
-  const [navMenu, setNavMenu] = useState(null);
+  const [categories, setCategories] = useState(initialCategories || []);
+  const [navMenu, setNavMenu] = useState(initialNavMenu || null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [announcementText, setAnnouncementText] = useState('');
-  const [brandSettings, setBrandSettings] = useState({
-    logoUrl: '/logo.webp',
-    brandName: 'PutiMach'
+  const [brandSettings, setBrandSettings] = useState(initialBrand || {
+    logoUrl: '/api/media/uploads/img_1786602897193_2103.webp',
+    brandName: 'PutiMach',
+    tagline: 'Timeless Style. Modern Soul.'
   });
   const [mounted, setMounted] = useState(false);
 
@@ -32,47 +41,33 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-    async function fetchCategories() {
+    if (initialBrand) setBrandSettings(initialBrand);
+  }, [initialBrand]);
+
+  useEffect(() => {
+    if (initialNavMenu) setNavMenu(initialNavMenu);
+  }, [initialNavMenu]);
+
+  useEffect(() => {
+    if (initialCategories && initialCategories.length > 0) setCategories(initialCategories);
+  }, [initialCategories]);
+
+  useEffect(() => {
+    async function fetchFreshCms() {
       try {
-        const data = await getCategories();
-        if (data) {
-          setCategories(data);
-        }
-      } catch (err) {
-        console.error('Error fetching navbar categories:', err);
-      }
-    }
-    async function fetchNavMenu() {
-      try {
-        const { data, error } = await supabase
-          .from('cb_settings')
-          .select('data')
-          .eq('id', 'nav_menu')
-          .single();
-        if (!error && data?.data) {
-          setNavMenu(data.data);
-        }
-      } catch (err) {
-        console.error('Error fetching nav menu:', err);
-      }
-    }
-    async function fetchBrandSettings() {
-      try {
-        const { data, error } = await supabase
+        const { data: bData } = await supabase
           .from('cb_settings')
           .select('data')
           .eq('id', 'brand_settings')
           .maybeSingle();
-        if (!error && data?.data) {
-          setBrandSettings(prev => ({ ...prev, ...data.data }));
+        if (bData?.data?.logoUrl || bData?.data?.brandName) {
+          setBrandSettings(prev => ({ ...prev, ...bData.data }));
         }
       } catch (err) {
-        console.error('Error fetching brand settings:', err);
+        // Non-critical background sync
       }
     }
-    fetchCategories();
-    fetchNavMenu();
-    fetchBrandSettings();
+    fetchFreshCms();
   }, []);
 
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
@@ -206,10 +201,9 @@ export default function Navbar() {
                 {brandSettings.logoUrl && (
                   <img 
                     src={brandSettings.logoUrl} 
-                    alt="Logo" 
+                    alt={brandSettings.brandName || "Logo"} 
                     onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src = '/logo.webp';
+                      e.currentTarget.style.opacity = '0';
                     }}
                     className="w-20 h-20 xs:w-24 xs:h-24 md:w-14 md:h-14 lg:w-32 lg:h-32 object-contain group-hover:scale-105 transition-transform shrink-0" 
                   />
@@ -313,10 +307,9 @@ export default function Navbar() {
                   {brandSettings.logoUrl && (
                     <img 
                       src={brandSettings.logoUrl} 
-                      alt="Logo" 
+                      alt={brandSettings.brandName || "Logo"} 
                       onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = '/logo.webp';
+                        e.currentTarget.style.opacity = '0';
                       }}
                       className="h-9 w-auto object-contain" 
                     />
