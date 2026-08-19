@@ -97,7 +97,7 @@ export const OrdersBoard = () => {
 
   const { 
     orders, loading, page, setPage, setFilters, 
-    fetchOrderLogs, fetchStats, stats, addOrder, deleteOrder, fraudFlags, automationFlags,
+    fetchOrders, fetchOrderLogs, fetchStats, stats, addOrder, deleteOrder, fraudFlags, automationFlags,
     pageSize, filters, updateOrderStatus, autoDistributeOrders, toyBoxes, inventory
   } = useOrders();
   const inventoryProductCheckpoints = useMemo(() => getProductCheckpoints(inventory), [inventory]);
