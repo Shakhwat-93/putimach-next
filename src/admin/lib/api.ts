@@ -1516,6 +1516,44 @@ export const api = {
     return data;
   },
 
+  /**
+   * Permanently delete a single order by ID
+   */
+  async deleteOrder(orderId) {
+    if (!orderId) return false;
+    try {
+      await supabase.from('order_activity_logs').delete().eq('order_id', orderId);
+    } catch (err) {
+      console.warn('[deleteOrder] Error clearing activity logs:', err);
+    }
+
+    const { error } = await supabase.from('orders').delete().eq('id', orderId);
+    if (error) {
+      console.error('[deleteOrder] Error deleting order:', error);
+      throw error;
+    }
+    return true;
+  },
+
+  /**
+   * Permanently delete multiple orders by ID array
+   */
+  async deleteOrders(orderIds = []) {
+    if (!Array.isArray(orderIds) || orderIds.length === 0) return false;
+    try {
+      await supabase.from('order_activity_logs').delete().in('order_id', orderIds);
+    } catch (err) {
+      console.warn('[deleteOrders] Error clearing activity logs:', err);
+    }
+
+    const { error } = await supabase.from('orders').delete().in('id', orderIds);
+    if (error) {
+      console.error('[deleteOrders] Error deleting orders:', error);
+      throw error;
+    }
+    return true;
+  },
+
 
   /**
    * Change order status
