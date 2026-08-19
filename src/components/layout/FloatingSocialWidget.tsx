@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { MessageCircle, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 export default function FloatingSocialWidget() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [contact, setContact] = useState<{
     whatsapp?: string;
@@ -13,6 +15,8 @@ export default function FloatingSocialWidget() {
     instagram_url?: string;
   } | null>(null);
   const widgetRef = useRef<HTMLDivElement>(null);
+
+  if (pathname === '/checkout') return null;
 
   useEffect(() => {
     async function loadContactInfo() {

@@ -122,12 +122,13 @@ export default function CartDrawer() {
                         Explore our luxury streetwear catalog and discover your next statement piece.
                       </p>
                     </div>
-                    <button 
-                      onClick={closeCart} 
-                      className="mt-2 px-8 py-3.5 bg-[#1C1613] text-white font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-[#FF5533] transition-all shadow-md active:scale-95 cursor-pointer"
+                    <Link 
+                      href="/shop"
+                      onClick={() => closeCart()} 
+                      className="mt-2 px-8 py-3.5 bg-[#1C1613] text-white font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-[#FF5533] transition-all shadow-md active:scale-95 cursor-pointer inline-block text-center"
                     >
                       Explore Catalog →
-                    </button>
+                    </Link>
                   </motion.div>
                 ) : (
                   items.map((item) => (
@@ -154,7 +155,7 @@ export default function CartDrawer() {
                         <div className="flex items-start justify-between gap-2">
                           <Link
                             href={`/product/${item.product?.slug}`}
-                            onClick={closeCart}
+                            onClick={() => closeCart()}
                             className="font-serif font-black text-sm text-[#1C1613] hover:text-[#C5A880] transition-colors line-clamp-1"
                           >
                             {item.product?.name}
@@ -162,11 +163,12 @@ export default function CartDrawer() {
 
                           {/* Delete Item Button */}
                           <button
+                            type="button"
                             onClick={() => removeItem(item.key)}
-                            className="text-gray-400 hover:text-red-500 transition-colors p-1 cursor-pointer"
+                            className="text-gray-400 hover:text-red-500 transition-colors p-1.5 cursor-pointer active:scale-90"
                             title="Remove item"
                           >
-                            <Trash2 size={15} />
+                            <Trash2 size={16} />
                           </button>
                         </div>
 
@@ -183,19 +185,23 @@ export default function CartDrawer() {
                           </span>
 
                           {/* Quantity Stepper */}
-                          <div className="flex items-center gap-2 bg-[#F4EFE6] border border-[#E9E2D2] rounded-xl px-2 py-1">
+                          <div className="flex items-center gap-1.5 bg-[#F4EFE6] border border-[#E9E2D2] rounded-xl p-1">
                             <button
+                              type="button"
                               onClick={() => updateQuantity(item.key, item.quantity - 1)}
-                              className="w-5 h-5 flex items-center justify-center text-[#1C1613] hover:bg-white rounded transition-colors cursor-pointer"
+                              className="w-7 h-7 flex items-center justify-center text-[#1C1613] hover:bg-white rounded-lg transition-colors cursor-pointer active:scale-90"
+                              aria-label="Decrease quantity"
                             >
-                              <Minus size={11} />
+                              <Minus size={12} />
                             </button>
-                            <span className="w-5 text-center text-xs font-bold font-mono">{item.quantity}</span>
+                            <span className="w-6 text-center text-xs font-black font-mono select-none">{item.quantity}</span>
                             <button
+                              type="button"
                               onClick={() => updateQuantity(item.key, item.quantity + 1)}
-                              className="w-5 h-5 flex items-center justify-center text-[#1C1613] hover:bg-white rounded transition-colors cursor-pointer"
+                              className="w-7 h-7 flex items-center justify-center text-[#1C1613] hover:bg-white rounded-lg transition-colors cursor-pointer active:scale-90"
+                              aria-label="Increase quantity"
                             >
-                              <Plus size={11} />
+                              <Plus size={12} />
                             </button>
                           </div>
                         </div>

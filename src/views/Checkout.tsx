@@ -134,21 +134,23 @@ function OrderSummary({ items, subtotal, shipping, total }) {
                   <button
                     type="button"
                     onClick={() => updateQuantity(item.key, item.quantity - 1)}
-                    className="w-5 h-5 rounded flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-white/20 transition-all active:scale-90"
+                    className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-white/20 transition-all active:scale-90 cursor-pointer"
                     title="Decrease quantity"
+                    aria-label="Decrease quantity"
                   >
-                    <Minus size={10} />
+                    <Minus size={12} />
                   </button>
-                  <span className="text-[11px] font-black w-4 text-center text-surface-primary">
+                  <span className="text-xs font-black w-6 text-center text-surface-primary select-none font-mono">
                     {item.quantity}
                   </span>
                   <button
                     type="button"
                     onClick={() => updateQuantity(item.key, item.quantity + 1)}
-                    className="w-5 h-5 rounded flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-white/20 transition-all active:scale-90"
+                    className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-white/20 transition-all active:scale-90 cursor-pointer"
                     title="Increase quantity"
+                    aria-label="Increase quantity"
                   >
-                    <Plus size={10} />
+                    <Plus size={12} />
                   </button>
                 </div>
 
@@ -698,9 +700,9 @@ export default function Checkout() {
           <ShoppingBag size={48} className="text-surface-muted mx-auto" />
           <h2 className="font-black text-2xl">Your cart is empty</h2>
           <p className="text-surface-muted text-sm">Add products before checking out.</p>
-          <button onClick={() => router.push('/shop')} className="btn-primary mx-auto">
+          <Link href="/shop" prefetch={true} className="btn-primary mx-auto inline-block text-center cursor-pointer">
             Browse Shop
-          </button>
+          </Link>
         </div>
       </div>
     );
@@ -932,12 +934,10 @@ export default function Checkout() {
               <OrderSummary items={items} subtotal={subtotal} shipping={shipping} total={total} />
 
               {/* Submit Place Order Button */}
-              <motion.button
+              <button
                 type="submit"
                 disabled={submitting || items.length === 0}
-                whileHover={!submitting ? { scale: 1.015, y: -2 } : {}}
-                whileTap={!submitting ? { scale: 0.98 } : {}}
-                className="w-full py-3.5 sm:py-4 rounded-xl bg-brand hover:bg-brand-400 text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all duration-300 shadow-glow hover:shadow-glow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3.5 sm:py-4 rounded-xl bg-brand hover:bg-brand-400 text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all duration-200 shadow-glow hover:shadow-glow-lg disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-[0.98]"
               >
                 {submitting ? (
                   <>
@@ -951,7 +951,7 @@ export default function Checkout() {
                     <ChevronRight size={16} />
                   </>
                 )}
-              </motion.button>
+              </button>
 
               <p className="text-center text-[10px] text-surface-muted">
                 By placing your order you agree to our Terms & Privacy Policy.
