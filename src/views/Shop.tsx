@@ -359,9 +359,9 @@ export default function Shop() {
         </div>
 
         {/* ─── Toolbar (Filters + Search + Sort + Grid) ─── */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-6 bg-white p-3 sm:p-4 rounded-2xl border border-[#E9E2D2] shadow-sm">
-          {/* Left: Filter Toggle + Search */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-[200px]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 bg-white p-3 sm:p-4 rounded-2xl border border-[#E9E2D2] shadow-sm">
+          {/* Top row on mobile / Left group on desktop */}
+          <div className="flex items-center gap-2 sm:gap-3 justify-between sm:justify-start">
             {/* Filter Toggle (Desktop: Sidebar, Mobile: Modal) */}
             <button
               type="button"
@@ -372,7 +372,7 @@ export default function Shop() {
                   setSidebarOpen(!sidebarOpen);
                 }
               }}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all duration-200 text-xs font-bold uppercase tracking-wider cursor-pointer active:scale-95 ${
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border transition-all duration-200 text-xs font-bold uppercase tracking-wider cursor-pointer active:scale-95 ${
                 sidebarOpen || activeFiltersCount > 0
                   ? 'bg-[#1C1613] text-[#C5A880] border-[#1C1613] shadow-sm'
                   : 'bg-[#FDFBF7] border-[#E9E2D2] text-[#1C1613] hover:border-[#1C1613] hover:bg-[#F4EFE6]'
@@ -387,41 +387,16 @@ export default function Shop() {
               )}
             </button>
 
-            {/* Search Input */}
-            <div className="relative flex-1 max-w-xs">
-              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#1C1613]/40" />
-              <input
-                type="text"
-                placeholder="Search collection..."
-                value={searchQuery}
-                onChange={(e) => updateParam('q', e.target.value)}
-                className="w-full bg-[#FDFBF7] border border-[#E9E2D2] focus:border-[#1C1613] rounded-xl pl-9 pr-8 py-2 text-xs font-medium text-[#1C1613] placeholder-[#1C1613]/40 focus:outline-none transition-colors"
-                id="shop-search"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => updateParam('q', '')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#1C1613]/40 hover:text-[#1C1613] cursor-pointer"
-                >
-                  <X size={13} />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Right: Luxury Sort Dropdown + Grid Toggle */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {/* Sort Dropdown */}
-            <div className="relative" ref={sortDropdownRef}>
+            <div className="relative flex-1 sm:flex-none" ref={sortDropdownRef}>
               <button
                 type="button"
                 onClick={() => setSortOpen(!sortOpen)}
-                className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-[#E9E2D2] bg-[#FDFBF7] text-xs font-bold text-[#1C1613] hover:border-[#1C1613] hover:bg-[#F4EFE6] transition-all duration-200 cursor-pointer active:scale-95 select-none"
+                className="w-full flex items-center justify-center sm:justify-start gap-2 px-4 py-2.5 rounded-xl border border-[#E9E2D2] bg-[#FDFBF7] text-xs font-bold text-[#1C1613] hover:border-[#1C1613] hover:bg-[#F4EFE6] transition-all duration-200 cursor-pointer active:scale-95 select-none"
               >
                 <span className="text-[#1C1613]/60 font-medium">Sort:</span>
-                <span>{currentSortLabel}</span>
-                <ChevronDown size={14} className={`transition-transform duration-200 text-[#1C1613]/60 ${sortOpen ? 'rotate-180 text-[#1C1613]' : ''}`} />
+                <span className="truncate">{currentSortLabel}</span>
+                <ChevronDown size={14} className={`shrink-0 transition-transform duration-200 text-[#1C1613]/60 ${sortOpen ? 'rotate-180 text-[#1C1613]' : ''}`} />
               </button>
 
               <AnimatePresence>
@@ -460,6 +435,30 @@ export default function Shop() {
                   </motion.div>
                 )}
               </AnimatePresence>
+            </div>
+          </div>
+
+          {/* Search Input + Grid View */}
+          <div className="flex items-center gap-2 sm:gap-3 flex-1 sm:justify-end">
+            <div className="relative flex-1 sm:max-w-xs">
+              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#1C1613]/40" />
+              <input
+                type="text"
+                placeholder="Search collection..."
+                value={searchQuery}
+                onChange={(e) => updateParam('q', e.target.value)}
+                className="w-full bg-[#FDFBF7] border border-[#E9E2D2] focus:border-[#1C1613] rounded-xl pl-9 pr-8 py-2 text-xs font-medium text-[#1C1613] placeholder-[#1C1613]/40 focus:outline-none transition-colors"
+                id="shop-search"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => updateParam('q', '')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#1C1613]/40 hover:text-[#1C1613] cursor-pointer"
+                >
+                  <X size={13} />
+                </button>
+              )}
             </div>
 
             {/* Grid Toggle (Desktop Only) */}
