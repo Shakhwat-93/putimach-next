@@ -111,6 +111,7 @@ export default function ProductDetailView() {
   }, [product]);
 
   const sliderRef = useRef(null);
+  const thumbnailRowRef = useRef(null);
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef(null);
 
@@ -139,6 +140,17 @@ export default function ProductDetailView() {
         left: width * index,
         behavior: 'smooth'
       });
+    }
+
+    if (thumbnailRowRef.current) {
+      const buttons = thumbnailRowRef.current.querySelectorAll('button');
+      if (buttons[index]) {
+        buttons[index].scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'center'
+        });
+      }
     }
 
     scrollTimeoutRef.current = setTimeout(() => {
@@ -459,27 +471,36 @@ export default function ProductDetailView() {
 
             {/* Thumbnail Row */}
             {images.length > 1 && (
-              <div className="flex gap-2 sm:gap-2.5 overflow-x-auto pb-2 scrollbar-none px-1 w-full max-w-full min-w-0 items-center">
-                {images.map((img, i) => (
-                  <button
-                    type="button"
-                    key={i}
-                    onClick={() => handleThumbnailClick(i)}
-                    className={`w-14 h-14 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl overflow-hidden border-2 shrink-0 transition-all duration-200 bg-[#F7F4EE] p-1 flex-shrink-0 cursor-pointer active:scale-95 touch-manipulation ${
-                      activeImg === i ? 'border-[#FF5533] scale-105 shadow-md ring-2 ring-[#FF5533]/20 opacity-100' : 'border-transparent opacity-60 hover:opacity-100'
-                    }`}
-                  >
-                    <img
-                      src={img}
-                      alt=""
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80';
-                      }}
-                      className="w-full h-full object-contain rounded-lg sm:rounded-xl pointer-events-none"
-                    />
-                  </button>
-                ))}
+              <div 
+                ref={thumbnailRowRef}
+                className="flex gap-3 sm:gap-3.5 overflow-x-auto pb-3 pt-1 scrollbar-none px-1 w-full max-w-full min-w-0 items-center scroll-smooth"
+              >
+                {images.map((img, i) => {
+                  const isSelected = activeImg === i;
+                  return (
+                    <button
+                      type="button"
+                      key={i}
+                      onClick={() => handleThumbnailClick(i)}
+                      aria-label={`View image ${i + 1}`}
+                      className={`relative w-20 h-20 xs:w-22 xs:h-22 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 shrink-0 transition-all duration-200 bg-[#F7F4EE] p-1.5 flex-shrink-0 cursor-pointer active:scale-95 touch-manipulation select-none ${
+                        isSelected 
+                          ? 'border-[#FF5533] shadow-md ring-2 ring-[#FF5533]/30 scale-105 opacity-100 z-10' 
+                          : 'border-[#E9E2D2] opacity-70 hover:opacity-100 hover:border-[#1C1613]/40'
+                      }`}
+                    >
+                      <img
+                        src={img}
+                        alt=""
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80';
+                        }}
+                        className="w-full h-full object-cover rounded-xl pointer-events-none"
+                      />
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
