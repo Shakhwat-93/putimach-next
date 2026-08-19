@@ -14,6 +14,7 @@ import { OrderDetailsModal } from '../components/OrderDetailsModal';
 import { PackingSlip } from '../components/PackingSlip';
 import { usePersistentState } from '../utils/persistentState';
 import { useRouteOrderReadState } from '../hooks/useRouteOrderReadState';
+import { StatusBadge } from '../components/StatusBadge';
 import { cn } from '../lib/utils';
 
 const containerVariants = {
@@ -505,9 +506,7 @@ export const SteadfastPanel = () => {
                     <Badge variant="outline" className="text-[10px] uppercase bg-secondary/50">
                       {String(order.courier_name || 'S-FAST')}
                     </Badge>
-                    <Badge variant={getStatusVariant(order.courier_status)} className="text-[10px]">
-                      {order.courier_status || 'Handover'}
-                    </Badge>
+                    <StatusBadge status={order.courier_status || 'In Transit'} size="sm" />
                   </div>
                 </div>
 

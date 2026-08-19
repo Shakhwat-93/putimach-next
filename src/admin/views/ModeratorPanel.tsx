@@ -29,6 +29,7 @@ import { getProductCheckpoints } from '../utils/productCatalog';
 import { useRouteOrderReadState } from '../hooks/useRouteOrderReadState';
 import { useConfirmDialog } from '../hooks/useConfirmDialog';
 import { ResponseTimer } from '../components/ResponseTimer';
+import { StatusBadge } from '../components/StatusBadge';
 import { cn } from '../lib/utils';
 
 const ORDER_STATUSES = [
@@ -526,13 +527,7 @@ export const ModeratorPanel = () => {
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5">{formatDateTime(order.created_at)}</div>
                 </div>
-                <div className={cn(
-                  "px-2.5 py-1 rounded-full text-[10px] font-bold border flex items-center gap-1.5",
-                  getStatusColor(order.status)
-                )}>
-                  <span className={cn("w-1.5 h-1.5 rounded-full", getStatusDot(order.status))} />
-                  {order.status}
-                </div>
+                <StatusBadge status={order.status} size="sm" />
               </div>
 
               {/* Row 2: Customer + Amount */}

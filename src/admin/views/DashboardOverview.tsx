@@ -391,7 +391,7 @@ export const DashboardOverview = () => {
 
       {/* My Tasks Widget */}
       <Link 
-        href="/tasks" 
+        href="/admin/tasks" 
         className="block rounded-2xl border border-primary/20 bg-primary/5 p-4 shadow-sm transition-all hover:bg-primary/10 hover:shadow-md"
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

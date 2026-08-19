@@ -19,6 +19,7 @@ import { getToyBoxStockKey } from '../utils/productCatalog';
 import { useRouteOrderReadState } from '../hooks/useRouteOrderReadState';
 import * as XLSX from 'xlsx';
 import { BulkExportModal } from '../components/BulkExportModal';
+import { StatusBadge } from '../components/StatusBadge';
 
 const containerVariants = {
   hidden: { opacity: 0, y: 15 },
@@ -1499,10 +1500,7 @@ export const FactoryPanel = () => {
 
                   <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
                     <div className="flex flex-col items-start gap-1">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${stock.matched ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${stock.matched ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                        {stock.matched ? 'Full Stock' : `${stock.missing.length} Missing`}
-                      </span>
+                      <StatusBadge status={stock.matched ? 'In Stock' : 'Low Stock'} size="sm" />
                     </div>
 
                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>

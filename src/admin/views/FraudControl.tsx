@@ -17,6 +17,7 @@ import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
+import { StatusBadge } from '../components/StatusBadge';
 import { cn } from '../lib/utils';
 
 const IPV4_PATTERN = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
@@ -357,7 +358,54 @@ export const FraudControl = () => {
         </CardHeader>
         <CardContent className="p-0">
           <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
+            {/* Mobile Stacked View */}
+            <div className="block md:hidden divide-y divide-border">
+              {ipRows.map((row) => {
+                const isBlocked = activeBlockMap.has(row.ip_address);
+                return (
+                  <div key={row.ip_address} className={cn("p-4 space-y-3", isBlocked && "bg-rose-50/40 dark:bg-rose-950/10")}>
+                    <div className="flex items-center justify-between gap-2">
+                      <code className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-muted text-foreground">
+                        {row.ip_address}
+                      </code>
+                      <StatusBadge status={isBlocked ? 'Fake' : row.total_orders > 2 ? 'Cancelled' : 'Active'} size="sm" />
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs text-muted-foreground">
+                      <span>Total Orders: <strong className="text-foreground font-semibold">{row.total_orders}</strong></span>
+                      <span>{formatDateTime(row.latest_order_at)}</span>
+                    </div>
+
+                    <div className="bg-secondary/40 rounded-xl p-2.5 text-xs space-y-1">
+                      <div className="font-bold text-foreground">Latest Order: #{row.latest_order?.id || 'N/A'}</div>
+                      <div className="text-muted-foreground">{row.latest_order?.customer_name || 'Unknown'} • {row.latest_order?.phone || 'No phone'}</div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <div className="flex flex-wrap gap-1 text-[11px]">
+                        {Object.entries(row.statuses || {}).map(([st, cnt]) => (
+                          <span key={st} className="px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground font-medium">
+                            {st}: {cnt}
+                          </span>
+                        ))}
+                      </div>
+                      {isBlocked ? (
+                        <Button type="button" variant="outline" size="xs" onClick={() => unblockIp(row.ip_address)} disabled={savingIp === row.ip_address}>
+                          Unblock
+                        </Button>
+                      ) : (
+                        <Button type="button" variant="destructive" size="xs" onClick={() => blockIp(row.ip_address, `Blocked from order intelligence.`)} disabled={!blocklistConfigured || savingIp === row.ip_address}>
+                          Block
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-border">
@@ -394,27 +442,7 @@ export const FraudControl = () => {
                             <code className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-muted">
                               {row.ip_address}
                             </code>
-                            {isBlocked ? (
-                              <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400">
-                                <span className="size-1.5 rounded-full bg-rose-600 dark:bg-rose-400" />
-                                Blocked
-                              </span>
-                            ) : row.total_orders > 2 ? (
-                              <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400">
-                                <span className="size-1.5 rounded-full bg-rose-600 dark:bg-rose-400" />
-                                High Risk
-                              </span>
-                            ) : row.total_orders > 1 ? (
-                              <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
-                                <span className="size-1.5 rounded-full bg-amber-600 dark:bg-amber-400" />
-                                Medium Risk
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-                                <span className="size-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
-                                Low Risk
-                              </span>
-                            )}
+                            <StatusBadge status={isBlocked ? 'Fake' : row.total_orders > 2 ? 'Cancelled' : 'Active'} size="sm" />
                           </div>
                         </td>
                         <td className="px-4 py-3 text-sm text-foreground border-b border-border/50 font-semibold">
