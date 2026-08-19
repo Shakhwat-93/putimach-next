@@ -111,10 +111,13 @@ export default function ProductDetailView() {
   }, [product]);
 
   const sliderRef = useRef(null);
+  const isScrollingRef = useRef(false);
+  const scrollTimeoutRef = useRef(null);
 
   const totalCartCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleScroll = (e) => {
+    if (isScrollingRef.current) return;
     const width = e.currentTarget.offsetWidth;
     if (width <= 0) return;
     const scrollLeft = e.currentTarget.scrollLeft;
@@ -127,6 +130,9 @@ export default function ProductDetailView() {
   const handleThumbnailClick = (index) => {
     if (index < 0 || index >= images.length) return;
     setActiveImg(index);
+    isScrollingRef.current = true;
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+
     if (sliderRef.current) {
       const width = sliderRef.current.offsetWidth;
       sliderRef.current.scrollTo({
@@ -134,6 +140,10 @@ export default function ProductDetailView() {
         behavior: 'smooth'
       });
     }
+
+    scrollTimeoutRef.current = setTimeout(() => {
+      isScrollingRef.current = false;
+    }, 450);
   };
 
   const handleSelectColor = (color) => {
@@ -449,13 +459,14 @@ export default function ProductDetailView() {
 
             {/* Thumbnail Row */}
             {images.length > 1 && (
-              <div className="flex gap-2 sm:gap-2.5 overflow-x-auto pb-2 scrollbar-none px-1 w-full max-w-full min-w-0 touch-pan-x snap-x scroll-smooth items-center">
+              <div className="flex gap-2 sm:gap-2.5 overflow-x-auto pb-2 scrollbar-none px-1 w-full max-w-full min-w-0 items-center">
                 {images.map((img, i) => (
                   <button
+                    type="button"
                     key={i}
                     onClick={() => handleThumbnailClick(i)}
-                    className={`w-14 h-14 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl overflow-hidden border-2 shrink-0 snap-start transition-all duration-200 bg-[#F7F4EE] p-1 flex-shrink-0 ${
-                      activeImg === i ? 'border-[#FF5533] scale-105 shadow-sm' : 'border-transparent opacity-60 hover:opacity-100'
+                    className={`w-14 h-14 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl overflow-hidden border-2 shrink-0 transition-all duration-200 bg-[#F7F4EE] p-1 flex-shrink-0 cursor-pointer active:scale-95 touch-manipulation ${
+                      activeImg === i ? 'border-[#FF5533] scale-105 shadow-md ring-2 ring-[#FF5533]/20 opacity-100' : 'border-transparent opacity-60 hover:opacity-100'
                     }`}
                   >
                     <img
@@ -465,7 +476,7 @@ export default function ProductDetailView() {
                         e.target.onerror = null;
                         e.target.src = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80';
                       }}
-                      className="w-full h-full object-contain rounded-lg sm:rounded-xl"
+                      className="w-full h-full object-contain rounded-lg sm:rounded-xl pointer-events-none"
                     />
                   </button>
                 ))}
