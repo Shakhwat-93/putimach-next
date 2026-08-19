@@ -793,23 +793,31 @@ export default function Checkout() {
                   ].map((area) => {
                     const isSelected = shippingArea === area.id;
                     return (
-                      <div
+                      <button
+                        type="button"
                         key={area.id}
                         onClick={() => setShippingArea(area.id)}
-                        className={`cursor-pointer p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 flex sm:flex-col justify-between items-center sm:items-start gap-2 w-full min-w-0 ${
+                        className={`text-left cursor-pointer p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 flex sm:flex-col justify-between items-center sm:items-start gap-2 w-full min-w-0 active:scale-[0.98] ${
                           isSelected
-                            ? 'border-brand bg-brand/5 shadow-glow-sm'
-                            : 'border-base-300 bg-base-950/40 hover:border-base-400'
+                            ? 'border-brand bg-brand/10 shadow-sm ring-1 ring-brand'
+                            : 'border-base-300 bg-white hover:border-brand/40'
                         }`}
                       >
-                        <div className="min-w-0 flex-1">
-                          <p className="font-bold text-xs text-surface-primary leading-snug">{area.label}</p>
-                          {area.subtitle && (
-                            <p className="text-[10px] font-semibold text-brand mt-0.5 leading-tight">{area.subtitle}</p>
-                          )}
+                        <div className="min-w-0 flex-1 flex items-start gap-2.5">
+                          <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                            isSelected ? 'border-brand' : 'border-gray-300'
+                          }`}>
+                            {isSelected && <div className="w-2 h-2 rounded-full bg-brand" />}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold text-xs text-surface-primary leading-snug">{area.label}</p>
+                            {area.subtitle && (
+                              <p className="text-[10px] font-semibold text-brand mt-0.5 leading-tight">{area.subtitle}</p>
+                            )}
+                          </div>
                         </div>
-                        <p className="font-black text-sm text-brand shrink-0 sm:mt-3">৳{area.fee}</p>
-                      </div>
+                        <p className="font-black text-sm text-brand shrink-0 sm:mt-2 sm:pl-6.5">৳{area.fee}</p>
+                      </button>
                     );
                   })}
                 </div>
