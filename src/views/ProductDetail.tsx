@@ -14,6 +14,7 @@ import { formatPrice } from '../lib/utils';
 import { trackViewContent, trackAddToCart } from '../lib/tracking';
 import { ProductCard } from '../components/shop/ProductCard';
 import { supabase } from '../lib/supabase';
+import { extractProductImages, DEFAULT_PRODUCT_FALLBACK, cleanImageUrl } from '../lib/productMedia';
 
 export default function ProductDetailView() {
   const { slug } = useParams();
@@ -103,12 +104,11 @@ export default function ProductDetailView() {
     return map;
   }, [product]);
 
-  const mainImage = product?.image || (Array.isArray(product?.images) && product.images[0]);
-  const otherImages = Array.isArray(product?.images) ? product.images.filter(img => img && img !== mainImage) : [];
-  const variantImageList = Object.values(colorImageMap);
-  const images = product
-    ? Array.from(new Set([mainImage, ...variantImageList, ...otherImages].filter(Boolean)))
-    : [];
+  const images = useMemo(() => {
+    if (!product) return [];
+    const candidateList = extractProductImages(product);
+    return candidateList.length > 0 ? candidateList : [DEFAULT_PRODUCT_FALLBACK];
+  }, [product]);
 
   const sliderRef = useRef(null);
 

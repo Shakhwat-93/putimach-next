@@ -3,6 +3,7 @@
 // Zero flicker, zero loading state, zero localStorage dependency.
 import { createClient } from '@supabase/supabase-js';
 import HomeClient from '@/views/Home';
+import { normalizeProduct } from '@/lib/productMedia';
 
 // Force dynamic: fetch fresh data from Supabase on every request
 export const dynamic = 'force-dynamic';
@@ -24,11 +25,12 @@ async function getServerData() {
 
   const settings = siteSettingsRes.data?.data || cbSettingsRes.data?.data || null;
 
-  const products = (productsRes.data || []).map(row => ({
+  const products = (productsRes.data || []).map(row => normalizeProduct({
     id: row.id,
     created_at: row.created_at,
+    slug: row.data?.slug || row.id,
     ...(row.data || {}),
-  }));
+  })).filter(Boolean);
 
   const categories = (categoriesRes.data || []).map(row => ({
     id: row.id,

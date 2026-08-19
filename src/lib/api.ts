@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { supabase } from './supabase';
 import { products as fallbackProducts, categories as fallbackCategories } from '../data/products';
+import { normalizeProduct } from './productMedia';
 
 // Global in-memory cache for 0ms route transitions
 let productsCache = { data: null, time: 0 };
@@ -125,12 +126,12 @@ export async function getProducts(options = {}) {
       return [];
     }
 
-    let list = (data || []).map(row => ({
+    let list = (data || []).map(row => normalizeProduct({
       id: row.id,
       created_at: row.created_at,
       slug: row.data?.slug || row.id,
       ...(row.data || {})
-    }));
+    })).filter(Boolean);
 
     productsCache = { data: list, time: Date.now() };
 
@@ -199,12 +200,12 @@ export async function getProductBySlug(slug) {
       const fallback = (fallbackProducts || []).find(
         p => String(p.id) === String(slug) || String(p.slug) === String(slug)
       );
-      return fallback || null;
+      return fallback ? normalizeProduct(fallback) : null;
     }
 
-    const product = { id: data.id, created_at: data.created_at, slug: data.data?.slug || data.id, ...data.data };
+    const product = normalizeProduct({ id: data.id, created_at: data.created_at, slug: data.data?.slug || data.id, ...data.data });
 
-    if (product.inventory_id) {
+    if (product?.inventory_id) {
       supabase
         .from('inventory')
         .select('*')
@@ -219,9 +220,10 @@ export async function getProductBySlug(slug) {
     return product;
   } catch (err) {
     console.warn('getProductBySlug notice, using fallback lookup:', err?.message || err);
-    return (fallbackProducts || []).find(
+    const fallback = (fallbackProducts || []).find(
       p => String(p.id) === String(slug) || String(p.slug) === String(slug)
-    ) || null;
+    );
+    return fallback ? normalizeProduct(fallback) : null;
   }
 }
 

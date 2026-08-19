@@ -1114,6 +1114,16 @@ export const StorefrontManagement = () => {
     
     const isProductInStock = hasVariants ? (totalVariantsStock > 0) : prodForm.in_stock;
 
+    // Validate & sanitize images to ensure primary image and gallery are never blank
+    const allCandidateImages = [
+      prodForm.image,
+      ...(Array.isArray(prodForm.images) ? prodForm.images : []),
+      ...Object.values(prodForm.color_images || {})
+    ].map(u => (typeof u === 'string' ? u.trim() : '')).filter(Boolean);
+
+    const primaryImg = allCandidateImages.length > 0 ? allCandidateImages[0] : (prodForm.image || '');
+    const cleanImages = Array.from(new Set(allCandidateImages.length > 0 ? allCandidateImages : [primaryImg].filter(Boolean)));
+
     const payload = {
       name: prodForm.name,
       slug: prodForm.slug,
@@ -1121,8 +1131,8 @@ export const StorefrontManagement = () => {
       price: Number(prodForm.price) || 0,
       original_price: prodForm.original_price ? Number(prodForm.original_price) : null,
       badge: prodForm.badge || null,
-      image: prodForm.image,
-      images: prodForm.images,
+      image: primaryImg,
+      images: cleanImages,
       color_images: prodForm.color_images || {},
       size_guide: prodForm.size_guide,
       features: formattedFeatures,

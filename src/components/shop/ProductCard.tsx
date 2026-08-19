@@ -7,14 +7,18 @@ import { Heart, ShoppingBag, Zap, Check } from 'lucide-react';
 import { useCartStore } from '../../store/cartStore';
 import { formatPrice } from '../../lib/utils';
 import { trackAddToCart } from '../../lib/tracking';
+import { normalizeProduct } from '../../lib/productMedia';
+import { ProductImage } from './ProductImage';
 
-export function ProductCard({ product, index = 0 }: { product: any; index?: number }) {
+export function ProductCard({ product: rawProduct, index = 0 }: { product: any; index?: number }) {
   const [liked, setLiked] = useState(false);
   const [adding, setAdding] = useState(false);
   
-  // Use selective selector so cart changes do not re-render all grid cards
+  const product = normalizeProduct(rawProduct);
   const addItem = useCartStore((state) => state.addItem);
   const router = useRouter();
+
+  if (!product) return null;
 
   const originalPrice = product.original_price || product.originalPrice;
   const discount = (originalPrice && Number(originalPrice) > Number(product.price))
@@ -62,17 +66,13 @@ export function ProductCard({ product, index = 0 }: { product: any; index?: numb
         className="block flex-1 relative cursor-pointer"
       >
         <div className="relative aspect-[3/4] rounded-2xl bg-base-900 overflow-hidden border border-base-400/30 group-hover:border-base-400/80 transition-all duration-300">
-          <img
-            src={product.image || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80'}
+          <ProductImage
+            src={product.image}
+            fallbackCandidates={product.images}
             alt={product.name || 'Product Image'}
             loading={index < 4 ? 'eager' : 'lazy'}
             decoding="async"
-            onError={(e) => {
-              const target = e.currentTarget as HTMLImageElement;
-              target.onerror = null;
-              target.src = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80';
-            }}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 will-change-transform"
+            className="group-hover:scale-105 transition-transform duration-500 will-change-transform"
           />
 
           {/* Badges */}
