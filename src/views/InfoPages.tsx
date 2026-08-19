@@ -3,6 +3,7 @@
 // src/pages/InfoPages.jsx
 import React, { useState, useEffect } from 'react';
 import { Truck, ShieldAlert, Ruler, BookOpen, Loader2 } from 'lucide-react';
+import { InfoPageSkeleton } from '@/components/skeletons/storefront/ShopHeaderSkeleton';
 
 function useSiteSettings(key) {
   const [data, setData] = useState(null);
@@ -39,7 +40,7 @@ export function SizingGuide() {
       <div className="container-site max-w-3xl">
         <p className="section-label mb-2">Help &amp; Guides</p>
         <h1 className="font-black text-3xl sm:text-4xl text-surface-primary mb-6">{content.title || 'Sizing Guide'}</h1>
-        {loading ? <div className="flex justify-center py-16"><Loader2 className="animate-spin text-[#C5A880]" size={32} /></div> : (
+        {loading ? <InfoPageSkeleton /> : (
           <div className="glass-dark p-6 sm:p-8 rounded-xl border border-base-300/40 space-y-6">
             <div className="flex gap-4 items-start">
               <Ruler className="text-brand flex-shrink-0 mt-1" size={24} />

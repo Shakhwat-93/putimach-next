@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { getProducts, getCategories } from '../lib/api';
 import ProductCard from '../components/shop/ProductCard';
+import ProductGridSkeleton from '@/components/skeletons/storefront/ProductGridSkeleton';
 import { trackSearch } from '../lib/tracking';
 
 const sortOptions = [
@@ -625,10 +626,7 @@ export default function Shop() {
           {/* Product Grid Area */}
           <div className="flex-1 min-w-0">
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-[#E9E2D2]">
-                <Loader2 className="animate-spin text-[#C5A880] mb-4" size={36} />
-                <p className="text-[#1C1613]/60 text-xs font-mono tracking-widest uppercase">Loading exclusive collection...</p>
-              </div>
+              <ProductGridSkeleton count={6} columns={grid === '2' ? 'grid-cols-2' : 'grid-cols-2 lg:grid-cols-3'} />
             ) : filteredProducts.length === 0 ? (
               <div className="text-center py-20 bg-white rounded-3xl border border-[#E9E2D2] p-8 shadow-sm">
                 <div className="w-16 h-16 rounded-full bg-[#F7F4EE] border border-[#E9E2D2] flex items-center justify-center mx-auto mb-4 text-[#C5A880]">

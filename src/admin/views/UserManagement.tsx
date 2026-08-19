@@ -16,6 +16,7 @@ import { Button } from '../components/ui/button';
 import { Modal } from '../components/Modal';
 import { Input } from '../components/ui/input';
 import { StatusBadge } from '../components/StatusBadge';
+import { UserListSkeleton } from '@/components/skeletons/admin/UserListSkeleton';
 import { PremiumSearch } from '../components/PremiumSearch';
 import { useConfirmDialog } from '../hooks/useConfirmDialog';
 
@@ -347,11 +348,7 @@ export const UserManagement = () => {
       </motion.div>
 
       {loading ? (
-        <div className="space-y-4 animate-pulse mt-6">
-          <div className="h-16 bg-muted rounded-xl"></div>
-          <div className="h-16 bg-muted rounded-xl"></div>
-          <div className="h-16 bg-muted rounded-xl"></div>
-        </div>
+        <UserListSkeleton />
       ) : filteredUsers.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 text-center border border-border rounded-2xl bg-card mt-6">
           <AlertCircle size={40} className="text-muted-foreground mb-4 opacity-50" />

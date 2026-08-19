@@ -13,6 +13,7 @@ import { useCartStore } from '../store/cartStore';
 import { formatPrice } from '../lib/utils';
 import { trackViewContent, trackAddToCart } from '../lib/tracking';
 import { ProductCard } from '../components/shop/ProductCard';
+import ProductDetailSkeleton from '@/components/skeletons/storefront/ProductDetailSkeleton';
 import { supabase } from '../lib/supabase';
 import { extractProductImages, DEFAULT_PRODUCT_FALLBACK, cleanImageUrl } from '../lib/productMedia';
 
@@ -245,12 +246,7 @@ export default function ProductDetailView() {
   }, [slug]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen pt-20 flex flex-col items-center justify-center gap-4 bg-[#FDFBF7]">
-        <Loader2 size={36} className="text-[#C5A880] animate-spin" />
-        <p className="text-[#1C1613]/60 text-xs font-mono tracking-widest uppercase">Loading Product Details...</p>
-      </div>
-    );
+    return <ProductDetailSkeleton />;
   }
 
   if (!product) {

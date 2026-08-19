@@ -23,6 +23,7 @@ import { DateRangePicker } from '../components/DateRangePicker';
 import { OrderRow } from '../components/OrderRow';
 import { OrderEditModal } from '../components/OrderEditModal';
 import BulkOrderCreator from '../components/BulkOrderCreator';
+import OrdersSkeleton from '@/components/skeletons/admin/OrdersSkeleton';
 
 import api from '../lib/api';
 import { getProductCheckpoints } from '../utils/productCatalog';
@@ -1172,7 +1173,7 @@ export const OrdersBoard = () => {
         {(!pagedOrders || pagedOrders.length === 0) && !loading && (
           <div className="p-8 text-center text-muted-foreground border border-border rounded-2xl bg-card">No orders found.</div>
         )}
-        {loading && <div className="p-8 text-center text-muted-foreground border border-border rounded-2xl bg-card">Loading orders...</div>}
+        {loading && <OrdersSkeleton />}
       </div>
 
       {totalPages > 1 && (
