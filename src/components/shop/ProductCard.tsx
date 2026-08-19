@@ -21,9 +21,10 @@ export function ProductCard({ product, index = 0 }: { product: any; index?: numb
     ? Math.round(((Number(originalPrice) - Number(product.price)) / Number(originalPrice)) * 100)
     : null;
 
-  const inStock = product.inventory_id
-    ? (product.inventory?.current_stock > 0)
-    : (product.in_stock !== false);
+  // Accurately determine if inStock (do not false-positive on unpopulated background inventory)
+  const inStock = product.in_stock !== false && 
+    (product.stock === undefined || product.stock > 0) &&
+    (!product.inventory || product.inventory.current_stock > 0);
 
   const handleQuickAdd = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -136,38 +137,36 @@ export function ProductCard({ product, index = 0 }: { product: any; index?: numb
         </div>
       </Link>
 
-      {/* ── Separate Interactive Action Buttons (Outside Link Tag) ── */}
-      {inStock && (
-        <div className="px-1 pt-2 flex items-center gap-1.5 mt-auto">
-          <button
-            type="button"
-            onClick={handleQuickAdd}
-            aria-label="Add to cart"
-            className={`flex-1 flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1.5 rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-wider transition-all duration-200 border shadow-sm cursor-pointer active:scale-95 ${
-              adding 
-                ? 'bg-emerald-600 text-white border-emerald-600 shadow-emerald-500/20' 
-                : 'bg-white text-[#1C1613] border-[#E9E2D2] hover:border-[#1C1613] hover:bg-[#FDFBF7]'
-            }`}
-          >
-            {adding ? (
-              <Check size={13} className="animate-bounce shrink-0 text-white" />
-            ) : (
-              <ShoppingBag size={12} className="shrink-0" />
-            )}
-            <span>{adding ? 'Added!' : 'Cart'}</span>
-          </button>
+      {/* ── Action Buttons (Always Visible on Every Card) ── */}
+      <div className="px-1 pt-2 flex items-center gap-1.5 mt-auto">
+        <button
+          type="button"
+          onClick={handleQuickAdd}
+          aria-label="Add to cart"
+          className={`flex-1 flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1.5 rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-wider transition-all duration-200 border shadow-sm cursor-pointer active:scale-95 ${
+            adding 
+              ? 'bg-emerald-600 text-white border-emerald-600 shadow-emerald-500/20' 
+              : 'bg-white text-[#1C1613] border-[#E9E2D2] hover:border-[#1C1613] hover:bg-[#FDFBF7]'
+          }`}
+        >
+          {adding ? (
+            <Check size={13} className="animate-bounce shrink-0 text-white" />
+          ) : (
+            <ShoppingBag size={12} className="shrink-0" />
+          )}
+          <span>{adding ? 'Added!' : 'Cart'}</span>
+        </button>
 
-          <button
-            type="button"
-            onClick={handleBuyNow}
-            aria-label="Buy now"
-            className="flex-1 flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1.5 rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-wider bg-[#1C1613] text-[#C5A880] hover:bg-[#2A221E] transition-all duration-200 shadow-sm border border-[#C5A880]/30 cursor-pointer active:scale-95"
-          >
-            <Zap size={12} className="shrink-0" />
-            <span>Buy</span>
-          </button>
-        </div>
-      )}
+        <button
+          type="button"
+          onClick={handleBuyNow}
+          aria-label="Buy now"
+          className="flex-1 flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1.5 rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-wider bg-[#1C1613] text-[#C5A880] hover:bg-[#2A221E] transition-all duration-200 shadow-sm border border-[#C5A880]/30 cursor-pointer active:scale-95"
+        >
+          <Zap size={12} className="shrink-0" />
+          <span>Buy</span>
+        </button>
+      </div>
     </div>
   );
 }
