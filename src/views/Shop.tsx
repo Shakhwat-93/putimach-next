@@ -2,9 +2,11 @@
 // @ts-nocheck
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-
 import { motion, AnimatePresence } from 'framer-motion';
-import { SlidersHorizontal, Search, ChevronDown, Grid2X2, Grid3X3, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { 
+  SlidersHorizontal, Search, ChevronDown, Grid2X2, Grid3X3, 
+  Loader2, ChevronLeft, ChevronRight, X, Check, RotateCcw, Sparkles 
+} from 'lucide-react';
 import { getProducts, getCategories } from '../lib/api';
 import ProductCard from '../components/shop/ProductCard';
 import { trackSearch } from '../lib/tracking';
@@ -30,7 +32,6 @@ function ShopBannerSlider({ slides }) {
   const [current, setCurrent] = useState(0);
   const timerRef = useRef(null);
 
-  // Normalize slides format (handles simple string arrays or object arrays)
   const normalizedSlides = useMemo(() => {
     if (!slides) return [];
     return slides.map((slide, idx) => {
@@ -123,38 +124,47 @@ function ShopBannerSlider({ slides }) {
   );
 }
 
+/* ─── Main Shop View Component ───────────────────────────────────────── */
 export default function Shop() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const setSearchParams = (params) => {
-    let newParams = new URLSearchParams(searchParams.toString());
-    if (typeof params === 'function') {
-      newParams = params(newParams);
-    } else {
-      for (const [key, value] of Object.entries(params)) {
-        if (value) newParams.set(key, value);
-        else newParams.delete(key);
-      }
-    }
-    router.push('?' + newParams.toString(), { scroll: false });
-  };
+
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [shopSlider, setShopSlider] = useState([]);
   const [shopSettings, setShopSettings] = useState({
-    title: 'Shop All',
-    subtitle: 'The Catalog',
+    title: 'Exclusive Catalog',
+    subtitle: 'Luxury Streetwear',
   });
   const [loading, setLoading] = useState(true);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [grid, setGrid] = useState('3');
+  const sortDropdownRef = useRef(null);
 
   const activeCategory = searchParams.get('cat') || 'all';
   const activePrice = searchParams.get('price') || 'all';
   const activeSort = searchParams.get('sort') || 'featured';
   const searchQuery = searchParams.get('q') || '';
+
+  // Close sort dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(e.target)) {
+        setSortOpen(false);
+      }
+    }
+    if (sortOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [sortOpen]);
 
   useEffect(() => {
     const fetchWithTimeout = (url, ms = 1500) => {
@@ -182,7 +192,7 @@ export default function Shop() {
         setProducts(prodList);
         setCategories(catList);
         if (shopSiteRes?.success && shopSiteRes.data) {
-          setShopSettings({ title: 'Shop All', subtitle: 'The Catalog', ...shopSiteRes.data });
+          setShopSettings({ title: 'Exclusive Catalog', subtitle: 'Luxury Streetwear', ...shopSiteRes.data });
         }
         if (sliderRes?.success && Array.isArray(sliderRes.data) && sliderRes.data.length > 0) {
           setShopSlider(sliderRes.data);
@@ -196,7 +206,7 @@ export default function Shop() {
     loadData();
   }, []);
 
-  // Fire Search tracking event when user searches (debounced to avoid firing on every keystroke)
+  // Fire Search tracking event when user searches
   useEffect(() => {
     if (!searchQuery) return;
     const timer = setTimeout(() => {
@@ -205,12 +215,26 @@ export default function Shop() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-
+  // Robust URL Search Params Updater
   const updateParam = (key, val) => {
-    const params = new URLSearchParams(searchParams);
-    if (val === 'all' || val === '' || val === 'featured') params.delete(key);
-    else params.set(key, val);
-    setSearchParams(params);
+    const params = new URLSearchParams(searchParams.toString());
+    if (!val || val === 'all' || val === 'featured') {
+      params.delete(key);
+    } else {
+      params.set(key, val);
+    }
+    const qs = params.toString();
+    router.push(qs ? `?${qs}` : '/shop', { scroll: false });
+  };
+
+  const clearAllFilters = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('cat');
+    params.delete('price');
+    params.delete('q');
+    params.delete('sort');
+    const qs = params.toString();
+    router.push(qs ? `?${qs}` : '/shop', { scroll: false });
   };
 
   const computedCategories = useMemo(() => {
@@ -218,15 +242,16 @@ export default function Shop() {
     const catCounts = { all: allCount };
 
     categories.forEach((c) => {
-      catCounts[c.slug] = products.filter((p) => p.category === c.slug).length;
+      const slug = c.slug || c.id;
+      catCounts[slug] = products.filter((p) => p.category === slug || p.category === c.name).length;
     });
 
     return [
       { id: 'all', label: 'All Items', count: allCount },
       ...categories.map((c) => ({
-        id: c.slug,
+        id: c.slug || c.id,
         label: c.name,
-        count: catCounts[c.slug] || 0,
+        count: catCounts[c.slug || c.id] || 0,
       })),
     ];
   }, [products, categories]);
@@ -250,7 +275,7 @@ export default function Shop() {
       const q = searchQuery.toLowerCase();
       result = result.filter(
         (p) =>
-          p.name.toLowerCase().includes(q) ||
+          p.name?.toLowerCase().includes(q) ||
           p.category?.toLowerCase().includes(q) ||
           (p.tags && p.tags.some((t) => t.toLowerCase().includes(q))) ||
           (p.description && p.description.toLowerCase().includes(q))
@@ -258,10 +283,10 @@ export default function Shop() {
     }
 
     // Sort
-    if (activeSort === 'price-asc') result.sort((a, b) => a.price - b.price);
-    if (activeSort === 'price-desc') result.sort((a, b) => b.price - a.price);
+    if (activeSort === 'price-asc') result.sort((a, b) => Number(a.price) - Number(b.price));
+    if (activeSort === 'price-desc') result.sort((a, b) => Number(b.price) - Number(a.price));
     if (activeSort === 'newest') result.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
-    if (activeSort === 'rating') result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    if (activeSort === 'rating') result.sort((a, b) => (b.rating || 5) - (a.rating || 5));
 
     return result;
   }, [products, activeCategory, activePrice, activeSort, searchQuery]);
@@ -270,117 +295,188 @@ export default function Shop() {
     activeCategory !== 'all',
     activePrice !== 'all',
     searchQuery !== '',
+    activeSort !== 'featured',
   ].filter(Boolean).length;
 
+  const currentSortLabel = sortOptions.find((o) => o.val === activeSort)?.label || 'Featured';
+  const currentCategoryLabel = computedCategories.find((c) => c.id === activeCategory)?.label || activeCategory;
+  const currentPriceLabel = priceRanges.find((p) => p.val === activePrice)?.label || activePrice;
+
   return (
-    <div className="min-h-screen pt-20 pb-20">
+    <div className="min-h-screen pt-20 pb-20 bg-[#FDFBF7]">
       {/* ─── Page Header ─── */}
-      <div className="container-site py-10 lg:py-14">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <p className="section-label mb-2">{shopSettings.subtitle}</p>
-          <h1 className="font-black text-h1 mb-2">{shopSettings.title}</h1>
-          <p className="text-surface-secondary">
-            {loading ? 'Loading catalog...' : `${filteredProducts.length} ${filteredProducts.length === 1 ? 'product' : 'products'} found`}
+      <div className="container-site py-8 lg:py-12">
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles size={14} className="text-[#C5A880]" />
+            <p className="text-xs font-bold text-[#C5A880] uppercase tracking-[0.25em] font-serif">
+              {shopSettings.subtitle}
+            </p>
+          </div>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-black text-[#1C1613] tracking-tight mb-2">
+            {shopSettings.title}
+          </h1>
+          <p className="text-sm text-[#1C1613]/60">
+            {loading ? 'Curating catalog...' : `${filteredProducts.length} ${filteredProducts.length === 1 ? 'masterpiece' : 'masterpieces'} available`}
           </p>
         </motion.div>
       </div>
 
-      {/* ─── Shop Banner Slider (from DB) ─── */}
+      {/* ─── Shop Banner Slider ─── */}
       {shopSlider.length > 0 && (
-        <div className="container-site mb-10">
+        <div className="container-site mb-8">
           <ShopBannerSlider slides={shopSlider} />
         </div>
       )}
 
       <div className="container-site">
-        {/* ─── Toolbar ─── */}
-        <div className="flex items-center justify-between gap-4 mb-8">
-          {/* Left: Filter + Search */}
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            {/* Filter Toggle */}
+        {/* ─── Quick Category Pills (Instant 1-Tap Filter) ─── */}
+        <div className="mb-6 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="flex items-center gap-2 min-w-max">
+            {computedCategories.map((c) => {
+              const isSelected = activeCategory === c.id;
+              return (
+                <button
+                  type="button"
+                  key={c.id}
+                  onClick={() => updateParam('cat', c.id)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer select-none active:scale-95 border ${
+                    isSelected
+                      ? 'bg-[#1C1613] text-[#C5A880] border-[#1C1613] shadow-md ring-2 ring-[#C5A880]/20'
+                      : 'bg-white text-[#1C1613]/80 border-[#E9E2D2] hover:border-[#1C1613] hover:text-[#1C1613] hover:bg-[#F7F4EE]'
+                  }`}
+                >
+                  <span>{c.label}</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                    isSelected ? 'bg-[#C5A880]/20 text-[#C5A880]' : 'bg-[#1C1613]/5 text-[#1C1613]/60'
+                  }`}>
+                    {c.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ─── Toolbar (Filters + Search + Sort + Grid) ─── */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6 bg-white p-3 sm:p-4 rounded-2xl border border-[#E9E2D2] shadow-sm">
+          {/* Left: Filter Toggle + Search */}
+          <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-[200px]">
+            {/* Filter Toggle (Desktop: Sidebar, Mobile: Modal) */}
             <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-all duration-200 text-small font-medium flex-shrink-0 ${
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                  setMobileFilterOpen(true);
+                } else {
+                  setSidebarOpen(!sidebarOpen);
+                }
+              }}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all duration-200 text-xs font-bold uppercase tracking-wider cursor-pointer active:scale-95 ${
                 sidebarOpen || activeFiltersCount > 0
-                  ? 'border-brand/40 text-brand bg-brand/10'
-                  : 'border-base-300 text-surface-secondary hover:border-brand/30 hover:text-surface-primary'
+                  ? 'bg-[#1C1613] text-[#C5A880] border-[#1C1613] shadow-sm'
+                  : 'bg-[#FDFBF7] border-[#E9E2D2] text-[#1C1613] hover:border-[#1C1613] hover:bg-[#F4EFE6]'
               }`}
             >
-              <SlidersHorizontal size={15} />
-              Filters
+              <SlidersHorizontal size={14} className="shrink-0" />
+              <span>Filters</span>
               {activeFiltersCount > 0 && (
-                <span className="w-5 h-5 rounded-full bg-brand text-white text-[10px] font-bold flex items-center justify-center">
+                <span className="w-5 h-5 rounded-full bg-[#FF5533] text-white text-[10px] font-black flex items-center justify-center shadow-sm">
                   {activeFiltersCount}
                 </span>
               )}
             </button>
 
-            {/* Search */}
-            <div className="relative flex-1 max-w-xs hidden sm:block">
-              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-muted" />
+            {/* Search Input */}
+            <div className="relative flex-1 max-w-xs">
+              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#1C1613]/40" />
               <input
                 type="text"
-                placeholder="Search products..."
+                placeholder="Search collection..."
                 value={searchQuery}
                 onChange={(e) => updateParam('q', e.target.value)}
-                className="input pl-9 py-2.5"
+                className="w-full bg-[#FDFBF7] border border-[#E9E2D2] focus:border-[#1C1613] rounded-xl pl-9 pr-8 py-2 text-xs font-medium text-[#1C1613] placeholder-[#1C1613]/40 focus:outline-none transition-colors"
                 id="shop-search"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => updateParam('q', '')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#1C1613]/40 hover:text-[#1C1613] cursor-pointer"
+                >
+                  <X size={13} />
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Right: Sort + Grid Toggle */}
-          <div className="flex items-center gap-3">
+          {/* Right: Luxury Sort Dropdown + Grid Toggle */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {/* Sort Dropdown */}
-            <div className="relative">
+            <div className="relative" ref={sortDropdownRef}>
               <button
+                type="button"
                 onClick={() => setSortOpen(!sortOpen)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-base-300 text-small text-surface-secondary hover:border-brand/30 hover:text-surface-primary transition-all duration-200"
+                className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-[#E9E2D2] bg-[#FDFBF7] text-xs font-bold text-[#1C1613] hover:border-[#1C1613] hover:bg-[#F4EFE6] transition-all duration-200 cursor-pointer active:scale-95 select-none"
               >
-                {sortOptions.find((o) => o.val === activeSort)?.label}
-                <ChevronDown size={14} className={`transition-transform ${sortOpen ? 'rotate-180' : ''}`} />
+                <span className="text-[#1C1613]/60 font-medium">Sort:</span>
+                <span>{currentSortLabel}</span>
+                <ChevronDown size={14} className={`transition-transform duration-200 text-[#1C1613]/60 ${sortOpen ? 'rotate-180 text-[#1C1613]' : ''}`} />
               </button>
+
               <AnimatePresence>
                 {sortOpen && (
                   <motion.div
-                    initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                    initial={{ opacity: 0, y: 6, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                    exit={{ opacity: 0, y: 6, scale: 0.98 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-full mt-2 w-52 glass-dark rounded-xl border border-base-300 overflow-hidden z-20 shadow-card-lg"
+                    className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl border border-[#E9E2D2] overflow-hidden z-50 shadow-2xl p-1.5 select-none"
                   >
-                    {sortOptions.map((opt) => (
-                      <button
-                        key={opt.val}
-                        onClick={() => {
-                          updateParam('sort', opt.val);
-                          setSortOpen(false);
-                        }}
-                        className={`w-full text-left px-4 py-2.5 text-small transition-colors ${
-                          activeSort === opt.val ? 'text-brand font-semibold bg-brand/10' : 'text-surface-secondary hover:text-surface-primary hover:bg-white/5'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
+                    <div className="px-3 py-2 border-b border-[#E9E2D2]/60 mb-1">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-[#C5A880] font-serif">Sort Collection</p>
+                    </div>
+                    {sortOptions.map((opt) => {
+                      const isCurrent = activeSort === opt.val;
+                      return (
+                        <button
+                          type="button"
+                          key={opt.val}
+                          onClick={() => {
+                            updateParam('sort', opt.val);
+                            setSortOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all duration-150 cursor-pointer ${
+                            isCurrent
+                              ? 'bg-[#1C1613] text-[#C5A880] font-bold shadow-sm'
+                              : 'text-[#1C1613] hover:bg-[#F7F4EE] hover:text-[#1C1613]'
+                          }`}
+                        >
+                          <span>{opt.label}</span>
+                          {isCurrent && <Check size={14} className="text-[#C5A880] shrink-0" />}
+                        </button>
+                      );
+                    })}
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
 
-            {/* Grid View Mode Buttons */}
-            <div className="hidden md:flex items-center gap-1 border border-base-300 rounded-lg p-1">
+            {/* Grid Toggle (Desktop Only) */}
+            <div className="hidden md:flex items-center gap-1 border border-[#E9E2D2] rounded-xl p-1 bg-[#FDFBF7]">
               <button
+                type="button"
                 onClick={() => setGrid('2')}
-                className={`p-1.5 rounded transition-colors ${grid === '2' ? 'bg-base-700 text-white' : 'text-surface-muted hover:text-white'}`}
-                title="2 columns"
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${grid === '2' ? 'bg-[#1C1613] text-[#C5A880]' : 'text-[#1C1613]/50 hover:text-[#1C1613]'}`}
+                title="2 Columns"
               >
                 <Grid2X2 size={16} />
               </button>
               <button
+                type="button"
                 onClick={() => setGrid('3')}
-                className={`p-1.5 rounded transition-colors ${grid === '3' ? 'bg-base-700 text-white' : 'text-surface-muted hover:text-white'}`}
-                title="3 columns"
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${grid === '3' ? 'bg-[#1C1613] text-[#C5A880]' : 'text-[#1C1613]/50 hover:text-[#1C1613]'}`}
+                title="3 Columns"
               >
                 <Grid3X3 size={16} />
               </button>
@@ -388,73 +484,138 @@ export default function Shop() {
           </div>
         </div>
 
-        {/* ─── Main Content Layout ─── */}
-        <div className="flex gap-8">
-          {/* Sidebar Filters */}
+        {/* ─── Active Filter Badges Bar ─── */}
+        {activeFiltersCount > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mb-6 p-3 bg-white rounded-xl border border-[#E9E2D2] shadow-xs">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#1C1613]/50 mr-1">Active:</span>
+
+            {activeCategory !== 'all' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#1C1613] text-[#C5A880] text-xs font-medium shadow-xs">
+                Category: {currentCategoryLabel}
+                <button type="button" onClick={() => updateParam('cat', 'all')} className="hover:text-white cursor-pointer">
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+
+            {activePrice !== 'all' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#1C1613] text-[#C5A880] text-xs font-medium shadow-xs">
+                Price: {currentPriceLabel}
+                <button type="button" onClick={() => updateParam('price', 'all')} className="hover:text-white cursor-pointer">
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+
+            {searchQuery && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#1C1613] text-[#C5A880] text-xs font-medium shadow-xs">
+                &ldquo;{searchQuery}&rdquo;
+                <button type="button" onClick={() => updateParam('q', '')} className="hover:text-white cursor-pointer">
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+
+            {activeSort !== 'featured' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#1C1613] text-[#C5A880] text-xs font-medium shadow-xs">
+                Sort: {currentSortLabel}
+                <button type="button" onClick={() => updateParam('sort', 'featured')} className="hover:text-white cursor-pointer">
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="inline-flex items-center gap-1 text-xs font-bold text-[#FF5533] hover:underline ml-auto cursor-pointer"
+            >
+              <RotateCcw size={12} />
+              Reset All
+            </button>
+          </div>
+        )}
+
+        {/* ─── Main Content Layout (Sidebar + Product Grid) ─── */}
+        <div className="flex gap-8 items-start">
+          {/* Desktop Sidebar Filters */}
           <AnimatePresence>
             {sidebarOpen && (
               <motion.aside
                 initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: 260 }}
+                animate={{ opacity: 1, width: 280 }}
                 exit={{ opacity: 0, width: 0 }}
                 transition={{ duration: 0.25 }}
                 className="overflow-hidden shrink-0 hidden md:block"
               >
-                <div className="w-[260px] pr-4 space-y-6">
+                <div className="w-[280px] bg-white p-5 rounded-2xl border border-[#E9E2D2] shadow-sm space-y-6">
                   {/* Category Filter */}
                   <div>
-                    <h3 className="section-label mb-3">Categories</h3>
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#C5A880] font-serif mb-3">
+                      Categories
+                    </h3>
                     <div className="space-y-1">
-                      {computedCategories.map((c) => (
-                        <button
-                          key={c.id}
-                          onClick={() => updateParam('cat', c.id)}
-                          className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-small transition-all ${
-                            activeCategory === c.id
-                              ? 'bg-brand/10 text-brand font-semibold'
-                              : 'text-surface-secondary hover:text-surface-primary hover:bg-base-800/50'
-                          }`}
-                        >
-                          <span>{c.label}</span>
-                          <span className="text-[11px] opacity-60">({c.count})</span>
-                        </button>
-                      ))}
+                      {computedCategories.map((c) => {
+                        const isSelected = activeCategory === c.id;
+                        return (
+                          <button
+                            type="button"
+                            key={c.id}
+                            onClick={() => updateParam('cat', c.id)}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 cursor-pointer ${
+                              isSelected
+                                ? 'bg-[#1C1613] text-[#C5A880] font-bold shadow-xs'
+                                : 'text-[#1C1613]/80 hover:text-[#1C1613] hover:bg-[#F7F4EE]'
+                            }`}
+                          >
+                            <span>{c.label}</span>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                              isSelected ? 'bg-[#C5A880]/20 text-[#C5A880]' : 'bg-[#1C1613]/5 text-[#1C1613]/60'
+                            }`}>
+                              {c.count}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  {/* Price Filter */}
-                  <div>
-                    <h3 className="section-label mb-3">Price Range</h3>
+                  {/* Price Range Filter */}
+                  <div className="pt-4 border-t border-[#E9E2D2]/60">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#C5A880] font-serif mb-3">
+                      Price Range
+                    </h3>
                     <div className="space-y-1">
-                      {priceRanges.map((p) => (
-                        <button
-                          key={p.val}
-                          onClick={() => updateParam('price', p.val)}
-                          className={`w-full text-left px-3 py-2 rounded-lg text-small transition-all ${
-                            activePrice === p.val
-                              ? 'bg-brand/10 text-brand font-semibold'
-                              : 'text-surface-secondary hover:text-surface-primary hover:bg-base-800/50'
-                          }`}
-                        >
-                          {p.label}
-                        </button>
-                      ))}
+                      {priceRanges.map((p) => {
+                        const isSelected = activePrice === p.val;
+                        return (
+                          <button
+                            type="button"
+                            key={p.val}
+                            onClick={() => updateParam('price', p.val)}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 cursor-pointer ${
+                              isSelected
+                                ? 'bg-[#1C1613] text-[#C5A880] font-bold shadow-xs'
+                                : 'text-[#1C1613]/80 hover:text-[#1C1613] hover:bg-[#F7F4EE]'
+                            }`}
+                          >
+                            <span>{p.label}</span>
+                            {isSelected && <Check size={13} className="text-[#C5A880]" />}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  {/* Reset Filters */}
+                  {/* Clear Button */}
                   {activeFiltersCount > 0 && (
                     <button
-                      onClick={() => {
-                        const params = new URLSearchParams(searchParams);
-                        params.delete('cat');
-                        params.delete('price');
-                        params.delete('q');
-                        setSearchParams(params);
-                      }}
-                      className="text-xs text-brand hover:underline font-medium pt-2"
+                      type="button"
+                      onClick={clearAllFilters}
+                      className="w-full py-2.5 rounded-xl border border-[#FF5533]/30 text-[#FF5533] hover:bg-[#FF5533]/10 font-bold text-xs uppercase tracking-wider transition-all duration-150 flex items-center justify-center gap-1.5 cursor-pointer"
                     >
-                      Clear all filters
+                      <RotateCcw size={13} />
+                      Clear All Filters
                     </button>
                   )}
                 </div>
@@ -465,37 +626,155 @@ export default function Shop() {
           {/* Product Grid Area */}
           <div className="flex-1 min-w-0">
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-24">
-                <Loader2 className="animate-spin text-brand mb-4" size={32} />
-                <p className="text-surface-secondary text-small">Loading products...</p>
+              <div className="flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-[#E9E2D2]">
+                <Loader2 className="animate-spin text-[#C5A880] mb-4" size={36} />
+                <p className="text-[#1C1613]/60 text-xs font-mono tracking-widest uppercase">Loading exclusive collection...</p>
               </div>
             ) : filteredProducts.length === 0 ? (
-              <div className="text-center py-20 border border-dashed border-base-300 rounded-2xl p-8">
-                <p className="text-h3 font-bold mb-2">No products found</p>
-                <p className="text-surface-muted text-small mb-6">Try adjusting your search or filter criteria</p>
+              <div className="text-center py-20 bg-white rounded-3xl border border-[#E9E2D2] p-8 shadow-sm">
+                <div className="w-16 h-16 rounded-full bg-[#F7F4EE] border border-[#E9E2D2] flex items-center justify-center mx-auto mb-4 text-[#C5A880]">
+                  <SlidersHorizontal size={24} />
+                </div>
+                <h3 className="text-xl font-serif font-black text-[#1C1613] mb-2">No matching pieces found</h3>
+                <p className="text-[#1C1613]/60 text-xs mb-6 max-w-sm mx-auto">
+                  Try adjusting your price range or exploring different categories to discover our latest drop.
+                </p>
                 <button
-                  onClick={() => {
-                    const params = new URLSearchParams(searchParams);
-                    params.delete('cat');
-                    params.delete('price');
-                    params.delete('q');
-                    setSearchParams(params);
-                  }}
-                  className="btn-primary"
+                  type="button"
+                  onClick={clearAllFilters}
+                  className="px-6 py-3 bg-[#1C1613] text-[#C5A880] font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-[#2A221E] transition-all shadow-sm border border-[#C5A880]/30 cursor-pointer"
                 >
-                  Reset Filters
+                  Reset All Filters
                 </button>
               </div>
             ) : (
               <div className={`grid gap-4 sm:gap-6 ${grid === '2' ? 'grid-cols-2' : 'grid-cols-2 lg:grid-cols-3'}`}>
                 {filteredProducts.map((p, idx) => (
-                  <ProductCard key={p.id} product={p} index={idx} />
+                  <ProductCard key={p.id || idx} product={p} index={idx} />
                 ))}
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* ─── Mobile Filter Slide-Over Drawer ─── */}
+      <AnimatePresence>
+        {mobileFilterOpen && (
+          <div className="fixed inset-0 z-[999] flex justify-end">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileFilterOpen(false)}
+              className="absolute inset-0 bg-[#1C1613]/70 backdrop-blur-xs cursor-pointer"
+            />
+
+            {/* Drawer */}
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="relative w-full max-w-xs bg-[#FDFBF7] h-full shadow-2xl flex flex-col z-10 overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b border-[#E9E2D2] bg-white">
+                <div className="flex items-center gap-2">
+                  <SlidersHorizontal size={16} className="text-[#C5A880]" />
+                  <h3 className="font-serif font-black text-base text-[#1C1613]">Filter Catalog</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobileFilterOpen(false)}
+                  className="w-8 h-8 rounded-full bg-[#F7F4EE] flex items-center justify-center text-[#1C1613]/60 hover:text-[#1C1613] cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Scrollable Filters Content */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                {/* Categories */}
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-widest text-[#C5A880] font-serif mb-3">Categories</p>
+                  <div className="space-y-1.5">
+                    {computedCategories.map((c) => {
+                      const isSelected = activeCategory === c.id;
+                      return (
+                        <button
+                          type="button"
+                          key={c.id}
+                          onClick={() => updateParam('cat', c.id)}
+                          className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                            isSelected
+                              ? 'bg-[#1C1613] text-[#C5A880] font-bold shadow-xs'
+                              : 'bg-white text-[#1C1613]/80 border border-[#E9E2D2]'
+                          }`}
+                        >
+                          <span>{c.label}</span>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                            isSelected ? 'bg-[#C5A880]/20 text-[#C5A880]' : 'bg-[#1C1613]/5 text-[#1C1613]/60'
+                          }`}>
+                            {c.count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Price Ranges */}
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-widest text-[#C5A880] font-serif mb-3">Price Range</p>
+                  <div className="space-y-1.5">
+                    {priceRanges.map((p) => {
+                      const isSelected = activePrice === p.val;
+                      return (
+                        <button
+                          type="button"
+                          key={p.val}
+                          onClick={() => updateParam('price', p.val)}
+                          className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                            isSelected
+                              ? 'bg-[#1C1613] text-[#C5A880] font-bold shadow-xs'
+                              : 'bg-white text-[#1C1613]/80 border border-[#E9E2D2]'
+                          }`}
+                        >
+                          <span>{p.label}</span>
+                          {isSelected && <Check size={14} className="text-[#C5A880]" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Drawer Footer Actions */}
+              <div className="p-4 border-t border-[#E9E2D2] bg-white flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearAllFilters();
+                    setMobileFilterOpen(false);
+                  }}
+                  className="flex-1 py-3 rounded-xl border border-[#E9E2D2] text-[#1C1613] font-bold text-xs uppercase tracking-wider hover:bg-[#F7F4EE] transition-all cursor-pointer"
+                >
+                  Reset
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileFilterOpen(false)}
+                  className="flex-1 py-3 rounded-xl bg-[#1C1613] text-[#C5A880] font-bold text-xs uppercase tracking-wider hover:bg-[#2A221E] transition-all shadow-sm cursor-pointer"
+                >
+                  Apply ({filteredProducts.length})
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
