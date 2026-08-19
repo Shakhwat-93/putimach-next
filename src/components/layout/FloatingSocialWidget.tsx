@@ -16,8 +16,6 @@ export default function FloatingSocialWidget() {
   } | null>(null);
   const widgetRef = useRef<HTMLDivElement>(null);
 
-  if (pathname === '/checkout') return null;
-
   useEffect(() => {
     async function loadContactInfo() {
       try {
@@ -84,6 +82,8 @@ export default function FloatingSocialWidget() {
   const whatsappUrl = `https://wa.me/${formattedWhatsapp}?text=${encodeURIComponent("Hello PutiMach! I have a question about your products.")}`;
   const instagramUrl = contact?.instagram_url || 'https://www.instagram.com/putimachhh?igsh=dnYxeXhhdHhodzdn';
   const facebookUrl = contact?.facebook_url || 'https://www.facebook.com/share/1HitDwyphD';
+
+  if (pathname === '/checkout') return null;
 
   return (
     <div ref={widgetRef} className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-[999] flex flex-col items-end gap-3 select-none">
