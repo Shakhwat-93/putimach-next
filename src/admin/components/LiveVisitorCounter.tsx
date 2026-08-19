@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Activity, Users, Smartphone, Monitor, Globe, X } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 
 export function LiveVisitorCounter({ compact = false }: { compact?: boolean }) {
   const [visitorCount, setVisitorCount] = useState<number>(0);
@@ -12,50 +11,33 @@ export function LiveVisitorCounter({ compact = false }: { compact?: boolean }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    const adminKey = `admin_${Math.random().toString(36).slice(2, 7)}`;
-    const channel = supabase.channel('online-visitors', {
-      config: {
-        presence: {
-          key: adminKey,
-        },
-      },
-    });
+    let isMounted = true;
 
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState();
-        const visitorKeys = Object.keys(state).filter(k => !k.startsWith('admin_'));
-        setVisitorCount(visitorKeys.length);
+    async function fetchLiveStats() {
+      try {
+        const res = await fetch(`/admin-api/visitor-heartbeat?t=${Date.now()}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (isMounted && data.success) {
+          setVisitorCount(data.count || 0);
+          setDeviceStats({ mobile: data.mobile || 0, desktop: data.desktop || 0 });
+          setPagesMap(data.pages || {});
+          setVisitorDetails(data.details || []);
+        }
+      } catch (err) {
+        // Silently handle fetch notice
+      }
+    }
 
-        const details: any[] = [];
-        const pMap: Record<string, number> = {};
-        let mob = 0;
-        let desk = 0;
+    // Initial fetch
+    fetchLiveStats();
 
-        visitorKeys.forEach(k => {
-          const presences = state[k] as any[];
-          if (presences && presences[0]) {
-            const data = presences[0];
-            details.push({ id: k, ...data });
-            
-            const page = data.page || '/';
-            pMap[page] = (pMap[page] || 0) + 1;
-
-            if (data.device === 'Mobile') mob++;
-            else desk++;
-          }
-        });
-
-        setVisitorDetails(details);
-        setPagesMap(pMap);
-        setDeviceStats({ mobile: mob, desktop: desk });
-      })
-      .subscribe();
+    // Poll every 3.5 seconds
+    const interval = setInterval(fetchLiveStats, 3500);
 
     return () => {
-      try {
-        channel.unsubscribe();
-      } catch (e) {}
+      isMounted = false;
+      clearInterval(interval);
     };
   }, []);
 
@@ -78,27 +60,30 @@ export function LiveVisitorCounter({ compact = false }: { compact?: boolean }) {
 
         {/* Detailed Modal */}
         {isModalOpen && (
-          <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-            <div className="w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden animate-scale-up">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-secondary/30">
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 overflow-y-auto">
+            <div className="relative w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden my-auto max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-secondary/30 shrink-0">
                 <div className="flex items-center gap-2.5">
                   <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
                     <Activity size={18} className="animate-pulse" />
                   </div>
                   <div>
                     <h3 className="font-bold text-sm text-foreground">Real-Time Visitors</h3>
-                    <p className="text-xs text-muted-foreground">Live sessions on putimach.com</p>
+                    <p className="text-xs text-muted-foreground">Live storefront traffic on putimach.com</p>
                   </div>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 >
                   <X size={16} />
                 </button>
               </div>
 
-              <div className="p-5 space-y-4">
+              {/* Scrollable Body */}
+              <div className="p-5 space-y-4 overflow-y-auto">
                 {/* Stat Box */}
                 <div className="grid grid-cols-3 gap-3">
                   <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex flex-col items-center justify-center">
@@ -210,3 +195,4 @@ export function LiveVisitorCounter({ compact = false }: { compact?: boolean }) {
     </div>
   );
 }
+
