@@ -816,151 +816,154 @@ export const OrdersBoard = () => {
 
   return (
     <div className="space-y-6">
+      {/* ── Top Header Bar ── */}
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col md:flex-row md:items-center justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold font-display">
-            <span className="text-foreground">Orders </span>
-            <span className="text-primary">Management</span>
-          </h1>
-          <p className="text-muted-foreground">Full control over your order pipeline and customer records.</p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl sm:text-3xl font-extrabold font-display tracking-tight text-foreground">
+              Orders Management
+            </h1>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-muted text-muted-foreground">
+              {filteredOrders.length} total
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+            Manage live customer orders, COD payments, stock allocation, and dispatch lifecycles.
+          </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Button variant="ghost" onClick={() => setIsExportModalOpen(true)}>
-            <Download size={18} className="mr-2" /> <span>Export CSV</span>
-          </Button>
-          
-          <Button
-            variant="secondary"
-            onClick={handleAutoDistribute}
-            disabled={distributing}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Button 
+            type="button"
+            variant="outline" 
+            size="sm"
+            onClick={() => fetchOrders(page)}
+            className="rounded-xl h-9 px-3.5 text-xs font-bold gap-2"
           >
-            {distributing ? 'Processing...' : 'AUTO DISTRIBUTE'}
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <span>Refresh</span>
           </Button>
 
           <Button 
+            type="button"
+            variant="outline" 
+            size="sm"
+            onClick={() => setIsExportModalOpen(true)}
+            className="rounded-xl h-9 px-3.5 text-xs font-bold gap-2"
+          >
+            <Download size={14} />
+            <span>Export CSV</span>
+          </Button>
+          
+          <Button 
+            type="button"
             onClick={() => {
               setSelectedOrderForEdit(null);
               setIsNewOrderModalOpen(true);
             }}
-            className="rounded-full font-bold gap-2"
+            size="sm"
+            className="rounded-xl h-9 px-4 text-xs font-bold gap-2 shadow-sm"
           >
-            <Plus size={18} />
+            <Plus size={15} />
             <span>New Order</span>
           </Button>
         </div>
       </motion.div>
 
-      {/* ── Status Tabs ── */}
-      <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-2 flex-nowrap">
-        {statusTabs.map((tab) => {
-          let colorClass = 'bg-slate-100 text-slate-700'; // default/All
-          if (tab.value === 'Pending Call') colorClass = 'bg-amber-100 text-amber-800';
-          else if (tab.value === 'Final Call Pending') colorClass = 'bg-orange-100 text-orange-800';
-          else if (tab.value === 'Confirmed') colorClass = 'bg-emerald-100 text-emerald-800';
-          else if (tab.value === 'Cancelled') colorClass = 'bg-rose-100 text-rose-800';
-          else if (tab.value === 'Fake Order') colorClass = 'bg-red-100 text-red-800';
-          
-          return (
-            <button
-              key={tab.value}
-              className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                filters.status === tab.value 
-                  ? 'bg-primary text-primary-foreground' 
-                  : `bg-secondary hover:bg-secondary/80 text-foreground`
-              }`}
-              onClick={() => handleFilterChange('status', tab.value)}
-            >
-              <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${colorClass.split(' ')[0].replace('100', '500')}`}></span>
-                <span>{tab.label}</span>
-                <span className="rounded-full bg-secondary px-3 py-1 text-xs font-bold text-muted-foreground">{tab.count}</span>
-              </div>
-            </button>
-          )
-        })}
-      </div>
-      {isLoadingStatusBreakdown && (
-        <div className="text-sm text-muted-foreground animate-pulse">Refreshing status-wise order counts...</div>
-      )}
-
-      {/* ── Unified Filter Bar ── */}
-      <div className="rounded-2xl border border-border bg-card p-3 mb-4 flex flex-col gap-3 md:flex-row md:items-center">
-        <div className="flex-1">
-          <PremiumSearch
-            value={filters.searchTerm}
-            onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
-            placeholder="Search ID, name or phone..."
-            suggestions={
-              filters.searchTerm ? orders.filter(o => 
-                o.id.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-                o.customer_name?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-                o.phone?.includes(filters.searchTerm)
-              ).slice(0, 5).map(o => ({
-                id: o.id,
-                label: o.customer_name,
-                sub: o.id,
-                type: 'order',
-                original: o
-              })) : []
-            }
-            onSuggestionClick={(item) => {
-              if (item.type === 'order') {
-                handleRowClick(item.original);
+      {/* ── Search & Filter Box (Matching Screenshot) ── */}
+      <div className="rounded-2xl border border-border bg-card p-4 space-y-4 shadow-xs">
+        {/* Full-width Search Bar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="flex-1">
+            <PremiumSearch
+              value={filters.searchTerm}
+              onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
+              placeholder="Search by customer name, order #, or phone..."
+              suggestions={
+                filters.searchTerm ? orders.filter(o => 
+                  o.id.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+                  o.customer_name?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+                  o.phone?.includes(filters.searchTerm)
+                ).slice(0, 5).map(o => ({
+                  id: o.id,
+                  label: o.customer_name,
+                  sub: o.id,
+                  type: 'order',
+                  original: o
+                })) : []
               }
-            }}
+              onSuggestionClick={(item) => {
+                if (item.type === 'order') {
+                  handleRowClick(item.original);
+                }
+              }}
+            />
+          </div>
+
+          <select
+            className="rounded-xl border border-input bg-background px-3 py-2 text-xs font-medium h-10 shrink-0"
+            value={filters.source}
+            onChange={(e) => handleFilterChange('source', e.target.value)}
+          >
+            <option value="All">All Sources</option>
+            {SOURCES.map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+
+          <DateRangePicker
+            value={filters.dateRange}
+            onChange={(range) => handleFilterChange('dateRange', range)}
           />
         </div>
 
-        <select
-          className="rounded-xl border border-input bg-background px-3 py-2 text-sm"
-          value={filters.source}
-          onChange={(e) => handleFilterChange('source', e.target.value)}
-        >
-          <option value="All">All Sources</option>
-          {SOURCES.map(s => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-
-        <DateRangePicker
-          value={filters.dateRange}
-          onChange={(range) => handleFilterChange('dateRange', range)}
-        />
-        {unreadCount > 0 && (
-          <span className="rounded-full bg-primary/10 text-primary px-3 py-1 text-xs font-bold whitespace-nowrap" title="Orders not opened in this route">
-            {unreadCount} unread
-          </span>
-        )}
+        {/* Status Tabs Pills (Matching Screenshot) */}
+        <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 flex-nowrap items-center pt-1">
+          {statusTabs.map((tab) => {
+            const isSelected = filters.status === tab.value;
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                className={`whitespace-nowrap px-3.5 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+                  isSelected 
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-bold shadow-xs' 
+                    : 'bg-card border border-border/70 text-muted-foreground hover:bg-secondary hover:text-foreground font-medium'
+                }`}
+                onClick={() => handleFilterChange('status', tab.value)}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* ── Product Checkpoints (Horizontal Scroll) ── */}
+      {/* ── Product Checkpoints Filter Bar ── */}
       <div className="flex gap-2 overflow-x-auto scrollbar-none pb-2 flex-nowrap items-center">
         {visibleProductBreakdown.map((product) => (
           <button
             key={product.id}
-            className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium border transition-colors flex items-center gap-2 ${
+            type="button"
+            className={`whitespace-nowrap px-3.5 py-1.5 rounded-xl text-xs font-medium border transition-colors flex items-center gap-2 cursor-pointer ${
               filters.productName === (product.id === 'all' ? '' : product.name) 
-                ? 'border-primary bg-primary/5 text-primary' 
+                ? 'border-primary bg-primary/5 text-primary font-bold' 
                 : 'border-border bg-card hover:bg-secondary text-foreground'
             }`}
             onClick={() => handleFilterChange('productName', product.id === 'all' ? '' : product.name)}
           >
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: product.color }}></span>
             <span>{product.name}</span>
-            <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-bold text-muted-foreground">{product.count}</span>
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold text-muted-foreground">{product.count}</span>
           </button>
         ))}
       </div>
-      {isLoadingProductBreakdown && (
-        <div className="text-sm text-muted-foreground animate-pulse">Refreshing product-wise order counts...</div>
-      )}
 
-      {/* ── Bulk Action Bar (shown when orders are selected) ── */}
+      {/* ── Bulk Action Bar ── */}
       {selectedOrderIds.length > 0 && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-rose-50 border border-rose-200 text-sm animate-slide-up">
           <span className="font-semibold text-rose-700">
@@ -984,7 +987,7 @@ export const OrdersBoard = () => {
         </div>
       )}
 
-      {/* ── Filter-wise / Status-wise Delete Button ── */}
+      {/* ── Filter-wise Delete Button ── */}
       {filteredOrders.length > 0 && (filters.status !== 'All' || filters.productName || filters.searchTerm || filters.source !== 'All') && (
         <div className="flex items-center justify-end">
           <button
@@ -998,12 +1001,12 @@ export const OrdersBoard = () => {
         </div>
       )}
 
-      {/* Table (desktop) */}
-      <div className="hidden md:block rounded-2xl border border-border bg-card overflow-hidden shadow-sm animate-slide-up">
-        <table className="w-full text-sm text-left">
-          <thead className="bg-secondary/40 text-muted-foreground font-semibold border-b border-border text-[11px] uppercase tracking-wider">
+      {/* Table (desktop - matching screenshot columns) */}
+      <div className="hidden md:block rounded-2xl border border-border bg-card overflow-hidden shadow-xs animate-slide-up">
+        <table className="w-full text-sm text-left border-collapse">
+          <thead className="bg-muted/30 text-muted-foreground font-bold border-b border-border text-[11px] uppercase tracking-wider">
             <tr>
-              <th className="px-3 py-3 w-8">
+              <th className="px-4 py-3.5 w-10">
                 <input 
                   type="checkbox" 
                   className="rounded border-input text-primary focus:ring-primary/20 h-4 w-4 cursor-pointer"
@@ -1011,17 +1014,16 @@ export const OrdersBoard = () => {
                   onChange={handleSelectAll}
                 />
               </th>
-              <th className="px-3 py-3">Caller / ID</th>
-              <th className="px-3 py-3">Date</th>
-              <th className="px-3 py-3">Customer</th>
-              <th className="px-3 py-3">Product</th>
-              <th className="px-3 py-3">Total</th>
-              <th className="px-3 py-3">Status</th>
-              <th className="px-3 py-3">Response</th>
-              <th className="px-3 py-3 text-right">Action</th>
+              <th className="px-4 py-3.5">Order Reference ↑↓</th>
+              <th className="px-4 py-3.5">Customer ↑↓</th>
+              <th className="px-4 py-3.5">Status ↑↓</th>
+              <th className="px-4 py-3.5">Payment ↑↓</th>
+              <th className="px-4 py-3.5">ITEMS</th>
+              <th className="px-4 py-3.5">Total (BDT) ↑↓</th>
+              <th className="px-4 py-3.5 text-right">ACTION</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody className="divide-y divide-border/60">
             <AnimatePresence mode="popLayout">
               {Array.isArray(pagedOrders) && pagedOrders.map(order => (
                 <OrderRow
@@ -1041,10 +1043,10 @@ export const OrdersBoard = () => {
                 />
               ))}
             </AnimatePresence>
-            {(!pagedOrders || pagedOrders.length === 0) && (
+            {(!pagedOrders || pagedOrders.length === 0) && !loading && (
               <tr>
-                <td colSpan="9" className="p-8 text-center text-muted-foreground">
-                  {loading ? 'Loading orders...' : 'No orders found matching your filters.'}
+                <td colSpan="8" className="p-8 text-center text-muted-foreground text-xs font-medium">
+                  No orders found matching your filters.
                 </td>
               </tr>
             )}
@@ -1176,60 +1178,37 @@ export const OrdersBoard = () => {
         {loading && <OrdersSkeleton />}
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
-          <div className="text-sm text-muted-foreground">
-            Showing page {page} of {totalPages} ({filteredOrders.length} matching orders)
-          </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={page === 1}
-              onClick={() => setPage(prev => Math.max(1, prev - 1))}
-            >
-              Previous
-            </Button>
-            <div className="flex items-center">
-              {[...Array(totalPages)].map((_, i) => {
-                if (
-                  i === 0 || 
-                  i === totalPages - 1 || 
-                  (i >= page - 2 && i <= page)
-                ) {
-                  return (
-                    <button
-                      key={i}
-                      className={`w-8 h-8 rounded-lg text-sm font-medium flex items-center justify-center transition-colors ${
-                        page === i + 1 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'text-foreground hover:bg-secondary'
-                      }`}
-                      onClick={() => setPage(i + 1)}
-                    >
-                      {i + 1}
-                    </button>
-                  );
-                } else if (
-                  (i === 1 && page > 3) || 
-                  (i === totalPages - 2 && page < totalPages - 2)
-                ) {
-                  return <span key={i} className="px-2 text-muted-foreground">...</span>;
-                }
-                return null;
-              })}
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={page === totalPages}
-              onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
-            >
-              Next
-            </Button>
-          </div>
+      {/* ── Pagination Footer (Matching Screenshot) ── */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 text-xs text-muted-foreground font-medium">
+        <div>
+          Showing <span className="font-bold text-foreground">{pagedOrders.length > 0 ? (page - 1) * 20 + 1 : 0}</span> to <span className="font-bold text-foreground">{Math.min(page * 20, filteredOrders.length)}</span> of <span className="font-bold text-foreground">{filteredOrders.length}</span> entries
         </div>
-      )}
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={page === 1}
+            onClick={() => setPage(prev => Math.max(1, prev - 1))}
+            className="rounded-xl h-8 px-3 text-xs font-semibold"
+          >
+            &lt; Previous
+          </Button>
+          <span className="px-2 font-mono font-bold text-foreground">
+            {page} / {totalPages || 1}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={page >= totalPages}
+            onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
+            className="rounded-xl h-8 px-3 text-xs font-semibold"
+          >
+            Next &gt;
+          </Button>
+        </div>
+      </div>
 
       {/* ── Bulk Action Bar ── */}
       <AnimatePresence>

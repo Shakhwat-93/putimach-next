@@ -145,7 +145,7 @@ export const OrderRow = ({ order, onDetails, onStatusChange, onEdit, onPrint, on
       transition={{ duration: 0.2 }}
     >
       {/* 1. Checkbox */}
-      <td className="px-3 py-2.5 w-8 align-middle" onClick={(e) => e.stopPropagation()}>
+      <td className="px-4 py-3.5 w-10 align-middle" onClick={(e) => e.stopPropagation()}>
         <input 
           type="checkbox" 
           className="rounded border-input text-primary focus:ring-primary/20 h-4 w-4 cursor-pointer" 
@@ -154,60 +154,33 @@ export const OrderRow = ({ order, onDetails, onStatusChange, onEdit, onPrint, on
         />
       </td>
 
-      {/* 2. Caller / ID */}
-      <td className="px-3 py-2.5 align-middle">
+      {/* 2. Order Reference */}
+      <td className="px-4 py-3.5 align-middle">
         <div className="flex flex-col gap-0.5 min-w-0">
-          {order.first_caller_name ? (
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="h-7 w-7 rounded-full bg-primary/15 text-primary font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
-                {order.first_caller_name.charAt(0).toUpperCase()}
-              </span>
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs font-bold text-foreground truncate max-w-[90px] leading-tight" title={order.first_caller_name}>
-                  {order.first_caller_name}
-                </span>
-                <span className="text-[10px] font-mono text-muted-foreground truncate">
-                  #{String(order.id).replace('ORD-', '').replace('STB-', '').replace('MGB-', '').slice(0, 8)}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="h-7 w-7 rounded-full bg-muted text-muted-foreground font-bold text-xs flex items-center justify-center shrink-0">—</span>
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs italic text-muted-foreground leading-tight">Not called</span>
-                <span className="text-[10px] font-mono text-muted-foreground truncate">
-                  #{String(order.id).replace('ORD-', '').replace('STB-', '').replace('MGB-', '').slice(0, 8)}
-                </span>
-              </div>
-            </div>
-          )}
-
+          <span className="text-xs font-mono font-bold text-foreground tracking-tight">
+            #{String(order.id).replace('ORD-', '').replace('STB-', '').replace('MGB-', '').slice(0, 10)}
+          </span>
+          <span className="text-[11px] text-muted-foreground font-medium">
+            {orderTimestamp}
+          </span>
           {duplicateWarning && (
-            <div className="mt-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 text-[9.5px] font-bold border border-rose-200/60 shrink-0 w-max max-w-[130px]" title={duplicateWarning.title}>
+            <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 text-[10px] font-bold border border-rose-200/60 w-max" title={duplicateWarning.title}>
               <AlertTriangle size={10} className="shrink-0" />
-              <span className="truncate">Dup: {duplicateWarning.label}</span>
+              <span>Dup: {duplicateWarning.label}</span>
             </div>
           )}
         </div>
       </td>
 
-      {/* 3. Date / Timestamp */}
-      <td className="px-3 py-2.5 whitespace-nowrap align-middle">
-        <span className="text-xs text-muted-foreground font-medium block leading-snug">
-          {orderTimestamp}
-        </span>
-      </td>
-
-      {/* 4. Customer */}
-      <td className="px-3 py-2.5 align-middle">
+      {/* 3. Customer */}
+      <td className="px-4 py-3.5 align-middle">
         <div className="flex flex-col gap-0.5 min-w-0">
-          <span className="text-xs font-bold text-foreground truncate max-w-[150px]" title={order.customer_name}>
+          <span className="text-xs font-bold text-foreground truncate max-w-[170px]" title={order.customer_name}>
             {order.customer_name || 'Customer'}
           </span>
-          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <span className="truncate max-w-[85px]">{rawPhone || 'No phone'}</span>
-            <div className="inline-flex items-center gap-0.5 shrink-0" onClick={stopRowClick}>
+          <div className="flex items-center gap-1 text-[11px] font-mono text-muted-foreground">
+            <span>{rawPhone || 'No phone'}</span>
+            <div className="inline-flex items-center gap-0.5 shrink-0 ml-1" onClick={stopRowClick}>
               <button
                 type="button"
                 className="p-0.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
@@ -242,31 +215,8 @@ export const OrderRow = ({ order, onDetails, onStatusChange, onEdit, onPrint, on
         </div>
       </td>
 
-      {/* 5. Product & Source */}
-      <td className="px-3 py-2.5 align-middle">
-        <div className="flex flex-col gap-1 min-w-0">
-          <span className="text-xs font-semibold text-foreground truncate max-w-[170px]" title={productName}>
-            {productName}
-          </span>
-          <SourceBadge traffic_source={order.traffic_source} source={order.source} />
-        </div>
-      </td>
-
-      {/* 6. Total Amount & Delivery Zone/Items */}
-      <td className="px-3 py-2.5 whitespace-nowrap align-middle">
-        <div className="flex flex-col">
-          <span className="text-xs font-bold text-foreground flex items-center gap-0.5">
-            <CurrencyIcon size={11} className="text-muted-foreground" />
-            {Number(order.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </span>
-          <span className="text-[10px] text-muted-foreground font-medium">
-            {order.shipping_zone || 'Standard'} • {order.items || 1} item{order.items > 1 ? 's' : ''}
-          </span>
-        </div>
-      </td>
-
-      {/* 7. Fulfilment Status */}
-      <td className="px-3 py-2.5 whitespace-nowrap align-middle" onClick={(e) => e.stopPropagation()}>
+      {/* 4. Status */}
+      <td className="px-4 py-3.5 whitespace-nowrap align-middle" onClick={(e) => e.stopPropagation()}>
         <div className="relative inline-block" ref={statusBtnRef}>
           <button 
             type="button"
@@ -306,41 +256,62 @@ export const OrderRow = ({ order, onDetails, onStatusChange, onEdit, onPrint, on
         </div>
       </td>
 
-      {/* 8. Response Timer */}
-      <td className="px-3 py-2.5 whitespace-nowrap align-middle" onClick={(e) => e.stopPropagation()}>
-        <ResponseTimer order={order} mode="compact" />
+      {/* 5. Payment */}
+      <td className="px-4 py-3.5 whitespace-nowrap align-middle">
+        <div className="flex flex-col gap-0.5">
+          <span className={`text-[11px] font-extrabold uppercase tracking-wider ${
+            order.status === 'Completed' || order.status === 'Delivered'
+              ? 'text-emerald-600 dark:text-emerald-400'
+              : 'text-amber-600 dark:text-amber-400'
+          }`}>
+            {order.payment_status || (order.status === 'Completed' || order.status === 'Delivered' ? 'COD_COLLECTED' : 'PENDING_COD')}
+          </span>
+          <span className="text-[11px] text-muted-foreground font-medium">
+            {order.payment_method || 'Cash On Delivery'}
+          </span>
+        </div>
       </td>
 
-      {/* 9. Action Buttons */}
-      <td className="px-3 py-2.5 text-right whitespace-nowrap align-middle">
-        <div className="inline-flex items-center gap-1 justify-end">
+      {/* 6. Items */}
+      <td className="px-4 py-3.5 whitespace-nowrap align-middle">
+        <span className="text-xs font-medium text-foreground">
+          {order.items || 1} item{order.items > 1 ? 's' : ''}
+        </span>
+      </td>
+
+      {/* 7. Total (BDT) */}
+      <td className="px-4 py-3.5 whitespace-nowrap align-middle">
+        <span className="text-sm font-extrabold font-mono text-foreground">
+          ৳{Number(order.amount || 0).toLocaleString()}
+        </span>
+      </td>
+
+      {/* 8. Action */}
+      <td className="px-4 py-3.5 text-right whitespace-nowrap align-middle" onClick={stopRowClick}>
+        <div className="inline-flex items-center gap-1.5 justify-end">
           <button 
-            className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center justify-center" 
-            title="View Details" 
-            onClick={(e) => { e.stopPropagation(); onDetails(order); }}
+            type="button"
+            className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer border border-border/40"
+            onClick={() => onDetails(order)}
           >
-            <FileText size={14} />
+            <FileText size={13} />
+            <span>View</span>
           </button>
           <button 
-            className="h-7 w-7 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors flex items-center justify-center" 
-            title="Edit Order" 
-            onClick={(e) => { e.stopPropagation(); onEdit && onEdit(order); }}
+            type="button"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
+            onClick={() => onEdit(order)}
+            title="Edit Order"
           >
-            <Edit2 size={14} />
+            <Edit2 size={13} />
           </button>
           <button 
-            className="h-7 w-7 rounded-lg text-muted-foreground hover:text-teal-500 hover:bg-teal-500/10 transition-colors flex items-center justify-center" 
-            title="Print Invoice / Label" 
-            onClick={(e) => { e.stopPropagation(); onPrint && onPrint(order); }}
+            type="button"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+            onClick={() => onDelete(order.id)}
+            title="Delete Order"
           >
-            <Printer size={14} />
-          </button>
-          <button 
-            className="h-7 w-7 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors flex items-center justify-center" 
-            title="Delete Order" 
-            onClick={(e) => { e.stopPropagation(); onDelete && onDelete(order); }}
-          >
-            <Trash2 size={14} />
+            <Trash2 size={13} />
           </button>
         </div>
       </td>
