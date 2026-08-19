@@ -86,14 +86,23 @@ export default function FloatingSocialWidget() {
   if (pathname === '/checkout') return null;
 
   return (
-    <div ref={widgetRef} className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-[999] flex flex-col items-end gap-3 select-none">
+    <div ref={widgetRef} className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-[999] pointer-events-none flex flex-col items-end gap-3 select-none">
       
+      {/* ── BACKDROP TO DISMISS WHEN OPEN ── */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-[-1] pointer-events-auto cursor-default" 
+          onClick={() => setIsOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* ── EXPANDED SPEED-DIAL SOCIAL BUTTONS ── */}
       <div 
         className={`flex flex-col items-end gap-3 transition-all duration-300 transform origin-bottom-right ${
           isOpen 
-            ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto' 
-            : 'opacity-0 scale-90 translate-y-4 pointer-events-none'
+            ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto visible' 
+            : 'opacity-0 scale-90 translate-y-4 pointer-events-none invisible'
         }`}
       >
         {/* 1. WhatsApp Button */}
@@ -102,7 +111,7 @@ export default function FloatingSocialWidget() {
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => setIsOpen(false)}
-          className="group flex items-center gap-3 bg-[#1C1613] hover:bg-[#2A221E] text-white p-2.5 pl-4 rounded-full border border-[#25D366]/40 shadow-xl shadow-[#25D366]/10 hover:shadow-[#25D366]/25 transition-all duration-200 hover:scale-105"
+          className="pointer-events-auto group flex items-center gap-3 bg-[#1C1613] hover:bg-[#2A221E] text-white p-2.5 pl-4 rounded-full border border-[#25D366]/40 shadow-xl shadow-[#25D366]/10 hover:shadow-[#25D366]/25 transition-all duration-200 hover:scale-105 cursor-pointer"
         >
           <span className="text-xs font-medium font-sans tracking-wide text-white group-hover:text-[#25D366] transition-colors whitespace-nowrap">
             Chat on WhatsApp
@@ -120,7 +129,7 @@ export default function FloatingSocialWidget() {
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => setIsOpen(false)}
-          className="group flex items-center gap-3 bg-[#1C1613] hover:bg-[#2A221E] text-white p-2.5 pl-4 rounded-full border border-[#E1306C]/40 shadow-xl shadow-[#E1306C]/10 hover:shadow-[#E1306C]/25 transition-all duration-200 hover:scale-105"
+          className="pointer-events-auto group flex items-center gap-3 bg-[#1C1613] hover:bg-[#2A221E] text-white p-2.5 pl-4 rounded-full border border-[#E1306C]/40 shadow-xl shadow-[#E1306C]/10 hover:shadow-[#E1306C]/25 transition-all duration-200 hover:scale-105 cursor-pointer"
         >
           <span className="text-xs font-medium font-sans tracking-wide text-white group-hover:text-[#E1306C] transition-colors whitespace-nowrap">
             Follow on Instagram
@@ -138,7 +147,7 @@ export default function FloatingSocialWidget() {
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => setIsOpen(false)}
-          className="group flex items-center gap-3 bg-[#1C1613] hover:bg-[#2A221E] text-white p-2.5 pl-4 rounded-full border border-[#1877F2]/40 shadow-xl shadow-[#1877F2]/10 hover:shadow-[#1877F2]/25 transition-all duration-200 hover:scale-105"
+          className="pointer-events-auto group flex items-center gap-3 bg-[#1C1613] hover:bg-[#2A221E] text-white p-2.5 pl-4 rounded-full border border-[#1877F2]/40 shadow-xl shadow-[#1877F2]/10 hover:shadow-[#1877F2]/25 transition-all duration-200 hover:scale-105 cursor-pointer"
         >
           <span className="text-xs font-medium font-sans tracking-wide text-white group-hover:text-[#1877F2] transition-colors whitespace-nowrap">
             Message on Facebook
@@ -156,13 +165,13 @@ export default function FloatingSocialWidget() {
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Contact and Social Support Options"
-        className={`relative group flex items-center justify-center w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-[#1C1613] to-[#2E241F] text-[#C5A880] border-2 border-[#C5A880]/60 shadow-2xl hover:border-[#C5A880] hover:shadow-[#C5A880]/30 transition-all duration-300 cursor-pointer ${
+        className={`pointer-events-auto relative group flex items-center justify-center w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-[#1C1613] to-[#2E241F] text-[#C5A880] border-2 border-[#C5A880]/60 shadow-2xl hover:border-[#C5A880] hover:shadow-[#C5A880]/30 transition-all duration-300 cursor-pointer ${
           isOpen ? 'rotate-90 bg-[#C5A880] text-[#1C1613] border-[#C5A880]' : 'hover:scale-110'
         }`}
       >
         {/* Pulse Dot Indicator */}
         {!isOpen && (
-          <span className="absolute top-0 right-0 flex h-3 w-3 -mt-0.5 -mr-0.5 sm:h-3.5 sm:w-3.5">
+          <span className="absolute top-0 right-0 flex h-3 w-3 -mt-0.5 -mr-0.5 sm:h-3.5 sm:w-3.5 pointer-events-none">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-3 w-3 sm:h-3.5 sm:w-3.5 bg-emerald-500 border-2 border-[#1C1613]"></span>
           </span>
