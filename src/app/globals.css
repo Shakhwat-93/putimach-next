@@ -6,10 +6,16 @@
 @layer base {
   *, *::before, *::after {
     box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
   }
-  body {
+  html, body {
     min-height: 100vh;
     overflow-x: hidden;
+    touch-action: manipulation;
+    -webkit-overflow-scrolling: touch;
+  }
+  button, a, input, select, textarea {
+    touch-action: manipulation;
   }
   .storefront-root {
     @apply bg-base-800 text-surface-primary font-sans;

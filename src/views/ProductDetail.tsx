@@ -37,22 +37,27 @@ export default function ProductDetailView() {
   const { addItem, openCart, items } = useCartStore();
 
   useEffect(() => {
-    let lastScrollY = window.scrollY;
+    let lastScrollY = 0;
+    let ticking = false;
 
     const handleWindowScroll = () => {
-      const currentScrollY = window.scrollY;
-      if (currentScrollY > 80) {
-        if (currentScrollY > lastScrollY + 6) {
-          // Scroll DOWN -> Hide item name header
-          setHeaderVisible(false);
-        } else if (currentScrollY < lastScrollY - 6) {
-          // Scroll UP -> Show item name header
-          setHeaderVisible(true);
-        }
-      } else {
-        setHeaderVisible(true);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const currentScrollY = window.scrollY;
+          if (currentScrollY > 120) {
+            if (currentScrollY > lastScrollY + 20) {
+              setHeaderVisible(false);
+            } else if (currentScrollY < lastScrollY - 20) {
+              setHeaderVisible(true);
+            }
+          } else {
+            setHeaderVisible(true);
+          }
+          lastScrollY = currentScrollY;
+          ticking = false;
+        });
+        ticking = true;
       }
-      lastScrollY = currentScrollY;
     };
 
     window.addEventListener('scroll', handleWindowScroll, { passive: true });
@@ -120,6 +125,7 @@ export default function ProductDetailView() {
   };
 
   const handleThumbnailClick = (index) => {
+    if (index < 0 || index >= images.length) return;
     setActiveImg(index);
     if (sliderRef.current) {
       const width = sliderRef.current.offsetWidth;
@@ -131,26 +137,25 @@ export default function ProductDetailView() {
   };
 
   const handleSelectColor = (color) => {
+    if (!color) return;
     setSelectedColor(color);
-    const colorImg = colorImageMap[color] || product?.variants?.find(v => String(v.color).toLowerCase() === String(color).toLowerCase() && (v.image_url || v.image))?.image_url;
+    
+    // Perform case-insensitive match against colorImageMap
+    const cleanColor = String(color).trim().toLowerCase();
+    const matchedKey = Object.keys(colorImageMap).find(
+      k => String(k).trim().toLowerCase() === cleanColor
+    );
+    const colorImg = matchedKey ? colorImageMap[matchedKey] : null;
+
     if (colorImg) {
-      const matchIndex = images.indexOf(colorImg);
+      const matchIndex = images.findIndex(
+        img => img === colorImg || (typeof img === 'string' && typeof colorImg === 'string' && (img.includes(colorImg) || colorImg.includes(img)))
+      );
       if (matchIndex !== -1) {
         handleThumbnailClick(matchIndex);
       }
     }
   };
-
-  // Auto-sync selected color pill when scrolling or clicking gallery thumbnails
-  useEffect(() => {
-    const currentImg = images[activeImg];
-    if (currentImg && colorImageMap) {
-      const foundColor = Object.keys(colorImageMap).find(c => colorImageMap[c] === currentImg);
-      if (foundColor && foundColor !== selectedColor) {
-        setSelectedColor(foundColor);
-      }
-    }
-  }, [activeImg, images, colorImageMap]);
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -516,9 +521,10 @@ export default function ProductDetailView() {
                     const isSelected = selectedColor === color;
                     return (
                       <button
+                        type="button"
                         key={color}
                         onClick={() => handleSelectColor(color)}
-                        className={`max-w-full px-3.5 py-2 rounded-xl font-bold text-xs text-left transition-all duration-200 border whitespace-normal break-words leading-snug ${
+                        className={`max-w-full px-3.5 py-2 rounded-xl font-bold text-xs text-left transition-all duration-200 border whitespace-normal break-words leading-snug cursor-pointer ${
                           isSelected
                             ? 'border-[#1C1613] bg-[#1C1613] text-white shadow-sm'
                             : 'border-[#E9E2D2] bg-white text-[#1C1613] hover:border-[#1C1613]/50'
@@ -542,7 +548,7 @@ export default function ProductDetailView() {
                   <button
                     type="button"
                     onClick={() => setSizeGuideOpen(true)}
-                    className="text-[10px] sm:text-[11px] font-bold text-[#C5A880] hover:text-[#1C1613] transition-colors flex items-center gap-1 bg-white border border-[#E9E2D2] px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-full active:scale-95 shadow-sm shrink-0"
+                    className="text-[10px] sm:text-[11px] font-bold text-[#C5A880] hover:text-[#1C1613] transition-colors flex items-center gap-1 bg-white border border-[#E9E2D2] px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-full active:scale-95 shadow-sm shrink-0 cursor-pointer"
                   >
                     <Ruler size={12} className="text-[#C5A880]" />
                     <span>Size Guide & Chart</span>
@@ -554,12 +560,13 @@ export default function ProductDetailView() {
                     const isSelected = selectedSize === size;
                     return (
                       <button
+                        type="button"
                         key={size}
                         onClick={() => {
                           setSelectedSize(size);
                           setSizeError(false);
                         }}
-                        className={`min-w-[46px] sm:min-w-[52px] h-10 sm:h-12 px-3 sm:px-4 rounded-xl font-black text-xs uppercase transition-all duration-200 border ${
+                        className={`min-w-[46px] sm:min-w-[52px] h-10 sm:h-12 px-3 sm:px-4 rounded-xl font-black text-xs uppercase transition-all duration-200 border cursor-pointer ${
                           isSelected
                             ? 'border-[#1C1613] bg-[#1C1613] text-white shadow-md scale-105'
                             : 'border-[#E9E2D2] bg-white text-[#1C1613] hover:border-[#1C1613]/50'
@@ -612,9 +619,10 @@ export default function ProductDetailView() {
             {/* Desktop Action Buttons */}
             <div className="hidden lg:flex gap-3 pt-2">
               <button
+                type="button"
                 disabled={!inStock}
                 onClick={handleAddToCart}
-                className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 border-2 ${
+                className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 border-2 cursor-pointer ${
                   !inStock
                     ? 'border-gray-200 text-gray-400 bg-gray-100 cursor-not-allowed'
                     : added
@@ -636,9 +644,10 @@ export default function ProductDetailView() {
               </button>
 
               <button
+                type="button"
                 disabled={!inStock}
                 onClick={handleBuyNow}
-                className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 shadow-md ${
+                className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 shadow-md cursor-pointer ${
                   !inStock
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     : 'bg-[#FF5533] text-white hover:bg-[#e04422]'
@@ -775,8 +784,9 @@ export default function ProductDetailView() {
           
           {/* Wishlist / Heart Button */}
           <button
+            type="button"
             onClick={() => setLiked(!liked)}
-            className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition-transform shrink-0"
+            className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition-transform shrink-0 cursor-pointer"
             aria-label="Wishlist"
           >
             <Heart size={18} className={liked ? 'fill-[#FF5533] text-[#FF5533]' : 'text-white'} />
@@ -784,9 +794,10 @@ export default function ProductDetailView() {
 
           {/* Add to Cart Button */}
           <button
+            type="button"
             disabled={!inStock}
             onClick={handleAddToCart}
-            className={`flex-1 h-10 sm:h-12 rounded-full font-black text-[11px] sm:text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
+            className={`flex-1 h-10 sm:h-12 rounded-full font-black text-[11px] sm:text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
               !inStock
                 ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
                 : added
@@ -809,9 +820,10 @@ export default function ProductDetailView() {
 
           {/* Buy Now Button */}
           <button
+            type="button"
             disabled={!inStock}
             onClick={handleBuyNow}
-            className={`flex-1 h-10 sm:h-12 rounded-full font-black text-[11px] sm:text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-md ${
+            className={`flex-1 h-10 sm:h-12 rounded-full font-black text-[11px] sm:text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-md cursor-pointer ${
               !inStock
                 ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
                 : 'bg-[#FF5533] text-white hover:bg-[#e04422]'

@@ -230,15 +230,16 @@ export default function CartDrawer() {
                 </div>
 
                 {/* Checkout Primary Button */}
-                <button
-                  type="button"
+                <Link
+                  href="/checkout"
                   id="cart-proceed-checkout-btn"
-                  onClick={handleCheckout}
-                  className="w-full py-4 bg-[#1C1613] hover:bg-[#FF5533] text-white font-black text-xs uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md active:scale-98 group cursor-pointer relative z-[10002]"
+                  onClick={() => closeCart()}
+                  prefetch={true}
+                  className="w-full py-4 bg-[#1C1613] hover:bg-[#FF5533] text-white font-black text-xs uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md active:scale-98 group cursor-pointer text-center"
                 >
-                  Proceed to Checkout
+                  <span>Proceed to Checkout</span>
                   <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                </button>
+                </Link>
 
                 {/* Security Trust Badge */}
                 <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold pt-0.5">
