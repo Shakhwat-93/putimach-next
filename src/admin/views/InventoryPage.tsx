@@ -848,7 +848,37 @@ export const InventoryPage = () => {
                             )}
                           </div>
                           <div className="flex-1 min-w-0 space-y-1">
-                            <span className="text-xs font-bold text-foreground block truncate">{color}</span>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-foreground truncate">{color}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFormData(prev => {
+                                    const updatedColorImages = { ...(prev.color_images || {}) };
+                                    delete updatedColorImages[color];
+                                    const updatedVariants = (prev.variants || []).filter(
+                                      v => v.color?.toLowerCase() !== color.toLowerCase()
+                                    );
+                                    return {
+                                      ...prev,
+                                      color_images: updatedColorImages,
+                                      variants: updatedVariants
+                                    };
+                                  });
+                                  setColorsInput(prev =>
+                                    prev
+                                      .split(',')
+                                      .map(c => c.trim())
+                                      .filter(c => c && c.toLowerCase() !== color.toLowerCase())
+                                      .join(', ')
+                                  );
+                                }}
+                                className="text-muted-foreground hover:text-destructive text-[11px] p-0.5 transition-colors cursor-pointer"
+                                title="Remove this color photo"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
                             <Input
                               className="h-7 text-[11px] px-2 font-mono"
                               placeholder={`Photo URL for ${color}`}
@@ -862,11 +892,11 @@ export const InventoryPage = () => {
                                   }
                                   return v;
                                 });
-                                setFormData({
-                                  ...formData,
+                                setFormData(prev => ({
+                                  ...prev,
                                   color_images: updatedColorImages,
                                   variants: updatedVariants
-                                });
+                                }));
                               }}
                             />
                           </div>

@@ -304,12 +304,16 @@ const MultipleImageUploadInput = ({ label, value = [], onChange }) => {
 };
 
 // Reusable Color-Wise Image Manager Component with Direct Image Uploading and Color Tagging
-const ColorImagesEditor = ({ colors = '', colorImages = {}, onChange, onColorsChange }) => {
+const ColorImagesEditor = ({ colors = '', colorImages = {}, onChange, onColorsChange, onRemoveColor }) => {
   const [uploadingColor, setUploadingColor] = useState(null);
+
+  const parsedColors = typeof colors === 'string'
+    ? colors.split(',').map(c => c.trim()).filter(Boolean)
+    : (Array.isArray(colors) ? colors : []);
 
   // Extract all active unique colors from either the comma text or colorImages map
   const colorList = Array.from(new Set([
-    ...colors.split(',').map(c => c.trim()).filter(Boolean),
+    ...parsedColors,
     ...Object.keys(colorImages || {})
   ]));
 
@@ -318,10 +322,15 @@ const ColorImagesEditor = ({ colors = '', colorImages = {}, onChange, onColorsCh
   const handleAddColor = () => {
     const trimmed = newColorInput.trim();
     if (!trimmed) return;
-    if (!colorList.includes(trimmed)) {
+    if (!colorList.map(c => c.toLowerCase()).includes(trimmed.toLowerCase())) {
       const updatedColors = [...colorList, trimmed].join(', ');
-      onColorsChange(updatedColors);
-      onChange({ ...(colorImages || {}), [trimmed]: '' });
+      const updatedMap = { ...(colorImages || {}), [trimmed]: '' };
+      if (onRemoveColor) {
+        onRemoveColor(null, updatedMap, updatedColors);
+      } else {
+        onChange(updatedMap);
+        onColorsChange(updatedColors);
+      }
     }
     setNewColorInput('');
   };
@@ -329,13 +338,21 @@ const ColorImagesEditor = ({ colors = '', colorImages = {}, onChange, onColorsCh
   const handleRemoveColor = (colorToRemove) => {
     const updatedMap = { ...(colorImages || {}) };
     delete updatedMap[colorToRemove];
-    onChange(updatedMap);
-    const updatedColors = colorList.filter(c => c !== colorToRemove).join(', ');
-    onColorsChange(updatedColors);
+
+    const updatedColorList = colorList.filter(c => c.toLowerCase() !== colorToRemove.toLowerCase());
+    const updatedColors = updatedColorList.join(', ');
+
+    if (onRemoveColor) {
+      onRemoveColor(colorToRemove, updatedMap, updatedColors);
+    } else {
+      onChange(updatedMap);
+      onColorsChange(updatedColors);
+    }
   };
 
   const handleImageUrlChange = (color, url) => {
-    onChange({ ...(colorImages || {}), [color]: url });
+    const updatedMap = { ...(colorImages || {}), [color]: url };
+    onChange(updatedMap);
   };
 
   const handleUploadFile = async (color, e) => {
@@ -345,7 +362,8 @@ const ColorImagesEditor = ({ colors = '', colorImages = {}, onChange, onColorsCh
     try {
       const url = await uploadImage(file);
       if (url) {
-        onChange({ ...(colorImages || {}), [color]: url });
+        const updatedMap = { ...(colorImages || {}), [color]: url };
+        onChange(updatedMap);
       }
     } catch (err) {
       console.error('Color image upload error:', err);
@@ -2953,10 +2971,23 @@ export const StorefrontManagement = () => {
               />
 
               <ColorImagesEditor
-                colors={prodForm.colors}
+                colors={typeof prodForm.colors === 'string' ? prodForm.colors : (Array.isArray(prodForm.colors) ? prodForm.colors.join(', ') : '')}
                 colorImages={prodForm.color_images || {}}
-                onChange={(newMap) => setProdForm({ ...prodForm, color_images: newMap })}
-                onColorsChange={(newColors) => setProdForm({ ...prodForm, colors: newColors })}
+                onChange={(newMap) => setProdForm(prev => ({ ...prev, color_images: newMap }))}
+                onColorsChange={(newColors) => setProdForm(prev => ({ ...prev, colors: newColors }))}
+                onRemoveColor={(colorToRemove, updatedMap, updatedColors) => {
+                  setProdForm(prev => {
+                    const cleanVariants = colorToRemove 
+                      ? (prev.variants || []).filter(v => v.color?.toLowerCase() !== colorToRemove.toLowerCase())
+                      : (prev.variants || []);
+                    return {
+                      ...prev,
+                      color_images: updatedMap,
+                      colors: updatedColors,
+                      variants: cleanVariants
+                    };
+                  });
+                }}
               />
 
               <SizeGuideTableEditor
