@@ -87,13 +87,13 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   }
 
   return (
-    <div className={cn("rounded-xl border border-input bg-background overflow-hidden focus-within:ring-2 focus-within:ring-primary/20 transition-all shadow-xs", className)}>
+    <div className={cn("rounded-xl border border-input bg-background overflow-hidden focus-within:ring-2 focus-within:ring-primary/20 transition-all shadow-xs w-full min-w-0", className)}>
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-1 p-2 bg-muted/40 border-b border-border/80">
-        <div className="flex flex-wrap items-center gap-1">
+      <div className="flex flex-wrap items-center justify-between gap-1.5 p-1.5 sm:p-2 bg-muted/40 border-b border-border/80 min-w-0">
+        <div className="flex flex-wrap items-center gap-0.5 sm:gap-1 min-w-0">
           {toolbarButtons.map((btn, idx) => {
             if (btn.divider) {
-              return <div key={`div-${idx}`} className="w-[1px] h-4 bg-border mx-1" />;
+              return <div key={`div-${idx}`} className="w-[1px] h-4 bg-border mx-0.5 sm:mx-1 shrink-0" />;
             }
             const Icon = btn.icon;
             return (
@@ -103,7 +103,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
                 onClick={btn.action}
                 disabled={isHtmlMode}
                 title={btn.label}
-                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-background/80 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                className="p-1.5 sm:p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-background/80 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shrink-0"
               >
                 <Icon size={14} />
               </button>
@@ -116,7 +116,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           type="button"
           onClick={() => setIsHtmlMode(!isHtmlMode)}
           className={cn(
-            "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer",
+            "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer shrink-0 ml-auto",
             isHtmlMode 
               ? "bg-primary text-primary-foreground border-primary" 
               : "bg-background text-muted-foreground border-border hover:text-foreground"

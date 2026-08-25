@@ -107,17 +107,17 @@ export const ProductMediaManager: React.FC<ProductMediaManagerProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-w-0 w-full">
       {/* Header Info */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+      <div className="flex flex-wrap items-start sm:items-center justify-between gap-2.5 min-w-0">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-bold text-foreground flex items-center gap-2 flex-wrap">
             <span>Media</span>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">
               {allImages.length} {allImages.length === 1 ? 'file' : 'files'}
             </span>
           </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">
             Cloudflare R2 storage. First image is the primary cover image shown on product cards.
           </p>
         </div>
@@ -125,7 +125,7 @@ export const ProductMediaManager: React.FC<ProductMediaManagerProps> = ({
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs transition-all cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs transition-all cursor-pointer shrink-0"
         >
           <Plus size={14} /> Add Media
         </button>

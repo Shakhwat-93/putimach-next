@@ -459,9 +459,101 @@ export const VariantManager: React.FC<VariantManagerProps> = ({
             </div>
           )}
 
-          {/* Matrix Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse min-w-[620px]">
+          {/* Mobile Variant Cards (Visible < 768px) */}
+          <div className="block md:hidden divide-y divide-border/60 p-3 space-y-3">
+            {variants.map((v, idx) => {
+              const isSelected = selectedVariantIds.includes(idx);
+              return (
+                <div
+                  key={idx}
+                  className={cn(
+                    "rounded-xl border border-border p-3 space-y-2.5 transition-colors bg-background/50",
+                    isSelected ? "border-primary ring-1 ring-primary/30 bg-primary/5" : ""
+                  )}
+                >
+                  {/* Card Header */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {
+                          setSelectedVariantIds(prev => 
+                            prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+                          );
+                        }}
+                        className="rounded border-input text-primary h-4 w-4 cursor-pointer shrink-0"
+                      />
+                      {/* Photo Picker */}
+                      <div
+                        onClick={() => setActiveMediaPickerIndex(idx)}
+                        className="w-9 h-9 rounded-lg border border-border bg-muted/40 overflow-hidden flex items-center justify-center cursor-pointer hover:border-primary transition-colors shrink-0"
+                        title="Assign image"
+                      >
+                        {v.image_url ? (
+                          <img src={v.image_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <ImageIcon size={15} className="text-muted-foreground" />
+                        )}
+                      </div>
+                      <span className="font-bold text-xs text-foreground truncate">
+                        {[v.color, v.size].filter(Boolean).join(' / ') || `Variant #${idx + 1}`}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteVariant(idx)}
+                      className="text-muted-foreground hover:text-destructive p-1.5 transition-colors cursor-pointer shrink-0"
+                      title="Remove variant"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+
+                  {/* Inputs Grid */}
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="space-y-1 min-w-0">
+                      <label className="text-[10px] font-bold text-muted-foreground">Price (৳)</label>
+                      <input
+                        type="number"
+                        value={v.price !== undefined ? v.price : basePrice}
+                        onChange={(e) => handleRowChange(idx, 'price', Number(e.target.value) || 0)}
+                        placeholder="Price"
+                        className="h-8 w-full px-2 rounded-lg border border-input bg-background text-xs font-mono font-bold"
+                      />
+                    </div>
+
+                    <div className="space-y-1 min-w-0">
+                      <label className="text-[10px] font-bold text-muted-foreground">Stock</label>
+                      <input
+                        type="number"
+                        value={v.stock !== undefined ? v.stock : 0}
+                        onChange={(e) => handleRowChange(idx, 'stock', Number(e.target.value) || 0)}
+                        placeholder="Qty"
+                        className="h-8 w-full px-2 rounded-lg border border-input bg-background text-xs font-mono font-bold"
+                      />
+                    </div>
+
+                    <div className="space-y-1 min-w-0">
+                      <label className="text-[10px] font-bold text-muted-foreground">SKU</label>
+                      <input
+                        type="text"
+                        value={v.sku || ''}
+                        onChange={(e) => handleRowChange(idx, 'sku', e.target.value)}
+                        placeholder="SKU"
+                        className="h-8 w-full px-2 rounded-lg border border-input bg-background text-[11px] font-mono truncate"
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop Matrix Table (Visible >= 768px) */}
+          <div className="hidden md:block overflow-x-auto min-w-0">
+            <table className="w-full text-left text-xs border-collapse min-w-[560px]">
               <thead>
                 <tr className="bg-muted/30 text-muted-foreground font-bold border-b border-border text-[11px] uppercase tracking-wider">
                   <th className="px-3 py-2.5 w-8">#</th>

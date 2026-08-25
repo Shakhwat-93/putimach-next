@@ -389,25 +389,25 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-24 max-w-7xl mx-auto">
+    <div className="w-full max-w-7xl mx-auto space-y-5 sm:space-y-6 pb-32 sm:pb-36 px-1 sm:px-2 md:px-4 min-w-0">
       {/* ── Top Header Navigation & Title ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/80 pb-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-border/80 pb-4 min-w-0">
+        <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
           <button
             type="button"
             onClick={handleCancelWithCheck}
-            className="w-9 h-9 rounded-xl border border-border bg-card hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-all cursor-pointer shadow-2xs"
+            className="w-9 h-9 shrink-0 rounded-xl border border-border bg-card hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-all cursor-pointer shadow-2xs mt-0.5 sm:mt-0"
             title="Back to products list"
           >
             <ArrowLeft size={16} />
           </button>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground font-display">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-lg sm:text-xl md:text-2xl font-extrabold tracking-tight text-foreground font-display truncate">
                 {isEditMode ? (title || 'Edit Product') : 'Add Product'}
               </h1>
               <span className={cn(
-                "px-2.5 py-0.5 rounded-full text-xs font-bold capitalize",
+                "px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold capitalize shrink-0",
                 status === 'active' ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300" :
                 status === 'draft' ? "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300" :
                 "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
@@ -415,24 +415,24 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                 {status}
               </span>
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 line-clamp-1 sm:line-clamp-none">
               {isEditMode ? `Editing product ID: #${initialProduct?.id || initialProduct?.slug}` : 'Create a fast, high-converting product listing with live variant synchronization.'}
             </p>
           </div>
         </div>
 
-        {/* Top Quick Actions */}
-        <div className="flex items-center gap-2">
+        {/* Top Quick Actions (Responsive) */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 self-end sm:self-auto">
           {isEditMode && onDuplicate && (
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => onDuplicate(initialProduct)}
-              className="rounded-xl text-xs font-bold gap-1.5"
+              className="rounded-xl text-xs font-bold gap-1 px-2.5 sm:px-3 h-8 sm:h-9"
             >
-              <Copy size={13} />
-              <span>Duplicate</span>
+              <Copy size={12} />
+              <span className="hidden sm:inline">Duplicate</span>
             </Button>
           )}
           <Button
@@ -440,7 +440,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
             variant="ghost"
             size="sm"
             onClick={handleCancelWithCheck}
-            className="rounded-xl text-xs font-semibold"
+            className="rounded-xl text-xs font-semibold px-2.5 sm:px-3 h-8 sm:h-9"
           >
             Discard
           </Button>
@@ -449,23 +449,23 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
             size="sm"
             disabled={isSaving}
             onClick={() => handleSubmit(undefined, false)}
-            className="rounded-xl text-xs font-bold gap-1.5 shadow-sm px-4"
+            className="rounded-xl text-xs font-bold gap-1.5 shadow-sm px-3 sm:px-4 h-8 sm:h-9"
           >
-            {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-            <span>{isSaving ? 'Saving...' : 'Save Product'}</span>
+            {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+            <span>{isSaving ? 'Saving...' : 'Save'}</span>
           </Button>
         </div>
       </div>
 
-      {/* ── Two-Column Main Responsive Grid ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      {/* ── Two-Column Main Responsive Grid (Stacks cleanly below 1280px) ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 sm:gap-6 items-start w-full min-w-0">
         
-        {/* ── LEFT MAIN COLUMN (~68%) ── */}
-        <div className="lg:col-span-8 space-y-6">
+        {/* ── LEFT MAIN COLUMN (~67% on XL, 100% on Mobile/Tablet) ── */}
+        <div className="col-span-1 xl:col-span-8 space-y-5 sm:space-y-6 min-w-0 w-full">
 
           {/* 1. PRODUCT INFORMATION */}
-          <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-xs">
-            <div className="space-y-1.5">
+          <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 space-y-4 shadow-xs min-w-0 w-full">
+            <div className="space-y-1.5 min-w-0">
               <label className="text-xs font-bold uppercase tracking-wider text-foreground">
                 Title <span className="text-destructive">*</span>
               </label>
@@ -474,15 +474,15 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                 placeholder="e.g. Heavyweight Boxy Hoodie, Vintage Washed Cargo"
                 value={title}
                 onChange={(e) => handleTitleChange(e.target.value)}
-                className="w-full h-11 px-3.5 rounded-xl border border-input bg-background text-sm font-semibold focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                className="w-full h-10 sm:h-11 px-3.5 rounded-xl border border-input bg-background text-xs sm:text-sm font-semibold focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                 required
               />
             </div>
 
             {/* URL Slug & Handle */}
-            <div className="space-y-1.5 pt-1">
-              <div className="flex items-center justify-between text-xs">
-                <label className="font-bold text-muted-foreground flex items-center gap-1.5">
+            <div className="space-y-1.5 pt-1 min-w-0">
+              <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs">
+                <label className="font-bold text-muted-foreground flex items-center gap-1.5 shrink-0">
                   <Globe size={13} />
                   <span>URL Handle / Slug</span>
                 </label>
@@ -512,7 +512,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                   </button>
                 </div>
               </div>
-              <div className="flex items-center rounded-xl border border-input bg-muted/30 px-3 overflow-hidden focus-within:ring-2 focus-within:ring-primary/20">
+              <div className="flex items-center rounded-xl border border-input bg-muted/30 px-3 overflow-hidden focus-within:ring-2 focus-within:ring-primary/20 min-w-0">
                 <span className="text-xs font-mono text-muted-foreground shrink-0 select-none">/product/</span>
                 <input
                   type="text"
@@ -523,15 +523,15 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                     setIsDirty(true);
                   }}
                   placeholder="heavyweight-boxy-hoodie"
-                  className="w-full h-9 px-1 bg-transparent text-xs font-mono text-foreground outline-none"
+                  className="w-full h-9 px-1 bg-transparent text-xs font-mono text-foreground outline-none min-w-0"
                 />
               </div>
             </div>
           </div>
 
           {/* 2. DESCRIPTION (Rich Text) */}
-          <div className="rounded-2xl border border-border bg-card p-5 space-y-3 shadow-xs">
-            <div className="flex items-center justify-between">
+          <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 space-y-3 shadow-xs min-w-0 w-full">
+            <div className="flex items-center justify-between flex-wrap gap-1">
               <label className="text-xs font-bold uppercase tracking-wider text-foreground">
                 Product Description & Highlights
               </label>
@@ -544,12 +544,12 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                 setDescription(val.replace(/<[^>]*>?/gm, '').slice(0, 180));
                 setIsDirty(true);
               }}
-              minHeight="180px"
+              minHeight="160px"
             />
           </div>
 
           {/* 3. MEDIA (Cloudflare R2) */}
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-xs">
+          <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-xs min-w-0 w-full">
             <ProductMediaManager
               primaryImage={primaryImage}
               onPrimaryChange={(url) => {
@@ -566,15 +566,15 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
           </div>
 
           {/* 4. PRICING & COST */}
-          <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-xs">
+          <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 space-y-4 shadow-xs min-w-0 w-full">
             <div>
               <h3 className="text-sm font-bold text-foreground">Pricing</h3>
               <p className="text-xs text-muted-foreground mt-0.5">Configure selling price, compare-at strike price, and cost analysis.</p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 sm:gap-4">
               {/* Selling Price */}
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 min-w-0">
                 <label className="text-xs font-bold text-foreground">
                   Price (BDT) <span className="text-destructive">*</span>
                 </label>
@@ -592,7 +592,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
               </div>
 
               {/* Compare-at Price */}
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 min-w-0">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-foreground">Compare-at Price</label>
                   {compareAtPrice && Number(compareAtPrice) > Number(price) && (
@@ -614,7 +614,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
               </div>
 
               {/* Cost per item */}
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 min-w-0 sm:col-span-2 md:col-span-1">
                 <label className="text-xs font-bold text-foreground">Cost per item (Optional)</label>
                 <div className="relative flex items-center">
                   <span className="absolute left-3 text-xs font-bold text-muted-foreground select-none">৳</span>
@@ -631,9 +631,9 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
 
             {/* Profit & Margin Bar */}
             {profitMetrics && (
-              <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-xs text-emerald-800 dark:text-emerald-300">
+              <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-xs text-emerald-800 dark:text-emerald-300">
                 <span className="font-semibold">Profit Analysis:</span>
-                <div className="flex items-center gap-4 font-mono font-bold">
+                <div className="flex items-center gap-3 sm:gap-4 font-mono font-bold">
                   <span>Margin: {profitMetrics.margin}%</span>
                   <span>Profit: ৳{profitMetrics.profit.toLocaleString()} / item</span>
                 </div>
@@ -642,8 +642,8 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
           </div>
 
           {/* 5. INVENTORY & STOCK */}
-          <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-xs">
-            <div className="flex items-center justify-between">
+          <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 space-y-4 shadow-xs min-w-0 w-full">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
                 <h3 className="text-sm font-bold text-foreground">Inventory & Tracking</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">Control SKU codes, barcode identifiers, and stock management rules.</p>
@@ -658,8 +658,8 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-1.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 sm:gap-4">
+              <div className="space-y-1.5 min-w-0">
                 <label className="text-xs font-bold text-foreground">Base SKU</label>
                 <input
                   type="text"
@@ -670,7 +670,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                 />
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 min-w-0">
                 <label className="text-xs font-bold text-foreground">Barcode (ISBN, UPC, GTIN)</label>
                 <input
                   type="text"
@@ -682,7 +682,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
               </div>
 
               {variants.length === 0 && (
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 min-w-0 sm:col-span-2 md:col-span-1">
                   <label className="text-xs font-bold text-foreground">Available Quantity</label>
                   <input
                     type="number"
@@ -697,13 +697,13 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
             {/* Link to Inventory Item */}
             <div className="pt-2 border-t border-border space-y-2">
               <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                <Package size={13} className="text-primary" />
+                <Package size={13} className="text-primary shrink-0" />
                 <span>Link to Central Warehouse Inventory (Stock Sync)</span>
               </label>
               <select
                 value={inventoryId}
                 onChange={(e) => { setInventoryId(e.target.value); setIsDirty(true); }}
-                className="w-full h-10 px-3 rounded-xl border border-input bg-background text-xs font-medium outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full h-10 px-3 rounded-xl border border-input bg-background text-xs font-medium outline-none focus:ring-2 focus:ring-primary/20 truncate"
               >
                 <option value="">-- No Direct Link (Manage stock directly here) --</option>
                 {inventoryItems.map(item => (
@@ -730,7 +730,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
           </div>
 
           {/* 6. VARIANTS (Shopify Matrix Engine) */}
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-xs">
+          <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-xs min-w-0 w-full">
             <VariantManager
               options={variantOptions}
               onOptionsChange={(opts) => {
@@ -754,11 +754,11 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
           </div>
 
           {/* 7. SHIPPING */}
-          <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-xs">
-            <div className="flex items-center justify-between">
+          <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 space-y-4 shadow-xs min-w-0 w-full">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
                 <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <Truck size={15} className="text-primary" />
+                  <Truck size={15} className="text-primary shrink-0" />
                   <span>Shipping & Fulfillment</span>
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">Physical package dimensions and courier weight calibration.</p>
@@ -774,8 +774,8 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
             </div>
 
             {isPhysicalProduct && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1 animate-in fade-in duration-200">
-                <div className="space-y-1.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 sm:gap-4 pt-1 animate-in fade-in duration-200">
+                <div className="space-y-1.5 min-w-0">
                   <label className="text-xs font-bold text-foreground">Package Weight</label>
                   <div className="flex items-center rounded-xl border border-input bg-background overflow-hidden">
                     <input
@@ -783,12 +783,12 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                       placeholder="0.45"
                       value={shippingWeight}
                       onChange={(e) => { setShippingWeight(e.target.value); setIsDirty(true); }}
-                      className="w-full h-10 px-3 text-xs font-mono font-bold bg-transparent outline-none"
+                      className="w-full h-10 px-3 text-xs font-mono font-bold bg-transparent outline-none min-w-0"
                     />
                     <select
                       value={shippingWeightUnit}
                       onChange={(e) => setShippingWeightUnit(e.target.value)}
-                      className="h-10 px-2.5 bg-muted text-xs font-bold border-l border-input outline-none cursor-pointer"
+                      className="h-10 px-2.5 bg-muted text-xs font-bold border-l border-input outline-none cursor-pointer shrink-0"
                     >
                       <option value="kg">kg</option>
                       <option value="g">g</option>
@@ -797,7 +797,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 min-w-0">
                   <label className="text-xs font-bold text-foreground">Country of Origin</label>
                   <input
                     type="text"
@@ -808,7 +808,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                   />
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 min-w-0 sm:col-span-2 md:col-span-1">
                   <label className="text-xs font-bold text-foreground">HS (Customs) Code</label>
                   <input
                     type="text"
@@ -822,15 +822,15 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
             )}
           </div>
 
-          {/* 8. MATERIAL, FEATURES & SIZE GUIDE */}
-          <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-xs">
+          {/* 8. MATERIAL, FEATURES & ATTRIBUTES */}
+          <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 space-y-4 shadow-xs min-w-0 w-full">
             <div>
-              <h3 className="text-sm font-bold text-foreground">Attributes & Sizing Guide</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Garment specifications, fabric compositions, and buyer measurement tables.</p>
+              <h3 className="text-sm font-bold text-foreground">Attributes & Specifications</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Garment specifications, fabric compositions, and product highlights.</p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+              <div className="space-y-1.5 min-w-0">
                 <label className="text-xs font-bold text-foreground">Material / Fabric</label>
                 <input
                   type="text"
@@ -841,7 +841,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                 />
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 min-w-0">
                 <label className="text-xs font-bold text-foreground">Key Features (comma separated)</label>
                 <input
                   type="text"
@@ -856,11 +856,11 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
 
         </div>
 
-        {/* ── RIGHT SECONDARY SIDEBAR (~32%) ── */}
-        <div className="lg:col-span-4 space-y-6">
+        {/* ── RIGHT SECONDARY SIDEBAR (~33% on XL, 100% on Mobile/Tablet) ── */}
+        <div className="col-span-1 xl:col-span-4 space-y-5 sm:space-y-6 min-w-0 w-full">
 
           {/* 9. STATUS */}
-          <div className="rounded-2xl border border-border bg-card p-5 space-y-3 shadow-xs">
+          <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 space-y-3 shadow-xs min-w-0 w-full">
             <label className="text-xs font-bold uppercase tracking-wider text-foreground">
               Product Status
             </label>
@@ -879,21 +879,21 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
           </div>
 
           {/* 10. PUBLISHING CHANNELS */}
-          <div className="rounded-2xl border border-border bg-card p-5 space-y-3 shadow-xs">
+          <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 space-y-3 shadow-xs min-w-0 w-full">
             <label className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center justify-between">
               <span>Publishing</span>
-              <Store size={14} className="text-primary" />
+              <Store size={14} className="text-primary shrink-0" />
             </label>
             <div className="space-y-2 text-xs">
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-muted/40 border border-border">
-                <span className="font-semibold text-foreground">Online Storefront</span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-muted/40 border border-border gap-2">
+                <span className="font-semibold text-foreground truncate">Online Storefront</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 shrink-0">
                   Published
                 </span>
               </div>
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-muted/40 border border-border">
-                <span className="font-semibold text-foreground">Mobile Catalog / Live ERP</span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-muted/40 border border-border gap-2">
+                <span className="font-semibold text-foreground truncate">Mobile Catalog / Live ERP</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 shrink-0">
                   Synced
                 </span>
               </div>
@@ -901,14 +901,14 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
           </div>
 
           {/* 11. PRODUCT ORGANIZATION */}
-          <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-xs">
+          <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 space-y-4 shadow-xs min-w-0 w-full">
             <label className="text-xs font-bold uppercase tracking-wider text-foreground">
               Product Organization
             </label>
 
             {/* Category */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
+            <div className="space-y-1.5 min-w-0">
+              <div className="flex items-center justify-between gap-1">
                 <label className="text-xs font-bold text-foreground">Category</label>
                 <button
                   type="button"
@@ -926,12 +926,12 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                     placeholder="New category name..."
                     value={newCatName}
                     onChange={(e) => setNewCatName(e.target.value)}
-                    className="flex-1 h-8 px-2.5 rounded-lg border border-input bg-background text-xs font-medium outline-none"
+                    className="flex-1 h-8 px-2.5 rounded-lg border border-input bg-background text-xs font-medium outline-none min-w-0"
                   />
                   <button
                     type="button"
                     onClick={handleCreateCategory}
-                    className="px-2.5 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-bold cursor-pointer"
+                    className="px-2.5 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-bold cursor-pointer shrink-0"
                   >
                     Add
                   </button>
@@ -941,7 +941,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
               <select
                 value={category}
                 onChange={(e) => { setCategory(e.target.value); setIsDirty(true); }}
-                className="w-full h-10 px-3 rounded-xl border border-input bg-background text-xs font-bold outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                className="w-full h-10 px-3 rounded-xl border border-input bg-background text-xs font-bold outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer truncate"
               >
                 {categories.map(c => (
                   <option key={c.id || c.slug} value={c.slug}>{c.name}</option>
@@ -950,8 +950,8 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
             </div>
 
             {/* Product Type & Vendor */}
-            <div className="grid grid-cols-2 gap-2.5">
-              <div className="space-y-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="space-y-1 min-w-0">
                 <label className="text-[11px] font-semibold text-foreground">Product Type</label>
                 <input
                   type="text"
@@ -961,7 +961,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                   className="w-full h-8 px-2.5 rounded-lg border border-input bg-background text-xs font-medium outline-none"
                 />
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1 min-w-0">
                 <label className="text-[11px] font-semibold text-foreground">Vendor / Brand</label>
                 <input
                   type="text"
@@ -974,7 +974,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
             </div>
 
             {/* Ribbon / Badge */}
-            <div className="space-y-1">
+            <div className="space-y-1 min-w-0">
               <label className="text-[11px] font-semibold text-foreground">Product Badge / Ribbon</label>
               <input
                 type="text"
@@ -986,9 +986,9 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
             </div>
 
             {/* Tags */}
-            <div className="space-y-2 pt-2 border-t border-border">
+            <div className="space-y-2 pt-2 border-t border-border min-w-0">
               <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                <Tag size={13} className="text-primary" />
+                <Tag size={13} className="text-primary shrink-0" />
                 <span>Tags</span>
               </label>
 
@@ -1020,35 +1020,37 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                       handleAddTag();
                     }
                   }}
-                  className="h-7 min-w-[100px] px-2 rounded-md border border-dashed border-input bg-background text-xs outline-none"
+                  className="h-7 min-w-[100px] flex-1 px-2 rounded-md border border-dashed border-input bg-background text-xs outline-none"
                 />
               </div>
             </div>
           </div>
 
           {/* 12. SEO PREVIEW */}
-          <ProductSeoPreview
-            title={title}
-            description={longDescription || description}
-            slug={slug}
-            seoTitle={seoTitle}
-            seoDescription={seoDescription}
-            seoHandle={seoHandle}
-            onChange={(seo) => {
-              if (seo.seo_title !== undefined) setSeoTitle(seo.seo_title);
-              if (seo.seo_description !== undefined) setSeoDescription(seo.seo_description);
-              if (seo.seo_handle !== undefined) setSeoHandle(seo.seo_handle);
-              setIsDirty(true);
-            }}
-          />
+          <div className="min-w-0 w-full">
+            <ProductSeoPreview
+              title={title}
+              description={longDescription || description}
+              slug={slug}
+              seoTitle={seoTitle}
+              seoDescription={seoDescription}
+              seoHandle={seoHandle}
+              onChange={(seo) => {
+                if (seo.seo_title !== undefined) setSeoTitle(seo.seo_title);
+                if (seo.seo_description !== undefined) setSeoDescription(seo.seo_description);
+                if (seo.seo_handle !== undefined) setSeoHandle(seo.seo_handle);
+                setIsDirty(true);
+              }}
+            />
+          </div>
 
           {/* 13. THEME TEMPLATE & METAFIELDS */}
-          <div className="rounded-2xl border border-border bg-card p-5 space-y-3.5 shadow-xs">
+          <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 space-y-3.5 shadow-xs min-w-0 w-full">
             <label className="text-xs font-bold uppercase tracking-wider text-foreground">
               Theme Template & Metafields
             </label>
 
-            <div className="space-y-1">
+            <div className="space-y-1 min-w-0">
               <label className="text-[11px] font-semibold text-foreground">Theme Template</label>
               <select
                 value={themeTemplate}
@@ -1061,9 +1063,9 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
               </select>
             </div>
 
-            <div className="space-y-1 pt-2 border-t border-border">
+            <div className="space-y-1 pt-2 border-t border-border min-w-0">
               <label className="text-[11px] font-semibold text-foreground flex items-center gap-1">
-                <Video size={12} className="text-primary" />
+                <Video size={12} className="text-primary shrink-0" />
                 <span>Instagram Video / Reel URL</span>
               </label>
               <input
@@ -1080,28 +1082,31 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
 
       </div>
 
-      {/* ── STICKY BOTTOM ACTION BAR ── */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-card/90 backdrop-blur-md border-t border-border px-4 py-3 shadow-2xl">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      {/* ── STICKY BOTTOM ACTION BAR (Fully responsive with desktop sidebar offset & mobile touch targets) ── */}
+      <div className="fixed bottom-0 left-0 right-0 md:left-64 z-40 bg-card/95 backdrop-blur-md border-t border-border px-3 sm:px-6 py-2.5 sm:py-3 shadow-2xl pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
             {isDirty ? (
-              <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold">
-                <AlertTriangle size={13} /> Unsaved changes
+              <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold text-[11px] sm:text-xs">
+                <AlertTriangle size={13} className="shrink-0" />
+                <span className="hidden xs:inline">Unsaved changes</span>
+                <span className="xs:hidden">Unsaved</span>
               </span>
             ) : (
-              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
-                <CheckCircle2 size={13} /> All changes saved
+              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium text-[11px] sm:text-xs">
+                <CheckCircle2 size={13} className="shrink-0" />
+                <span className="hidden xs:inline">All saved</span>
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 justify-end flex-1 sm:flex-initial">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={handleCancelWithCheck}
-              className="rounded-xl text-xs font-semibold px-4 h-9"
+              className="rounded-xl text-xs font-semibold px-2.5 sm:px-4 h-9 cursor-pointer"
             >
               Discard
             </Button>
@@ -1113,9 +1118,9 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                 size="sm"
                 disabled={isSaving}
                 onClick={() => handleSubmit(undefined, true)}
-                className="rounded-xl text-xs font-bold px-4 h-9"
+                className="rounded-xl text-xs font-bold px-2.5 sm:px-4 h-9 cursor-pointer hidden sm:inline-flex"
               >
-                Save as Draft
+                Save Draft
               </Button>
             )}
 
@@ -1124,7 +1129,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
               size="sm"
               disabled={isSaving}
               onClick={() => handleSubmit(undefined, false)}
-              className="rounded-xl text-xs font-bold px-6 h-9 gap-2 shadow-sm"
+              className="rounded-xl text-xs font-bold px-3.5 sm:px-6 h-9 gap-1.5 sm:gap-2 shadow-sm cursor-pointer flex-1 sm:flex-initial"
             >
               {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
               <span>{isSaving ? 'Saving...' : 'Save Product'}</span>
