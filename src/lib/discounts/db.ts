@@ -93,8 +93,7 @@ export async function saveDiscount(discount: Discount): Promise<Discount> {
       .from('site_settings')
       .upsert({
         id: DISCOUNTS_KEY,
-        data: updatedList,
-        updated_at: now
+        data: updatedList
       });
 
     if (sErr) throw sErr;
@@ -123,13 +122,11 @@ export async function deleteDiscount(id: string): Promise<boolean> {
   const updatedList = discounts.filter(d => d.id !== id);
 
   try {
-    const now = new Date().toISOString();
     await supabase
       .from('site_settings')
       .upsert({
         id: DISCOUNTS_KEY,
-        data: updatedList,
-        updated_at: now
+        data: updatedList
       });
 
     try {
@@ -195,13 +192,9 @@ export async function recordDiscountUsage(discountId: string, customerIdentifier
       discounts[targetIdx] = {
         ...discounts[targetIdx],
         usage_count: (discounts[targetIdx].usage_count || 0) + 1,
-        updated_at: new Date().toISOString()
-      };
-
       await supabase.from('site_settings').upsert({
         id: DISCOUNTS_KEY,
-        data: discounts,
-        updated_at: new Date().toISOString()
+        data: discounts
       });
     }
 
@@ -216,8 +209,7 @@ export async function recordDiscountUsage(discountId: string, customerIdentifier
     const updatedUsages = [newUsage, ...usages];
     await supabase.from('site_settings').upsert({
       id: USAGES_KEY,
-      data: updatedUsages,
-      updated_at: new Date().toISOString()
+      data: updatedUsages
     });
   } catch (err) {
     console.error('Failed to record discount usage:', err);
