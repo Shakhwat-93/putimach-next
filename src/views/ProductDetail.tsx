@@ -871,59 +871,65 @@ export default function ProductDetailView() {
       {/* Size Guide Modal */}
       <AnimatePresence>
         {sizeGuideOpen && (
-          <>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm cursor-pointer"
               onClick={() => setSizeGuideOpen(false)}
             />
+
+            {/* Centered Modal Card */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              initial={{ opacity: 0, scale: 0.92, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="fixed inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-50 sm:w-full sm:max-w-xl max-h-[90vh] bg-white rounded-3xl p-6 overflow-y-auto border border-[#E9E2D2] shadow-2xl"
+              exit={{ opacity: 0, scale: 0.92, y: 16 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+              className="relative z-10 w-full max-w-md sm:max-w-lg max-h-[85vh] bg-white rounded-3xl p-4 sm:p-6 overflow-y-auto border border-[#E9E2D2] shadow-2xl my-auto"
             >
-              <div className="flex items-center justify-between pb-4 border-b border-[#E9E2D2] mb-4">
+              <div className="flex items-center justify-between pb-3 border-b border-[#E9E2D2] mb-3 sm:mb-4">
                 <div>
-                  <h3 className="font-serif font-black text-xl text-[#1C1613]">Size Chart & Fit Guide</h3>
-                  <p className="text-xs text-gray-500">Measurements for {product.name}</p>
+                  <h3 className="font-serif font-black text-lg sm:text-xl text-[#1C1613]">Size Chart & Fit Guide</h3>
+                  <p className="text-[11px] sm:text-xs text-gray-500">Measurements for {product.name}</p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setSizeGuideOpen(false)}
-                  className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-[#1C1613] hover:bg-gray-200"
+                  className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-[#1C1613] hover:bg-gray-200 transition-colors cursor-pointer active:scale-95"
+                  aria-label="Close size guide"
                 >
-                  <X size={16} />
+                  <X size={15} />
                 </button>
               </div>
 
               {sizeChartImageUrl ? (
-                <div className="rounded-2xl overflow-hidden bg-gray-50 p-2 mb-4 border border-[#E9E2D2]">
+                <div className="rounded-2xl overflow-hidden bg-gray-50 p-1.5 sm:p-2 mb-3 sm:mb-4 border border-[#E9E2D2] max-h-[55vh] flex items-center justify-center">
                   <img
                     src={sizeChartImageUrl}
                     alt="Size Chart"
-                    className="w-full h-auto object-contain rounded-xl"
+                    className="w-full h-auto max-h-[50vh] object-contain rounded-xl"
                   />
                 </div>
               ) : (
-                <div className="space-y-4 text-xs text-gray-600">
+                <div className="space-y-3 sm:space-y-4 text-xs text-gray-600 mb-3 sm:mb-4">
                   <p className="font-semibold text-[#1C1613]">Standard Measurement Guide (Inches)</p>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
+                  <div className="overflow-x-auto rounded-xl border border-gray-200">
+                    <table className="w-full text-left border-collapse text-xs">
                       <thead>
                         <tr className="bg-gray-100 font-bold text-[#1C1613]">
-                          <th className="p-2 border">Size</th>
-                          <th className="p-2 border">Chest</th>
-                          <th className="p-2 border">Length</th>
+                          <th className="p-2 border-b">Size</th>
+                          <th className="p-2 border-b">Chest</th>
+                          <th className="p-2 border-b">Length</th>
                         </tr>
                       </thead>
-                      <tbody>
-                        <tr><td className="p-2 border font-bold">S</td><td className="p-2 border">38"</td><td className="p-2 border">27"</td></tr>
-                        <tr><td className="p-2 border font-bold">M</td><td className="p-2 border">40"</td><td className="p-2 border">28"</td></tr>
-                        <tr><td className="p-2 border font-bold">L</td><td className="p-2 border">42"</td><td className="p-2 border">29"</td></tr>
-                        <tr><td className="p-2 border font-bold">XL</td><td className="p-2 border">44"</td><td className="p-2 border">30"</td></tr>
-                        <tr><td className="p-2 border font-bold">XXL</td><td className="p-2 border">46"</td><td className="p-2 border">31"</td></tr>
+                      <tbody className="divide-y divide-gray-100">
+                        <tr><td className="p-2 font-bold text-[#1C1613]">S</td><td className="p-2">38"</td><td className="p-2">27"</td></tr>
+                        <tr><td className="p-2 font-bold text-[#1C1613]">M</td><td className="p-2">40"</td><td className="p-2">28"</td></tr>
+                        <tr><td className="p-2 font-bold text-[#1C1613]">L</td><td className="p-2">42"</td><td className="p-2">29"</td></tr>
+                        <tr><td className="p-2 font-bold text-[#1C1613]">XL</td><td className="p-2">44"</td><td className="p-2">30"</td></tr>
+                        <tr><td className="p-2 font-bold text-[#1C1613]">XXL</td><td className="p-2">46"</td><td className="p-2">31"</td></tr>
                       </tbody>
                     </table>
                   </div>
@@ -931,13 +937,14 @@ export default function ProductDetailView() {
               )}
 
               <button
+                type="button"
                 onClick={() => setSizeGuideOpen(false)}
-                className="w-full py-3 mt-4 bg-[#1C1613] text-white rounded-xl font-bold text-xs uppercase tracking-wider"
+                className="w-full py-2.5 sm:py-3 bg-[#1C1613] hover:bg-[#332A24] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer active:scale-98"
               >
                 Close Guide
               </button>
             </motion.div>
-          </>
+          </div>
         )}
       </AnimatePresence>
 
