@@ -191,7 +191,9 @@ export async function recordDiscountUsage(discountId: string, customerIdentifier
     if (targetIdx >= 0) {
       discounts[targetIdx] = {
         ...discounts[targetIdx],
-        usage_count: (discounts[targetIdx].usage_count || 0) + 1,
+        usage_count: (discounts[targetIdx].usage_count || 0) + 1
+      };
+
       await supabase.from('site_settings').upsert({
         id: DISCOUNTS_KEY,
         data: discounts
