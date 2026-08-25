@@ -2,11 +2,11 @@
 // Guarantees deterministic, rock-solid image resolution across the entire storefront
 
 export const DEFAULT_PRODUCT_FALLBACK = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80';
-export const MEDIA_BASE_URL = 'https://media.putimach.com';
+export const MEDIA_BASE_URL = '/api/media';
 
 /**
  * Sanitizes and validates a potential image URL.
- * Handles relative paths, whitespace, stringified JSON, and invalid URL formats.
+ * Handles relative paths, whitespace, stringified JSON, media.putimach.com R2 proxying, and invalid URL formats.
  */
 export function cleanImageUrl(url: unknown): string | null {
   if (!url) return null;
@@ -24,13 +24,33 @@ export function cleanImageUrl(url: unknown): string | null {
 
   if (!trimmed) return null;
 
-  // If already absolute HTTP / HTTPS URL
-  if (/^https?:\/\//i.test(trimmed)) {
+  // Handle data URLs directly
+  if (trimmed.startsWith('data:image/')) {
     return trimmed;
   }
 
-  // If data URL
-  if (trimmed.startsWith('data:image/')) {
+  // Rewrite media.putimach.com directly to Next.js R2 Media Proxy Route
+  if (/^https?:\/\/media\.putimach\.com/i.test(trimmed)) {
+    const keyPath = trimmed.replace(/^https?:\/\/media\.putimach\.com\/?/i, '');
+    return `/api/media/${keyPath.replace(/^\/+/, '')}`;
+  }
+
+  // If already pointing to /api/media/...
+  if (trimmed.startsWith('/api/media/')) {
+    return trimmed;
+  }
+  if (trimmed.startsWith('api/media/')) {
+    return `/${trimmed}`;
+  }
+
+  // If pointing to uploads/... or /uploads/...
+  if (trimmed.startsWith('/uploads/') || trimmed.startsWith('uploads/')) {
+    const keyPath = trimmed.replace(/^\/?uploads\//, '');
+    return `/api/media/uploads/${keyPath}`;
+  }
+
+  // If already absolute HTTP / HTTPS URL
+  if (/^https?:\/\//i.test(trimmed)) {
     return trimmed;
   }
 
@@ -39,9 +59,9 @@ export function cleanImageUrl(url: unknown): string | null {
     return trimmed;
   }
 
-  // If relative path without protocol (e.g. products/sample.webp or uploads/...)
+  // If relative path without protocol (e.g. products/sample.webp)
   const cleanPath = trimmed.replace(/^\/+/, '');
-  return `${MEDIA_BASE_URL}/${cleanPath}`;
+  return `/api/media/${cleanPath}`;
 }
 
 /**
