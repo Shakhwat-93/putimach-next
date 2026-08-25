@@ -41,8 +41,8 @@ import { Modal } from '../components/Modal';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import { Switch } from '../components/ui/switch';
 
-// Reusable Image Upload Input Component connected to Supabase Storage
 import { uploadImage } from '../lib/uploadHelper';
+import { ShopifyProductEditor } from '../components/product/ShopifyProductEditor';
 
 const ImageUploadInput = ({ label, value, onChange, placeholder, required = false, local = false }) => {
   const [uploading, setUploading] = useState(false);
@@ -1212,6 +1212,129 @@ export const StorefrontManagement = () => {
     } finally {
       setSaveLoading(false);
     }
+  };
+
+  // Shopify-Style Product Save Handler
+  const handleSaveShopifyProduct = async (payload, isDraft = false) => {
+    setSaveLoading(true);
+    try {
+      if (editingProduct && editingProduct.id) {
+        const { error } = await supabase
+          .from('products')
+          .update({ data: payload })
+          .eq('id', editingProduct.id);
+        if (error) throw error;
+
+        try {
+          await supabase
+            .from('cb_products')
+            .update({ data: payload })
+            .eq('id', editingProduct.id);
+        } catch (_) {}
+      } else {
+        let targetId = payload.slug || generateSlug(payload.name) || 'product-' + Date.now();
+        const existsLocally = products.some(p => p.id === targetId || p.slug === targetId);
+        if (existsLocally) {
+          const uniqueSuffix = Date.now().toString(36).slice(-4);
+          targetId = `${targetId}-${uniqueSuffix}`;
+          payload.slug = targetId;
+        }
+
+        const { error } = await supabase
+          .from('products')
+          .insert([{
+            id: targetId,
+            data: payload,
+            created_at: new Date().toISOString()
+          }]);
+        if (error) throw error;
+
+        try {
+          await supabase
+            .from('cb_products')
+            .insert([{
+              id: targetId,
+              data: payload,
+              created_at: new Date().toISOString()
+            }]);
+        } catch (_) {}
+      }
+
+      // Sync with inventory table if connected
+      if (payload.inventory_id && payload.variants?.length > 0) {
+        const totalVariantsStock = payload.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+        await supabase
+          .from('inventory')
+          .update({ current_stock: totalVariantsStock })
+          .eq('id', payload.inventory_id);
+      }
+
+      setIsProductModalOpen(false);
+      setEditingProduct(null);
+      await fetchStorefrontData();
+
+      Swal.fire({
+        title: isDraft ? 'Saved as Draft ✓' : (editingProduct ? 'Product Updated ✓' : 'Product Published ✓'),
+        text: `"${payload.name}" has been successfully saved to your store.`,
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } catch (err) {
+      console.error('Error saving product:', err);
+      showError('Error saving product: ' + err.message);
+      throw err;
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  // Duplicate Product Handler
+  const handleDuplicateShopifyProduct = (productData) => {
+    const copyTitle = `Copy of ${productData.name || productData.title || 'Product'}`;
+    const copySlug = `${generateSlug(productData.slug || productData.name || 'product')}-copy-${Date.now().toString(36).slice(-4)}`;
+    const duplicated = {
+      ...productData,
+      id: undefined,
+      name: copyTitle,
+      slug: copySlug,
+      status: 'draft',
+      sku: `RR-${copySlug.toUpperCase().slice(0, 10)}`,
+      variants: (productData.variants || []).map((v, i) => ({
+        ...v,
+        sku: `${copySlug.toUpperCase()}-${v.color || 'STD'}-${v.size || 'STD'}-${i + 1}`
+      }))
+    };
+    setEditingProduct(duplicated);
+  };
+
+  // Quick Add Category Handler
+  const handleQuickAddCategory = async (name) => {
+    const slug = generateSlug(name) || 'cat-' + Date.now();
+    const payload = {
+      name,
+      slug,
+      description: `Category for ${name}`,
+      image_url: null
+    };
+
+    try {
+      await supabase
+        .from('cb_categories')
+        .insert([{
+          id: slug,
+          data: payload,
+          created_at: new Date().toISOString()
+        }]);
+    } catch (e) {
+      await supabase
+        .from('categories')
+        .insert([{ id: slug, data: payload, created_at: new Date().toISOString() }]);
+    }
+
+    const newCat = { id: slug, slug, name, ...payload };
+    setCategories(prev => [...prev, newCat]);
+    return newCat;
   };
 
   // Save Category
@@ -2838,346 +2961,24 @@ export const StorefrontManagement = () => {
         </div>
       )}
 
-      <Modal 
-        isOpen={isProductModalOpen} 
-        onClose={() => setIsProductModalOpen(false)}
-        title={editingProduct ? 'Edit Storefront Product' : 'Add New Product'}
-        subtitle="Configure product details, stock synchronization, pricing, and media gallery."
-        size="lg"
-      >
-        <form onSubmit={saveProductSubmit} className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-foreground">Product Name</label>
-                <input 
-                  type="text" 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                  value={prodForm.name}
-                  onChange={handleProdNameChange}
-                  required 
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="sf-label flex justify-between items-center">
-                  <span>URL Slug</span>
-                  <span className="text-[10px] text-brand flex items-center gap-1 cursor-pointer" onClick={() => setProdForm({ ...prodForm, slug: generateSlug(prodForm.name) })}>
-                    <Sparkles size={10} /> Auto
-                  </span>
-                </label>
-                <input 
-                  type="text" 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                  value={prodForm.slug}
-                  onChange={(e) => setProdForm({ ...prodForm, slug: generateSlug(e.target.value) })}
-                  required 
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-foreground">Category</label>
-                <select 
-                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                  value={prodForm.category}
-                  onChange={(e) => setProdForm({ ...prodForm, category: e.target.value })}
-                  required
-                >
-                  {categories.map(c => (
-                    <option key={c.id} value={c.slug}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-foreground">Link to Inventory Item (Stock Sync)</label>
-                <select 
-                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                  value={prodForm.inventory_id || ''}
-                  onChange={(e) => setProdForm({ ...prodForm, inventory_id: e.target.value || '' })}
-                >
-                  <option value="">-- No Link (Ignore Stock Control) --</option>
-                  {inventoryItems.map(item => (
-                    <option key={item.id} value={item.id}>
-                      {item.name} ({item.sku || 'No SKU'}) - Stock: {item.current_stock}
-                    </option>
-                  ))}
-                </select>
-                <div className="flex flex-wrap gap-2 mt-2.5">
-                  {prodForm.inventory_id && (
-                    <button
-                      type="button"
-                      onClick={() => syncVariantsFromInventory(prodForm.inventory_id)}
-                      className="text-xs text-brand hover:text-brand-400 font-bold flex items-center gap-1.5 cursor-pointer bg-brand/10 hover:bg-brand/20 px-3 py-1.5 rounded-lg border border-brand/20 transition-all"
-                    >
-                      🔄 Import Variations from Linked Inventory
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    disabled={quickCreatingInventory}
-                    onClick={handleQuickCreateInventory}
-                    className="text-xs text-emerald-600 hover:text-emerald-500 font-bold flex items-center gap-1.5 cursor-pointer bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-200 transition-all"
-                  >
-                    {quickCreatingInventory ? 'Creating...' : '➕ Quick Create & Link Inventory'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-foreground">Badge Tag (e.g. Bestseller, New, Drop)</label>
-                <input 
-                  type="text" 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                  placeholder="Leave empty for none"
-                  value={prodForm.badge}
-                  onChange={(e) => setProdForm({ ...prodForm, badge: e.target.value })}
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-foreground">Selling Price (BDT)</label>
-                <input 
-                  type="number" 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                  value={prodForm.price}
-                  onChange={(e) => setProdForm({ ...prodForm, price: e.target.value })}
-                  required 
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-foreground">Original/Strike Price (BDT)</label>
-                <input 
-                  type="number" 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                  placeholder="Leave empty for no strike"
-                  value={prodForm.original_price}
-                  onChange={(e) => setProdForm({ ...prodForm, original_price: e.target.value })}
-                />
-              </div>
-
-              <ImageUploadInput
-                label="Product Main Image URL"
-                value={prodForm.image}
-                onChange={(val) => setProdForm({ ...prodForm, image: val })}
-                placeholder="e.g. /images/hoodie-black.webp"
-                required
-              />
-
-              <MultipleImageUploadInput
-                label="Product Additional Images"
-                value={prodForm.images || []}
-                onChange={(urls) => setProdForm({ ...prodForm, images: urls })}
-              />
-
-              <ColorImagesEditor
-                colors={typeof prodForm.colors === 'string' ? prodForm.colors : (Array.isArray(prodForm.colors) ? prodForm.colors.join(', ') : '')}
-                colorImages={prodForm.color_images || {}}
-                onChange={(newMap) => setProdForm(prev => ({ ...prev, color_images: newMap }))}
-                onColorsChange={(newColors) => setProdForm(prev => ({ ...prev, colors: newColors }))}
-                onRemoveColor={(colorToRemove, updatedMap, updatedColors) => {
-                  setProdForm(prev => {
-                    const cleanVariants = colorToRemove 
-                      ? (prev.variants || []).filter(v => v.color?.toLowerCase() !== colorToRemove.toLowerCase())
-                      : (prev.variants || []);
-                    return {
-                      ...prev,
-                      color_images: updatedMap,
-                      colors: updatedColors,
-                      variants: cleanVariants
-                    };
-                  });
-                }}
-              />
-
-              <SizeGuideTableEditor
-                value={prodForm.size_guide}
-                onChange={(guide) => setProdForm({ ...prodForm, size_guide: guide })}
-              />
-
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-foreground">Available Sizes (comma separated)</label>
-                <input 
-                  type="text" 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                  placeholder="e.g. S, M, L, XL"
-                  value={prodForm.sizes}
-                  onChange={(e) => setProdForm({ ...prodForm, sizes: e.target.value })}
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-foreground">Available Colors (comma separated)</label>
-                <input 
-                  type="text" 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                  placeholder="e.g. black, rust, grey"
-                  value={prodForm.colors}
-                  onChange={(e) => setProdForm({ ...prodForm, colors: e.target.value })}
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-foreground">Product Features (comma separated)</label>
-                <input 
-                  type="text" 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                  placeholder="e.g. 100% Premium Cotton, Oversized Fit"
-                  value={prodForm.features || ''}
-                  onChange={(e) => setProdForm({ ...prodForm, features: e.target.value })}
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-foreground">Material / Fabric</label>
-                <input 
-                  type="text" 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                  placeholder="e.g. Cotton 100%, Heavyweight Fleece"
-                  value={prodForm.material || ''}
-                  onChange={(e) => setProdForm({ ...prodForm, material: e.target.value })}
-                />
-              </div>
-
-              {/* Product Variations (Color, Size, SKU, Stock) */}
-              <div className="sf-form-group full-width border border-base-300/30 rounded-xl p-4 bg-base-900/40 mt-2">
-                <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                  <div>
-                    <h4 className="font-bold text-sm text-surface-primary">Product Variations</h4>
-                    <p className="text-xs text-surface-muted">Manage size & color combinations, SKUs, and individual stocks.</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button 
-                      type="button" 
-                      onClick={generateVariantCombinations}
-                      className="px-3 py-1.5 text-xs font-semibold bg-brand/10 text-brand border border-brand/20 rounded-lg hover:bg-brand/20 transition-all cursor-pointer"
-                    >
-                      Auto-Generate Combinations
-                    </button>
-                    <button 
-                      type="button" 
-                      onClick={addVariantRow}
-                      className="px-3 py-1.5 text-xs font-semibold bg-base-800 text-surface-primary border border-base-300/40 rounded-lg hover:bg-base-750 transition-all cursor-pointer"
-                    >
-                      + Add Row
-                    </button>
-                  </div>
-                </div>
-
-                {(!prodForm.variants || prodForm.variants.length === 0) ? (
-                  <div className="rounded-2xl border-2 border-dashed border-border bg-muted/30 p-8 text-center">
-                    <p className="text-xs text-surface-muted">No variations added yet. Click Auto-Generate or Add Row to start.</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs border-collapse">
-                      <thead>
-                        <tr className="border-b border-base-300/20 text-surface-muted uppercase font-mono tracking-wider">
-                          <th className="pb-2 pr-2 font-medium">Size</th>
-                          <th className="pb-2 px-2 font-medium">Color</th>
-                          <th className="pb-2 px-2 font-medium">SKU</th>
-                          <th className="pb-2 px-2 font-medium">Stock</th>
-                          <th className="pb-2 pl-2 font-medium text-right">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {prodForm.variants.map((v, idx) => (
-                          <tr key={idx} className="border-b border-base-300/10 last:border-0">
-                            <td className="py-2 pr-2">
-                              <input 
-                                type="text"
-                                className="w-full bg-base-800 border border-base-300/30 rounded px-2 py-1 text-surface-primary"
-                                placeholder="e.g. S"
-                                value={v.size || ''}
-                                onChange={(e) => handleVariantChange(idx, 'size', e.target.value)}
-                              />
-                            </td>
-                            <td className="py-2 px-2">
-                              <input 
-                                type="text"
-                                className="w-full bg-base-800 border border-base-300/30 rounded px-2 py-1 text-surface-primary"
-                                placeholder="e.g. Black"
-                                value={v.color || ''}
-                                onChange={(e) => handleVariantChange(idx, 'color', e.target.value)}
-                              />
-                            </td>
-                            <td className="py-2 px-2">
-                              <input 
-                                type="text"
-                                className="w-full bg-base-800 border border-base-300/30 rounded px-2 py-1 text-surface-primary font-mono"
-                                placeholder="SKU"
-                                value={v.sku || ''}
-                                onChange={(e) => handleVariantChange(idx, 'sku', e.target.value)}
-                              />
-                            </td>
-                            <td className="py-2 px-2 w-24">
-                              <input 
-                                type="number"
-                                className="w-full bg-base-800 border border-base-300/30 rounded px-2 py-1 text-surface-primary"
-                                placeholder="0"
-                                value={v.stock}
-                                onChange={(e) => handleVariantChange(idx, 'stock', Number(e.target.value) || 0)}
-                              />
-                            </td>
-                            <td className="py-2 pl-2 text-right">
-                              <button 
-                                type="button"
-                                onClick={() => removeVariantRow(idx)}
-                                className="text-red-500 hover:text-red-400 font-semibold cursor-pointer"
-                              >
-                                Delete
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-2 md:col-span-2">
-                <label className="text-sm font-medium text-foreground">Short Description</label>
-                <textarea 
-                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                  placeholder="Describe this product briefly..."
-                  value={prodForm.description}
-                  onChange={(e) => setProdForm({ ...prodForm, description: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="flex flex-col gap-2 md:col-span-2">
-                <label className="text-sm font-medium text-foreground">Long Details Description</label>
-                <textarea 
-                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                  placeholder="Provide detailed composition, sizing details etc..."
-                  value={prodForm.long_description}
-                  onChange={(e) => setProdForm({ ...prodForm, long_description: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-foreground">Stock Status</label>
-                <div className="flex items-center gap-3 mt-2">
-                  <Switch 
-                    checked={prodForm.in_stock}
-                    onCheckedChange={(checked) => setProdForm({ ...prodForm, in_stock: checked })}
-                  />
-                  <span className="text-sm font-semibold">{prodForm.in_stock ? 'In Stock' : 'Out of Stock'}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border mt-6">
-              <Button variant="ghost" type="button" onClick={() => setIsProductModalOpen(false)} className="rounded-full px-5 py-2 text-xs font-bold">Cancel</Button>
-              <Button variant="primary" type="submit" disabled={saveLoading} className="rounded-full px-6 py-2 text-xs font-bold gap-2">
-                {saveLoading ? <Loader2 size={16} className="spin" /> : <Save size={16} />} Save Product
-              </Button>
-            </div>
-          </form>
-      </Modal>
+      {/* SHOPIFY-STYLE PRODUCT EDITOR OVERLAY */}
+      {isProductModalOpen && (
+        <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-md overflow-y-auto p-4 sm:p-6 md:p-8 animate-in fade-in zoom-in-95 duration-200">
+          <ShopifyProductEditor
+            initialProduct={editingProduct}
+            categories={categories}
+            inventoryItems={inventoryItems}
+            onSave={handleSaveShopifyProduct}
+            onCancel={() => {
+              setIsProductModalOpen(false);
+              setEditingProduct(null);
+            }}
+            onDuplicate={handleDuplicateShopifyProduct}
+            onQuickAddCategory={handleQuickAddCategory}
+            isSaving={saveLoading}
+          />
+        </div>
+      )}
 
       {/* CATEGORY MODAL */}
       <Modal 
