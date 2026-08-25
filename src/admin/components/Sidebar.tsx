@@ -96,8 +96,8 @@ export const Sidebar = ({ isOpen, onClose }) => {
       )}
 
       <aside className={cn(
-        'fixed inset-y-0 left-0 z-50 flex h-full w-64 flex-col border-r border-sidebar-border bg-sidebar transition-transform duration-300 ease-in-out md:sticky md:top-0 md:h-screen md:translate-x-0 md:w-64 md:shrink-0',
-        isOpen ? 'translate-x-0 pointer-events-auto shadow-2xl' : '-translate-x-full pointer-events-none md:pointer-events-auto',
+        'fixed inset-y-0 left-0 z-50 flex h-full w-64 flex-col border-r border-sidebar-border bg-sidebar transition-transform duration-300 ease-in-out md:relative md:inset-auto md:top-0 md:h-screen md:w-64 md:shrink-0 md:translate-x-0 md:z-auto md:pointer-events-auto',
+        isOpen ? 'translate-x-0 pointer-events-auto shadow-2xl' : '-translate-x-full pointer-events-none md:translate-x-0 md:pointer-events-auto',
       )}>
 
         {/* ── Header ── */}

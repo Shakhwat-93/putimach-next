@@ -14544,8 +14544,9 @@ input[type="radio"],
 
 @media (min-width: 768px) {
   .sidebar {
-    position: sticky;
-    top: 0;
+    position: relative;
+    top: auto;
+    left: auto;
     transform: translateX(0);
     z-index: auto;
     border-radius: 0;
