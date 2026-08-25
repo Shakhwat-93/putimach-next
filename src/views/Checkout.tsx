@@ -9,11 +9,12 @@ import Link from 'next/link';
 import {
   User, Phone, MapPin, MessageSquare, ShoppingBag,
   CheckCircle, Loader2, ChevronRight, Tag, Truck, CreditCard,
-  ArrowLeft, Zap, Package, Mail, Trash2, Plus, Minus,
+  ArrowLeft, Zap, Package, Mail, Trash2, Plus, Minus, X, Sparkles
 } from 'lucide-react';
 import useCartStore from '../store/cartStore';
 import { supabase } from '../lib/supabase';
 import { trackInitiateCheckout, trackPurchase } from '../lib/tracking';
+import { recordDiscountUsage } from '../lib/discounts/db';
 
 const formatPrice = (p) => `৳${Number(p).toLocaleString('en-BD')}`;
 
@@ -74,7 +75,22 @@ function getTrafficSource() {
 }
 
 /* ─── Order Summary Sidebar ─────────────────────────────────────────────── */
-function OrderSummary({ items, subtotal, shipping, total }) {
+function OrderSummary({ 
+  items, 
+  subtotal, 
+  shipping, 
+  total,
+  discountAmount = 0,
+  freeShippingUnlocked = false,
+  appliedCouponCode = '',
+  discountTitle = '',
+  couponInput = '',
+  setCouponInput,
+  couponLoading = false,
+  couponError = null,
+  onApplyCoupon,
+  onRemoveCoupon
+}) {
   const { updateQuantity, removeItem } = useCartStore();
 
   return (
@@ -86,7 +102,7 @@ function OrderSummary({ items, subtotal, shipping, total }) {
       </div>
 
       {/* Items List */}
-      <div className="space-y-3">
+      <div className="space-y-3 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
         {items.map((item) => (
           <div key={item.key} className="flex items-start gap-3 p-2.5 rounded-2xl bg-white dark:bg-[#1C1613]/60 border border-[#E9E2D2] dark:border-white/10 shadow-sm relative">
             
@@ -155,7 +171,7 @@ function OrderSummary({ items, subtotal, shipping, total }) {
                   </button>
                 </div>
 
-                <span className="text-xs font-black text-brand">
+                <span className="text-xs font-black text-brand font-mono">
                   {formatPrice(item.product.price * item.quantity)}
                 </span>
               </div>
@@ -165,21 +181,79 @@ function OrderSummary({ items, subtotal, shipping, total }) {
         ))}
       </div>
 
+      {/* Coupon / Promo Code Input */}
+      <div className="p-3 rounded-2xl bg-white dark:bg-[#1C1613]/60 border border-[#E9E2D2] dark:border-white/10 space-y-2">
+        {appliedCouponCode ? (
+          <div className="flex items-center justify-between p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Tag size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <div className="truncate">
+                <span className="font-mono font-bold text-emerald-800 dark:text-emerald-200 uppercase">{appliedCouponCode}</span>
+                {discountTitle && <span className="text-[10px] text-emerald-600 dark:text-emerald-400 ml-1 truncate">({discountTitle})</span>}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onRemoveCoupon}
+              className="text-gray-400 hover:text-red-500 p-1 cursor-pointer transition-colors"
+              title="Remove promo code"
+            >
+              <X size={13} />
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={onApplyCoupon} className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <div className="relative flex-1">
+                <Tag size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Promo Code (e.g. SAVE20)"
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value)}
+                  className="w-full h-9 pl-8 pr-2.5 rounded-xl border border-input bg-background text-xs font-mono font-semibold uppercase placeholder:normal-case placeholder:font-sans focus:outline-none focus:ring-1 focus:ring-brand"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={couponLoading || !couponInput.trim()}
+                className="h-9 px-3 rounded-xl bg-[#1C1613] dark:bg-white text-white dark:text-[#1C1613] text-xs font-bold transition-all disabled:opacity-40 cursor-pointer flex items-center gap-1 shrink-0 active:scale-95"
+              >
+                {couponLoading ? <Loader2 size={12} className="animate-spin" /> : 'Apply'}
+              </button>
+            </div>
+            {couponError && (
+              <p className="text-[11px] text-red-500 dark:text-red-400 font-medium pl-1 leading-tight">{couponError}</p>
+            )}
+          </form>
+        )}
+      </div>
+
       <div className="divider" />
 
-      {/* Totals */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-surface-muted">Subtotal</span>
-          <span className="font-semibold">{formatPrice(subtotal)}</span>
+      {/* Totals Breakdown */}
+      <div className="space-y-2 text-xs sm:text-sm">
+        <div className="flex items-center justify-between text-surface-muted">
+          <span>Subtotal</span>
+          <span className="font-semibold font-mono text-surface-primary">{formatPrice(subtotal)}</span>
         </div>
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center gap-1.5 text-surface-muted">
+
+        {discountAmount > 0 && (
+          <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
+            <span className="flex items-center gap-1">
+              <Tag size={12} /> Discount Savings
+            </span>
+            <span className="font-mono font-bold">- {formatPrice(discountAmount)}</span>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between text-surface-muted">
+          <div className="flex items-center gap-1.5">
             <Truck size={13} />
             <span>Delivery</span>
           </div>
-          <span className={`font-semibold ${shipping === 0 ? 'text-emerald-400' : ''}`}>
-            {shipping === 0 ? 'FREE' : formatPrice(shipping)}
+          <span className={`font-semibold font-mono ${shipping === 0 || freeShippingUnlocked ? 'text-emerald-500 dark:text-emerald-400' : 'text-surface-primary'}`}>
+            {shipping === 0 || freeShippingUnlocked ? 'FREE' : formatPrice(shipping)}
           </span>
         </div>
       </div>
@@ -187,14 +261,14 @@ function OrderSummary({ items, subtotal, shipping, total }) {
       <div className="divider" />
 
       <div className="flex items-center justify-between">
-        <span className="font-bold text-surface-primary">Total</span>
-        <span className="font-black text-xl text-brand">{formatPrice(total)}</span>
+        <span className="font-bold text-surface-primary">Total Amount</span>
+        <span className="font-black text-xl text-brand font-mono">{formatPrice(total)}</span>
       </div>
 
       {/* Trust badges */}
       <div className="mt-4 p-3 rounded-xl bg-emerald-500/8 border border-emerald-500/20 flex items-start gap-2.5">
         <CheckCircle size={15} className="text-emerald-400 mt-0.5 flex-shrink-0" />
-        <p className="text-[10px] text-emerald-300 leading-relaxed">
+        <p className="text-[10px] text-emerald-700 dark:text-emerald-300 leading-relaxed">
           Cash on Delivery available. Pay when your order arrives at your door.
         </p>
       </div>
@@ -371,7 +445,10 @@ function SuccessScreen({ orderNumber, items, total, onContinue }) {
 /* ─── Main Checkout Page ───────────────────────────────────────────────── */
 export default function Checkout() {
   const router = useRouter();
-  const { items, clearCart } = useCartStore();
+  const { 
+    items, clearCart, appliedCouponCode, discountResult,
+    setAppliedCoupon, setDiscountResult, clearDiscount 
+  } = useCartStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -395,6 +472,11 @@ export default function Checkout() {
   const [shippingRates, setShippingRates] = useState(DEFAULT_SHIPPING);
   const [shippingArea, setShippingArea] = useState('inside'); // 'inside' | 'sub' | 'outside'
   const [whatsappPhone, setWhatsappPhone] = useState('8801827406756');
+
+  // Coupon state
+  const [couponInput, setCouponInput] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadContactPhone() {
@@ -440,6 +522,123 @@ export default function Checkout() {
     loadRates();
   }, []);
 
+  // Real-time discount re-validation whenever items, coupon code, or customer contact changes
+  useEffect(() => {
+    async function revalidateDiscount() {
+      if (!items || items.length === 0) {
+        setDiscountResult(null);
+        return;
+      }
+
+      try {
+        const payload = {
+          code: appliedCouponCode || undefined,
+          items: items.map(i => ({
+            key: i.key,
+            product: {
+              id: i.product.id,
+              slug: i.product.slug,
+              name: i.product.name,
+              price: i.product.price,
+              category: i.product.category,
+              collections: i.product.collections,
+              variants: i.product.variants
+            },
+            size: i.size,
+            color: i.color,
+            quantity: i.quantity
+          })),
+          customer: {
+            email: form.email.trim() || undefined,
+            phone: form.phone.trim() || undefined,
+            is_guest: true
+          }
+        };
+
+        const res = await fetch('/api/discounts/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (data && data.valid) {
+          setDiscountResult(data);
+          setCouponError(null);
+        } else {
+          setDiscountResult(null);
+          if (appliedCouponCode && data?.error) {
+            setCouponError(data.error);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to validate discount at checkout:', err);
+      }
+    }
+
+    revalidateDiscount();
+  }, [items, appliedCouponCode, form.phone, form.email]);
+
+  const handleApplyCoupon = async (e: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const clean = couponInput.trim().toUpperCase();
+    if (!clean) return;
+
+    setCouponLoading(true);
+    setCouponError(null);
+
+    try {
+      const payload = {
+        code: clean,
+        items: items.map(i => ({
+          key: i.key,
+          product: {
+            id: i.product.id,
+            slug: i.product.slug,
+            name: i.product.name,
+            price: i.product.price,
+            category: i.product.category,
+            collections: i.product.collections,
+            variants: i.product.variants
+          },
+          size: i.size,
+          color: i.color,
+          quantity: i.quantity
+        })),
+        customer: {
+          email: form.email.trim() || undefined,
+          phone: form.phone.trim() || undefined,
+          is_guest: true
+        }
+      };
+
+      const res = await fetch('/api/discounts/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (data && data.valid) {
+        setAppliedCoupon(clean);
+        setDiscountResult(data);
+        setCouponInput('');
+        setCouponError(null);
+      } else {
+        setCouponError(data?.error || 'Invalid discount code.');
+      }
+    } catch (err) {
+      setCouponError('Failed to apply discount code.');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    clearDiscount();
+    setCouponError(null);
+  };
+
   // Fire InitiateCheckout when user arrives on checkout page (once, when items are ready)
   const initiateCheckoutFired = useRef(false);
   useEffect(() => {
@@ -450,13 +649,18 @@ export default function Checkout() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items.length]);
 
-  const shipping = shippingArea === 'inside'
+  const subtotal = items.reduce((s, i) => s + i.product.price * i.quantity, 0);
+  const discountAmount = discountResult?.valid ? (discountResult.discount_amount || 0) : 0;
+  const isFreeShippingUnlocked = Boolean(discountResult?.valid && discountResult.free_shipping);
+
+  const baseShipping = shippingArea === 'inside'
     ? shippingRates.inside
     : shippingArea === 'sub'
       ? shippingRates.sub
       : shippingRates.outside;
-  const subtotal = items.reduce((s, i) => s + i.product.price * i.quantity, 0);
-  const total = subtotal + shipping;
+
+  const finalShipping = isFreeShippingUnlocked ? 0 : baseShipping;
+  const total = Math.max(0, subtotal - discountAmount) + finalShipping;
 
   const setField = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }));
 
@@ -519,6 +723,53 @@ export default function Checkout() {
       console.warn('Failed to verify duplicate orders:', dupCheckErr);
     }
 
+    // 4. Server-Side Final Discount Re-validation
+    let finalDiscountResult = null;
+    let validatedDiscountAmount = 0;
+    let validatedFreeShipping = false;
+
+    try {
+      const valRes = await fetch('/api/discounts/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: appliedCouponCode || undefined,
+          items: items.map(i => ({
+            key: i.key,
+            product: {
+              id: i.product.id,
+              slug: i.product.slug,
+              name: i.product.name,
+              price: i.product.price,
+              category: i.product.category,
+              collections: i.product.collections,
+              variants: i.product.variants
+            },
+            size: i.size,
+            color: i.color,
+            quantity: i.quantity
+          })),
+          customer: {
+            email: form.email.trim() || undefined,
+            phone: form.phone.trim() || undefined,
+            is_guest: true
+          }
+        })
+      });
+
+      const valData = await valRes.json();
+      if (valData && valData.valid) {
+        finalDiscountResult = valData;
+        validatedDiscountAmount = valData.discount_amount || 0;
+        validatedFreeShipping = Boolean(valData.free_shipping);
+      }
+    } catch (valErr) {
+      console.warn('Server discount revalidation failed, proceeding with current values:', valErr);
+    }
+
+    const calculatedFinalShipping = validatedFreeShipping ? 0 : baseShipping;
+    const calculatedFinalAmount = Math.max(0, subtotal - validatedDiscountAmount) + calculatedFinalShipping;
+
     const orderPayload = {
       id: num,
       customer_name: form.name.trim(),
@@ -537,7 +788,15 @@ export default function Checkout() {
         quantity: i.quantity,
         line_total: i.product.price * i.quantity,
       })),
-      amount: total,
+      amount: calculatedFinalAmount,
+      subtotal: subtotal,
+      shipping_fee: calculatedFinalShipping,
+      discount_id: finalDiscountResult?.discount?.id || null,
+      discount_code: finalDiscountResult?.discount_code || (appliedCouponCode || null),
+      discount_type: finalDiscountResult?.discount_type || null,
+      discount_amount: validatedDiscountAmount,
+      discount_allocations: finalDiscountResult?.item_allocations || [],
+      free_shipping_discount: validatedFreeShipping,
       items: items.reduce((sum, i) => sum + i.quantity, 0),
       product_name: items[0]?.product.name || '',
       size: items[0]?.size || '',
@@ -566,6 +825,15 @@ export default function Checkout() {
 
       if (dbError) {
         throw new Error(dbError.message);
+      }
+
+      // Record Discount Usage atomically
+      if (finalDiscountResult?.discount?.id) {
+        try {
+          await recordDiscountUsage(finalDiscountResult.discount.id, form.phone || form.email || 'guest', num);
+        } catch (uErr) {
+          console.warn('Failed to record discount usage:', uErr);
+        }
       }
 
       // Snapshot items BEFORE clearing cart so success screen can show them
@@ -932,7 +1200,22 @@ export default function Checkout() {
                 </a>
               </div>
 
-              <OrderSummary items={items} subtotal={subtotal} shipping={shipping} total={total} />
+              <OrderSummary 
+                items={items} 
+                subtotal={subtotal} 
+                shipping={finalShipping} 
+                total={total}
+                discountAmount={discountAmount}
+                freeShippingUnlocked={isFreeShippingUnlocked}
+                appliedCouponCode={appliedCouponCode}
+                discountTitle={discountResult?.discount_title || ''}
+                couponInput={couponInput}
+                setCouponInput={setCouponInput}
+                couponLoading={couponLoading}
+                couponError={couponError}
+                onApplyCoupon={handleApplyCoupon}
+                onRemoveCoupon={handleRemoveCoupon}
+              />
 
               {/* Submit Place Order Button */}
               <button

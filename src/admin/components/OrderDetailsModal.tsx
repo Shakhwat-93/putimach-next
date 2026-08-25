@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { 
   User, Phone, MapPin, Package, Calendar, Clock, 
   History, Edit2, X, Clipboard, Copy, ExternalLink, 
-  Truck, CheckCircle2, AlertCircle, Info, RotateCcw, Loader2, Printer
+  Truck, CheckCircle2, AlertCircle, Info, RotateCcw, Loader2, Printer, Tag
 } from 'lucide-react';
 import CurrencyIcon from './CurrencyIcon';
 import api from '../lib/api';
@@ -803,6 +803,32 @@ export const OrderDetailsModal = ({ isOpen, onClose, order, onEdit }) => {
                   </div>
                 )}
               </div>
+
+              {/* Discount Applied Row */}
+              {((order.discount_amount && Number(order.discount_amount) > 0) || order.discount_code || order.free_shipping_discount) && (
+                <div style={{
+                  marginTop: '12px',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  background: 'rgba(16,185,129,0.08)',
+                  border: '1px solid rgba(16,185,129,0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  fontSize: '12px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#059669', fontWeight: 600 }}>
+                    <Tag size={13} />
+                    <span>Promotion: {order.discount_code ? <strong>{order.discount_code}</strong> : 'Discount Applied'}</span>
+                    {order.free_shipping_discount && <span style={{ fontSize: '10px', background: '#059669', color: '#fff', padding: '1px 6px', borderRadius: '4px' }}>Free Shipping</span>}
+                  </div>
+                  {Number(order.discount_amount || 0) > 0 && (
+                    <span style={{ fontWeight: 700, color: '#059669', fontFamily: 'monospace' }}>
+                      - <CurrencyIcon size={11} />{Number(order.discount_amount).toLocaleString()}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

@@ -27,10 +27,19 @@ const useCartStore = create(
       badgeBouncing: false,
       _hasHydrated: false,
 
+      // Discount & Promotion State
+      appliedCouponCode: null,
+      discountResult: null,
+
       setHasHydrated: (state) => set({ _hasHydrated: state }),
       openCart: () => set({ isOpen: true }),
       closeCart: () => set({ isOpen: false }),
       toggleCart: () => set(state => ({ isOpen: !state.isOpen })),
+
+      // Discount Actions
+      setAppliedCoupon: (code) => set({ appliedCouponCode: code ? code.trim().toUpperCase() : null }),
+      setDiscountResult: (res) => set({ discountResult: res }),
+      clearDiscount: () => set({ appliedCouponCode: null, discountResult: null }),
 
       triggerFlyToCart: (imageSrc, clickEventOrRect) => {
         if (typeof window === 'undefined') return;
@@ -101,7 +110,7 @@ const useCartStore = create(
         // Save fallback immediately
         if (typeof window !== 'undefined') {
           try {
-            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ state: { items: newItems }, version: 0 }));
+            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ state: { items: newItems, appliedCouponCode: get().appliedCouponCode }, version: 0 }));
           } catch (e) {}
         }
 
@@ -113,9 +122,7 @@ const useCartStore = create(
         if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
           try {
             window.navigator.vibrate([25, 15, 35]);
-          } catch (e) {
-            // ignore
-          }
+          } catch (e) {}
         }
       },
 
@@ -124,7 +131,7 @@ const useCartStore = create(
         set({ items: newItems });
         if (typeof window !== 'undefined') {
           try {
-            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ state: { items: newItems }, version: 0 }));
+            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ state: { items: newItems, appliedCouponCode: get().appliedCouponCode }, version: 0 }));
           } catch (e) {}
         }
       },
@@ -138,13 +145,13 @@ const useCartStore = create(
         set({ items: newItems });
         if (typeof window !== 'undefined') {
           try {
-            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ state: { items: newItems }, version: 0 }));
+            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ state: { items: newItems, appliedCouponCode: get().appliedCouponCode }, version: 0 }));
           } catch (e) {}
         }
       },
 
       clearCart: () => {
-        set({ items: [] });
+        set({ items: [], appliedCouponCode: null, discountResult: null });
         if (typeof window !== 'undefined') {
           try {
             localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ state: { items: [] }, version: 0 }));
@@ -155,7 +162,11 @@ const useCartStore = create(
       // Derived selectors
       getTotalItems: () => get().items.reduce((sum, i) => sum + i.quantity, 0),
       getSubtotal: () => get().items.reduce((sum, i) => sum + (i.product?.price || 0) * i.quantity, 0),
-      getTotal: () => get().items.reduce((sum, i) => sum + (i.product?.price || 0) * i.quantity, 0),
+      getTotal: () => {
+        const sub = get().getSubtotal();
+        const discountAmount = get().discountResult?.discount_amount || 0;
+        return Math.max(0, sub - discountAmount);
+      },
 
       get totalItems() {
         return get().items.reduce((sum, i) => sum + i.quantity, 0);
@@ -171,7 +182,10 @@ const useCartStore = create(
         setItem: () => {},
         removeItem: () => {},
       })),
-      partialize: (state) => ({ items: state.items }),
+      partialize: (state) => ({ 
+        items: state.items,
+        appliedCouponCode: state.appliedCouponCode 
+      }),
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.setHasHydrated(true);

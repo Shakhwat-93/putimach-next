@@ -1,28 +1,141 @@
 'use client';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, ShieldCheck, Truck, Sparkles } from 'lucide-react';
+import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, ShieldCheck, Truck, Sparkles, Tag, Check, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCartStore } from '../../store/cartStore';
 import { formatPrice } from '../../lib/utils';
 
 export default function CartDrawer() {
-  const { isOpen, closeCart, items, updateQuantity, removeItem, getSubtotal, getTotal } = useCartStore();
+  const { 
+    isOpen, closeCart, items, updateQuantity, removeItem, 
+    getSubtotal, appliedCouponCode, discountResult, 
+    setAppliedCoupon, setDiscountResult, clearDiscount 
+  } = useCartStore();
   const router = useRouter();
 
-  const handleCheckout = (e) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
+  const [couponInput, setCouponInput] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
+
+  // Auto-validate discount whenever items or coupon code changes
+  useEffect(() => {
+    async function validateCurrentDiscount() {
+      if (!items || items.length === 0) {
+        setDiscountResult(null);
+        return;
+      }
+
+      try {
+        const payload = {
+          code: appliedCouponCode || undefined,
+          items: items.map(i => ({
+            key: i.key,
+            product: {
+              id: i.product.id,
+              slug: i.product.slug,
+              name: i.product.name,
+              price: i.product.price,
+              category: i.product.category,
+              collections: i.product.collections,
+              variants: i.product.variants
+            },
+            size: i.size,
+            color: i.color,
+            quantity: i.quantity
+          }))
+        };
+
+        const res = await fetch('/api/discounts/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (data && data.valid) {
+          setDiscountResult(data);
+          setCouponError(null);
+        } else {
+          setDiscountResult(null);
+          if (appliedCouponCode && data?.error) {
+            setCouponError(data.error);
+          }
+        }
+      } catch (err) {
+        console.warn('Discount validation error in cart:', err);
+      }
     }
-    closeCart();
-    router.push('/checkout');
+
+    if (isOpen) {
+      validateCurrentDiscount();
+    }
+  }, [items, appliedCouponCode, isOpen]);
+
+  const handleApplyCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = couponInput.trim().toUpperCase();
+    if (!clean) return;
+
+    setCouponLoading(true);
+    setCouponError(null);
+
+    try {
+      const payload = {
+        code: clean,
+        items: items.map(i => ({
+          key: i.key,
+          product: {
+            id: i.product.id,
+            slug: i.product.slug,
+            name: i.product.name,
+            price: i.product.price,
+            category: i.product.category,
+            collections: i.product.collections,
+            variants: i.product.variants
+          },
+          size: i.size,
+          color: i.color,
+          quantity: i.quantity
+        }))
+      };
+
+      const res = await fetch('/api/discounts/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (data && data.valid) {
+        setAppliedCoupon(clean);
+        setDiscountResult(data);
+        setCouponInput('');
+        setCouponError(null);
+      } else {
+        setCouponError(data?.error || 'Invalid discount code.');
+      }
+    } catch (err: any) {
+      setCouponError('Failed to apply discount code.');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    clearDiscount();
+    setCouponError(null);
   };
 
   const totalItemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const calculatedSubtotal = typeof getSubtotal === 'function' 
     ? getSubtotal() 
-    : (typeof getTotal === 'function' ? getTotal() : items.reduce((sum, i) => sum + (i.product?.price || 0) * i.quantity, 0));
+    : items.reduce((sum, i) => sum + (i.product?.price || 0) * i.quantity, 0);
+
+  const discountAmount = discountResult?.discount_amount || 0;
+  const isFreeShippingUnlocked = discountResult?.free_shipping || false;
+  const finalCalculatedTotal = Math.max(0, calculatedSubtotal - discountAmount);
 
   const freeShippingThreshold = 3000;
   const progressPercent = Math.min(100, Math.round((calculatedSubtotal / freeShippingThreshold) * 100));
@@ -84,7 +197,11 @@ export default function CartDrawer() {
                 <div className="flex items-center justify-between mb-1.5 font-medium text-xs text-[#1C1613]">
                   <span className="flex items-center gap-1.5 text-[11px] font-bold">
                     <Truck size={14} className="text-[#C5A880]" />
-                    {remainingForFreeShipping > 0 ? (
+                    {isFreeShippingUnlocked ? (
+                      <span className="text-emerald-700 font-bold flex items-center gap-1">
+                        <Sparkles size={12} /> Promotion Unlocked: FREE Delivery!
+                      </span>
+                    ) : remainingForFreeShipping > 0 ? (
                       <>Add <span className="font-black text-[#FF5533]">{formatPrice(remainingForFreeShipping)}</span> more for FREE Delivery!</>
                     ) : (
                       <span className="text-emerald-700 font-bold flex items-center gap-1">
@@ -92,12 +209,12 @@ export default function CartDrawer() {
                       </span>
                     )}
                   </span>
-                  <span className="text-[10px] font-bold text-gray-500">{progressPercent}%</span>
+                  <span className="text-[10px] font-bold text-gray-500">{isFreeShippingUnlocked ? '100%' : `${progressPercent}%`}</span>
                 </div>
                 <div className="w-full h-1.5 bg-[#E9E2D2] rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-gradient-to-r from-[#C5A880] to-[#FF5533] rounded-full transition-all duration-500" 
-                    style={{ width: `${progressPercent}%` }}
+                    style={{ width: isFreeShippingUnlocked ? '100%' : `${progressPercent}%` }}
                   />
                 </div>
               </div>
@@ -118,74 +235,61 @@ export default function CartDrawer() {
                     </div>
                     <div>
                       <h3 className="font-serif font-black text-xl text-[#1C1613] mb-1">Your Bag is Empty</h3>
-                      <p className="text-xs text-gray-500 max-w-[240px] mx-auto">
-                        Explore our luxury streetwear catalog and discover your next statement piece.
-                      </p>
+                      <p className="text-xs text-gray-500 max-w-[240px]">Explore our exclusive drop and find your signature style.</p>
                     </div>
-                    <Link 
-                      href="/shop"
-                      onClick={() => closeCart()} 
-                      className="mt-2 px-8 py-3.5 bg-[#1C1613] text-white font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-[#FF5533] transition-all shadow-md active:scale-95 cursor-pointer inline-block text-center"
+                    <button
+                      onClick={closeCart}
+                      className="mt-2 px-6 py-2.5 bg-[#1C1613] text-[#C5A880] text-xs font-black uppercase tracking-wider rounded-xl hover:bg-[#FF5533] hover:text-white transition-colors cursor-pointer"
                     >
-                      Explore Catalog →
-                    </Link>
+                      Start Shopping
+                    </button>
                   </motion.div>
                 ) : (
                   items.map((item) => (
                     <motion.div
                       key={item.key}
                       layout
-                      initial={{ opacity: 0, y: 15 }}
+                      initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, x: -30, height: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="bg-white rounded-2xl p-3.5 border border-[#E9E2D2] shadow-sm flex gap-3.5 items-center relative hover:border-[#1C1613]/30 transition-all group"
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="p-3 bg-white rounded-2xl border border-[#E9E2D2] flex gap-3.5 shadow-xs relative group"
                     >
-                      {/* Image Thumbnail */}
-                      <div className="w-20 h-20 rounded-xl overflow-hidden bg-[#F7F4EE] border border-[#E9E2D2] p-1 flex-shrink-0">
-                        <img
-                          src={item.product?.image || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80'}
-                          alt={item.product?.name || 'Product'}
-                          className="w-full h-full object-contain rounded-lg"
+                      {/* Product Thumbnail */}
+                      <div className="w-16 h-20 rounded-xl overflow-hidden bg-[#F7F4EE] shrink-0 border border-[#E9E2D2]/60">
+                        <img 
+                          src={item.product?.image || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80'} 
+                          alt={item.product?.name}
+                          className="w-full h-full object-cover"
                         />
                       </div>
 
-                      {/* Info & Controls */}
-                      <div className="flex-1 min-w-0">
+                      {/* Product Info & Stepper */}
+                      <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
                         <div className="flex items-start justify-between gap-2">
-                          <Link
-                            href={`/product/${item.product?.slug}`}
-                            onClick={() => closeCart()}
-                            className="font-serif font-black text-sm text-[#1C1613] hover:text-[#C5A880] transition-colors line-clamp-1"
-                          >
-                            {item.product?.name}
-                          </Link>
-
-                          {/* Delete Item Button */}
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-xs text-[#1C1613] truncate">{item.product?.name}</h4>
+                            <p className="text-[11px] text-gray-500 font-medium mt-0.5">
+                              Size: <span className="text-[#1C1613] font-bold">{item.size}</span>
+                              {item.color && item.color !== 'None' && (
+                                <> · Color: <span className="text-[#1C1613] font-bold">{item.color}</span></>
+                              )}
+                            </p>
+                          </div>
                           <button
-                            type="button"
                             onClick={() => removeItem(item.key)}
-                            className="text-gray-400 hover:text-red-500 transition-colors p-1.5 cursor-pointer active:scale-90"
-                            title="Remove item"
+                            className="text-gray-400 hover:text-red-500 p-1 transition-colors cursor-pointer"
+                            aria-label="Remove item"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={13} />
                           </button>
                         </div>
 
-                        <p className="text-[11px] text-gray-500 mt-0.5">
-                          Size: <span className="font-bold text-[#1C1613]">{item.size}</span>
-                          {item.color && item.color !== 'None' && (
-                            <> • Color: <span className="font-bold text-[#1C1613]">{item.color}</span></>
-                          )}
-                        </p>
-
-                        <div className="flex items-center justify-between mt-2.5">
-                          <span className="font-serif font-black text-sm text-[#1C1613]">
-                            {formatPrice(item.product?.price || 0)}
+                        <div className="flex items-center justify-between mt-2 pt-1 border-t border-[#E9E2D2]/40">
+                          <span className="font-mono font-bold text-xs text-[#1C1613]">
+                            {formatPrice(item.product.price * item.quantity)}
                           </span>
 
-                          {/* Quantity Stepper */}
-                          <div className="flex items-center gap-1.5 bg-[#F4EFE6] border border-[#E9E2D2] rounded-xl p-1">
+                          <div className="flex items-center gap-1 bg-[#F7F4EE] rounded-lg p-0.5 border border-[#E9E2D2]">
                             <button
                               type="button"
                               onClick={() => updateQuantity(item.key, item.quantity - 1)}
@@ -212,25 +316,82 @@ export default function CartDrawer() {
               </AnimatePresence>
             </div>
 
-            {/* Footer Area */}
+            {/* Footer Area with Promo Input & Order Breakdown */}
             {items.length > 0 && (
               <div className="p-6 bg-white border-t border-[#E9E2D2] space-y-4 shadow-lg relative z-10">
                 
+                {/* Coupon Code Box */}
+                {appliedCouponCode && discountResult?.valid ? (
+                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <Tag size={13} className="text-emerald-600" />
+                      <div>
+                        <span className="font-mono font-black text-emerald-800 tracking-wide">{appliedCouponCode}</span>
+                        <span className="text-[11px] text-emerald-600 ml-1.5 font-semibold">({discountResult.discount_title || 'Applied'})</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoupon}
+                      className="text-gray-400 hover:text-red-500 text-[11px] font-bold p-1 cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleApplyCoupon} className="space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <div className="relative flex-1">
+                        <Tag size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Discount code (e.g. SAVE20)"
+                          value={couponInput}
+                          onChange={(e) => setCouponInput(e.target.value)}
+                          className="w-full h-9 pl-8 pr-3 rounded-xl border border-[#E9E2D2] bg-[#FDFBF7] text-xs font-mono font-semibold uppercase placeholder:normal-case placeholder:font-sans focus:outline-none focus:border-[#1C1613]"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={couponLoading || !couponInput.trim()}
+                        className="h-9 px-3.5 rounded-xl bg-[#1C1613] hover:bg-[#FF5533] text-white text-xs font-bold transition-colors disabled:opacity-40 cursor-pointer flex items-center gap-1"
+                      >
+                        {couponLoading ? <Loader2 size={12} className="animate-spin" /> : 'Apply'}
+                      </button>
+                    </div>
+                    {couponError && (
+                      <p className="text-[11px] text-red-500 font-medium pl-1">{couponError}</p>
+                    )}
+                  </form>
+                )}
+
+                {/* Totals Breakdown */}
                 <div className="space-y-1.5 text-xs">
                   <div className="flex items-center justify-between text-gray-500">
                     <span>Subtotal</span>
                     <span className="font-mono text-gray-700">{formatPrice(calculatedSubtotal)}</span>
                   </div>
+
+                  {discountAmount > 0 && (
+                    <div className="flex items-center justify-between text-emerald-600 font-semibold">
+                      <span className="flex items-center gap-1">
+                        <Tag size={11} /> Discount Savings
+                      </span>
+                      <span className="font-mono">- {formatPrice(discountAmount)}</span>
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-between text-gray-500">
                     <span>Shipping</span>
                     <span className="text-emerald-700 font-bold">
-                      {remainingForFreeShipping === 0 ? 'FREE' : 'Calculated at checkout'}
+                      {isFreeShippingUnlocked || remainingForFreeShipping === 0 ? 'FREE' : 'Calculated at checkout'}
                     </span>
                   </div>
+
                   <div className="flex items-center justify-between pt-2 border-t border-[#E9E2D2]/60 text-sm font-black font-serif text-[#1C1613]">
                     <span>Total Amount</span>
                     <span className="font-mono text-base text-[#1C1613]">
-                      {formatPrice(calculatedSubtotal)}
+                      {formatPrice(finalCalculatedTotal)}
                     </span>
                   </div>
                 </div>
