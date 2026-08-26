@@ -6,18 +6,27 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCartStore } from '../../store/cartStore';
 import { formatPrice } from '../../lib/utils';
+import { trackViewCart, trackRemoveFromCart } from '../../lib/tracking';
 
 export default function CartDrawer() {
   const { 
     isOpen, closeCart, items, updateQuantity, removeItem, 
     getSubtotal, appliedCouponCode, discountResult, 
-    setAppliedCoupon, setDiscountResult, clearDiscount 
+    setAppliedCoupon, setDiscountResult, clearDiscount,
+    revalidationNotice
   } = useCartStore();
   const router = useRouter();
 
   const [couponInput, setCouponInput] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
+
+  // Track ViewCart when drawer opens with items
+  useEffect(() => {
+    if (isOpen && items && items.length > 0) {
+      trackViewCart(items, getSubtotal());
+    }
+  }, [isOpen]);
 
   // Auto-validate discount whenever items or coupon code changes
   useEffect(() => {
@@ -300,7 +309,10 @@ export default function CartDrawer() {
                               )}
                             </div>
                             <button
-                              onClick={() => removeItem(item.key)}
+                              onClick={() => {
+                                trackRemoveFromCart(item.product, item.quantity, item.size, item.color);
+                                removeItem(item.key);
+                              }}
                               className="text-gray-400 hover:text-red-500 p-1 transition-colors cursor-pointer"
                               aria-label="Remove item"
                             >
@@ -336,7 +348,10 @@ export default function CartDrawer() {
                             ) : (
                               <button
                                 type="button"
-                                onClick={() => removeItem(item.key)}
+                                onClick={() => {
+                                  trackRemoveFromCart(item.product, item.quantity, item.size, item.color);
+                                  removeItem(item.key);
+                                }}
                                 className="text-[11px] font-bold text-rose-600 hover:underline"
                               >
                                 Remove

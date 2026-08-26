@@ -1,30 +1,61 @@
 'use client';
 // @ts-nocheck
-// admin/src/components/TrackingSection.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Admin UI for managing all tracking pixels & analytics IDs dynamically.
-// Saves to site_settings table with id = 'tracking_config'
-// ─────────────────────────────────────────────────────────────────────────────
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Save, Loader2, CheckCircle, Eye, EyeOff,
-  BarChart2, ExternalLink, Wifi, WifiOff, Copy, AlertTriangle, Info
+  Save, Loader2, CheckCircle2, Eye, EyeOff,
+  BarChart2, ExternalLink, Wifi, WifiOff, Copy, 
+  AlertTriangle, ShieldCheck, Zap, Activity, Info, 
+  Check, Sparkles, RefreshCw, Play
 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import Swal from 'sweetalert2';
 
-const SETTINGS_ID = 'tracking_config';
+const SETTINGS_ID = 'default';
 
-const EMPTY = {
-  gtm_id: '',
-  ga4_id: '',
-  pixel_id: '',
-  capi_token: '',
-  capi_test_code: '',
-  tracking_enabled: true,
+const EMPTY_SETTINGS = {
+  // Google
+  gtm_enabled: false,
+  gtm_container_id: '',
+  ga4_enabled: false,
+  ga4_measurement_id: '',
+  google_ads_enabled: false,
+  google_ads_conversion_id: '',
+  google_ads_purchase_label: '',
+  google_ads_cart_label: '',
+  google_ads_begin_checkout_label: '',
+
+  // Meta
+  meta_enabled: true,
+  meta_pixel_id: '',
+  meta_capi_enabled: true,
+  meta_capi_token: '',
+  meta_capi_test_code: '',
+
+  // TikTok
+  tiktok_enabled: false,
+  tiktok_pixel_id: '',
+  tiktok_events_api_enabled: false,
+  tiktok_access_token: '',
+  tiktok_test_code: '',
+
+  // General
+  ecommerce_tracking_enabled: true,
+  debug_mode: false,
+  consent_mode_enabled: false,
+  advanced_matching_enabled: true,
 };
 
-// ── Field component ─────────────────────────────────────────────────────────
-function Field({ label, hint, value, onChange, placeholder, masked = false, badge = null, monospace = false }) {
+// ── Form Input Field ────────────────────────────────────────────────────────
+function FormField({ 
+  label, 
+  hint, 
+  value, 
+  onChange, 
+  placeholder, 
+  masked = false, 
+  badge = null, 
+  monospace = false 
+}) {
   const [show, setShow] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -38,106 +69,113 @@ function Field({ label, hint, value, onChange, placeholder, masked = false, badg
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex items-center gap-2">
-        <label className="text-sm font-semibold text-foreground">{label}</label>
-        {badge && (
-          <span className={cn(
-            "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full",
-            badge === 'required' ? "bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400"
-            : badge === 'optional' ? "bg-muted text-muted-foreground"
-            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400"
-          )}>{badge}</span>
-        )}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-bold text-foreground uppercase tracking-wider">{label}</label>
+          {badge && (
+            <span className={cn(
+              "text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full",
+              badge === 'required' ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300"
+              : badge === 'optional' ? "bg-muted text-muted-foreground"
+              : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
+            )}>{badge}</span>
+          )}
+        </div>
       </div>
       <div className="relative flex">
         <input
           type={masked && !show ? 'password' : 'text'}
-          value={value}
+          value={value || ''}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
           className={cn(
-            "flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition-all",
-            "focus:ring-2 focus:ring-primary/30 focus:border-primary",
-            "placeholder:text-muted-foreground/50",
+            "flex-1 rounded-xl border border-input bg-background px-3.5 py-2 text-xs text-foreground outline-none transition-all",
+            "focus:ring-2 focus:ring-primary/20 focus:border-primary",
+            "placeholder:text-muted-foreground/40",
             monospace && "font-mono tracking-tight"
           )}
           autoComplete="off"
           spellCheck={false}
         />
-        <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+        <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
           {value && (
             <button
               type="button"
               onClick={copy}
-              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
               title="Copy"
             >
-              {copied ? <CheckCircle size={13} className="text-emerald-500" /> : <Copy size={13} />}
+              {copied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
             </button>
           )}
           {masked && (
             <button
               type="button"
               onClick={() => setShow(s => !s)}
-              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
             >
               {show ? <EyeOff size={13} /> : <Eye size={13} />}
             </button>
           )}
         </div>
       </div>
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+      {hint && <p className="text-[11px] text-muted-foreground">{hint}</p>}
     </div>
   );
 }
 
-// ── Status badge ────────────────────────────────────────────────────────────
-function StatusBadge({ label, active }) {
+// ── Toggle Switch Component ──────────────────────────────────────────────────
+function SwitchToggle({ label, desc, checked, onChange, disabled }) {
   return (
-    <div className={cn(
-      "flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full",
-      active
-        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400"
-        : "bg-muted text-muted-foreground"
-    )}>
-      {active ? <Wifi size={11} /> : <WifiOff size={11} />}
-      {label}
+    <div className="flex items-center justify-between gap-4 py-2">
+      <div className="space-y-0.5">
+        <p className="text-xs font-bold text-foreground">{label}</p>
+        {desc && <p className="text-[11px] text-muted-foreground">{desc}</p>}
+      </div>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onChange(!checked)}
+        className={cn(
+          "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none",
+          checked ? "bg-primary" : "bg-muted",
+          disabled && "opacity-50 cursor-not-allowed"
+        )}
+      >
+        <span
+          className={cn(
+            "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition-transform duration-200 ease-in-out",
+            checked ? "translate-x-5" : "translate-x-0"
+          )}
+        />
+      </button>
     </div>
   );
 }
 
-// ── Help link ────────────────────────────────────────────────────────────────
-function HelpLink({ href, children }) {
-  return (
-    <a href={href} target="_blank" rel="noopener noreferrer"
-      className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
-      {children} <ExternalLink size={11} />
-    </a>
-  );
-}
-
-// ── Main TrackingSection ─────────────────────────────────────────────────────
 export default function TrackingSection({ supabase }) {
-  const [cfg, setCfg] = useState(EMPTY);
+  const [cfg, setCfg] = useState(EMPTY_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [error, setError] = useState(null);
-  const [testResult, setTestResult] = useState(null);
   const [testing, setTesting] = useState(false);
+  const [testResults, setTestResults] = useState(null);
 
-  // Load from Supabase
+  // Load from Supabase tracking_settings
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await supabase
-        .from('site_settings')
-        .select('data')
+      const { data, error } = await supabase
+        .from('tracking_settings')
+        .select('*')
         .eq('id', SETTINGS_ID)
         .maybeSingle();
-      if (data?.data) setCfg({ ...EMPTY, ...data.data });
+
+      if (data) {
+        setCfg({ ...EMPTY_SETTINGS, ...data });
+      }
     } catch (e) {
-      setError('Failed to load tracking config: ' + e.message);
+      console.error('Failed to load tracking settings:', e);
     } finally {
       setLoading(false);
     }
@@ -145,61 +183,60 @@ export default function TrackingSection({ supabase }) {
 
   useEffect(() => { load(); }, [load]);
 
-  // Save to Supabase
+  // Save to Supabase tracking_settings
   const save = async () => {
     setSaving(true);
-    setSaved(false);
-    setError(null);
     try {
-      const { error: err } = await supabase
-        .from('site_settings')
-        .upsert({ id: SETTINGS_ID, data: cfg }, { onConflict: 'id' });
-      if (err) throw err;
+      const payload = {
+        id: SETTINGS_ID,
+        ...cfg,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('tracking_settings')
+        .upsert(payload, { onConflict: 'id' });
+
+      if (error) throw error;
+
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-    } catch (e) {
-      setError('Failed to save: ' + e.message);
+      Swal.fire({
+        title: 'Settings Saved',
+        text: 'Marketing & Analytics tracking configuration has been updated.',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    } catch (err: any) {
+      console.error('Failed to save tracking settings:', err);
+      Swal.fire({
+        title: 'Save Failed',
+        text: err?.message || 'Could not update tracking settings in database.',
+        icon: 'error',
+      });
     } finally {
       setSaving(false);
     }
   };
 
-  const set = (key) => (val) => setCfg(prev => ({ ...prev, [key]: val }));
-
-  // Test fire a test event (fires a Purchase event to Meta Events Manager using test code)
-  const fireTestEvent = async () => {
-    if (!cfg.pixel_id || !cfg.capi_token) {
-      setTestResult({ type: 'error', msg: 'Pixel ID and CAPI Token are required to test.' });
-      return;
-    }
+  // Run Live Diagnostic Test
+  const handleRunDiagnostic = async () => {
     setTesting(true);
-    setTestResult(null);
+    setTestResults(null);
     try {
-      const eventId = `test-${Date.now()}`;
-      const payload = {
-        data: [{
-          event_name: 'Purchase',
-          event_time: Math.floor(Date.now() / 1000),
-          event_id: eventId,
-          event_source_url: 'https://putimach.com',
-          action_source: 'website',
-          user_data: { client_user_agent: navigator.userAgent },
-          custom_data: { value: 100, currency: 'BDT', order_id: 'TEST-001' },
-        }],
-        ...(cfg.capi_test_code ? { test_event_code: cfg.capi_test_code } : {}),
-      };
-      const res = await fetch(
-        `https://graph.facebook.com/v20.0/${cfg.pixel_id}/events?access_token=${cfg.capi_token}`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
-      );
+      // First save current state so test runs against latest credentials
+      await save();
+
+      const res = await fetch('/api/tracking/test', { method: 'POST' });
       const json = await res.json();
-      if (json.error) {
-        setTestResult({ type: 'error', msg: `CAPI Error: ${json.error.message}` });
+      if (json.success) {
+        setTestResults(json.report);
       } else {
-        setTestResult({ type: 'success', msg: `✅ CAPI test event sent! Events received: ${json.events_received || 1}. Check Meta Events Manager.` });
+        throw new Error(json.error || 'Diagnostic test failed.');
       }
-    } catch (e) {
-      setTestResult({ type: 'error', msg: `Request failed: ${e.message}` });
+    } catch (err: any) {
+      Swal.fire({ title: 'Test Failed', text: err.message, icon: 'error' });
     } finally {
       setTesting(false);
     }
@@ -207,205 +244,356 @@ export default function TrackingSection({ supabase }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 size={28} className="animate-spin text-primary" />
+      <div className="flex items-center justify-center py-16 text-muted-foreground text-xs gap-2">
+        <Loader2 size={16} className="animate-spin text-primary" />
+        <span>Loading marketing tracking configuration...</span>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-4xl min-w-0">
+      
       {/* Header */}
-      <div className="flex items-center gap-3 pb-4 border-b border-border">
-        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary">
-          <BarChart2 size={20} />
-        </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-5">
         <div>
-          <h2 className="text-lg font-display font-semibold text-foreground">Tracking & Pixels</h2>
-          <p className="text-sm text-muted-foreground">Configure GTM, GA4, Meta Pixel & CAPI for accurate analytics.</p>
-        </div>
-      </div>
-
-      {/* Master Enable/Disable toggle */}
-      <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/40 border border-border/60">
-        <div>
-          <span className="block text-sm font-semibold text-foreground">Enable Tracking</span>
-          <span className="block text-xs text-muted-foreground mt-0.5">
-            Master switch — disabling stops all Pixel, CAPI, and GA4 events.
-          </span>
-        </div>
-        <button
-          type="button"
-          className={cn(
-            "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
-            cfg.tracking_enabled ? "bg-primary" : "bg-input"
-          )}
-          onClick={() => set('tracking_enabled')(!cfg.tracking_enabled)}
-        >
-          <span className={cn(
-            "absolute left-0 inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform",
-            cfg.tracking_enabled ? "translate-x-5" : "translate-x-0"
-          )} />
-        </button>
-      </div>
-
-      {/* Status row */}
-      <div className="flex flex-wrap gap-2">
-        <StatusBadge label="GTM" active={!!cfg.gtm_id && cfg.tracking_enabled} />
-        <StatusBadge label="GA4" active={!!cfg.ga4_id && cfg.tracking_enabled} />
-        <StatusBadge label="Meta Pixel" active={!!cfg.pixel_id && cfg.tracking_enabled} />
-        <StatusBadge label="CAPI" active={!!cfg.capi_token && !!cfg.pixel_id && cfg.tracking_enabled} />
-      </div>
-
-      {/* GTM Section */}
-      <div className="space-y-4 rounded-xl border border-border/60 p-5 bg-secondary/20">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-          <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Google Tag Manager</h3>
-          <HelpLink href="https://tagmanager.google.com/">GTM Console</HelpLink>
-        </div>
-        <div className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-lg p-3 flex gap-2">
-          <Info size={14} className="text-blue-500 shrink-0 mt-0.5" />
-          <span>GTM manages all GA4 tags. Configure GA4 tags <strong>inside GTM</strong> — do NOT use both GTM + direct GA4 script (causes double events).</span>
-        </div>
-        <Field
-          label="GTM Container ID"
-          badge="required"
-          placeholder="GTM-XXXXXXX"
-          value={cfg.gtm_id}
-          onChange={set('gtm_id')}
-          hint="Format: GTM-XXXXXXX — found in your GTM container header snippet."
-          monospace
-        />
-        <Field
-          label="GA4 Measurement ID"
-          badge="optional"
-          placeholder="G-XXXXXXXXXX"
-          value={cfg.ga4_id}
-          onChange={set('ga4_id')}
-          hint="Only needed if NOT using GTM. If GTM is configured, add GA4 via GTM tags."
-          monospace
-        />
-      </div>
-
-      {/* Meta Pixel Section */}
-      <div className="space-y-4 rounded-xl border border-border/60 p-5 bg-secondary/20">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#1877f2]"></span>
-          <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Meta Pixel & CAPI</h3>
-          <HelpLink href="https://business.facebook.com/events_manager2/">Events Manager</HelpLink>
-        </div>
-        <div className="text-xs text-muted-foreground bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg p-3 flex gap-2">
-          <AlertTriangle size={14} className="text-amber-500 shrink-0 mt-0.5" />
-          <span>Pixel + CAPI send the <strong>same eventID</strong> — Meta deduplicates automatically. No double counting.</span>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field
-            label="Meta Pixel ID"
-            badge="required"
-            placeholder="123456789012345"
-            value={cfg.pixel_id}
-            onChange={set('pixel_id')}
-            hint="15-digit number from Events Manager → Data Sources."
-            monospace
-          />
-          <Field
-            label="CAPI Access Token"
-            badge="required"
-            placeholder="EAAxxxxxxxxxxxxxxx"
-            value={cfg.capi_token}
-            onChange={set('capi_token')}
-            masked
-            hint="Generate from Events Manager → Settings → Conversions API → Generate Token."
-          />
-        </div>
-        <Field
-          label="CAPI Test Event Code"
-          badge="optional"
-          placeholder="TEST12345"
-          value={cfg.capi_test_code}
-          onChange={set('capi_test_code')}
-          hint="From Events Manager → Test Events tab. Remove after testing!"
-          monospace
-        />
-      </div>
-
-      {/* Events tracked info */}
-      <div className="rounded-xl border border-border/60 p-5 bg-secondary/20 space-y-3">
-        <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Events Tracked</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {[
-            { name: 'PageView', desc: 'Every route change' },
-            { name: 'ViewContent', desc: 'Product page load' },
-            { name: 'AddToCart', desc: 'Add to cart click' },
-            { name: 'InitiateCheckout', desc: 'Checkout page open' },
-            { name: 'Purchase', desc: 'Order placed ✓' },
-            { name: 'Search', desc: 'Shop search query' },
-          ].map(ev => (
-            <div key={ev.name} className="rounded-lg bg-background border border-border/50 px-3 py-2">
-              <p className="text-xs font-bold text-foreground">{ev.name}</p>
-              <p className="text-[11px] text-muted-foreground">{ev.desc}</p>
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold">
+              <BarChart2 size={20} />
             </div>
-          ))}
-        </div>
-        <p className="text-[11px] text-muted-foreground">
-          All events fire via <strong>Pixel (browser)</strong> + <strong>CAPI (browser→Meta API)</strong> with the same <code className="bg-muted px-1 rounded">eventID</code> for deduplication.
-        </p>
-      </div>
-
-      {/* Test Event */}
-      <div className="rounded-xl border border-border/60 p-5 space-y-3">
-        <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Test CAPI Connection</h3>
-        <p className="text-xs text-muted-foreground">
-          Sends a test Purchase event to Meta via CAPI. Make sure to set the Test Event Code above and save first.
-        </p>
-        <button
-          type="button"
-          onClick={fireTestEvent}
-          disabled={testing || !cfg.pixel_id || !cfg.capi_token}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1877f2] text-white text-sm font-semibold hover:bg-[#1565d8] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {testing ? <Loader2 size={15} className="animate-spin" /> : <Wifi size={15} />}
-          {testing ? 'Sending Test Event...' : 'Send Test Purchase Event'}
-        </button>
-        {testResult && (
-          <div className={cn(
-            "rounded-lg p-3 text-sm font-medium",
-            testResult.type === 'success'
-              ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
-              : "bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20"
-          )}>
-            {testResult.msg}
+            <div>
+              <h2 className="text-lg sm:text-xl font-black text-foreground tracking-tight font-display">
+                Marketing Tracking & Analytics
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Centralized conversion tracking for Google Tag Manager, GA4, Meta Pixel, Meta CAPI, and TikTok.
+              </p>
+            </div>
           </div>
-        )}
+        </div>
+
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={handleRunDiagnostic}
+            disabled={testing || saving}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-card hover:bg-secondary text-xs font-bold text-foreground transition-all cursor-pointer shadow-2xs"
+          >
+            {testing ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} className="text-primary fill-primary" />}
+            <span>Test Configuration</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold transition-all cursor-pointer shadow-2xs"
+          >
+            {saving ? <Loader2 size={13} className="animate-spin" /> : saved ? <CheckCircle2 size={14} /> : <Save size={14} />}
+            <span>{saved ? 'Saved' : 'Save Changes'}</span>
+          </button>
+        </div>
       </div>
 
-      {/* Error */}
-      {error && (
-        <div className="rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 p-4 text-sm text-rose-700 dark:text-rose-400">
-          {error}
+      {/* ── Diagnostic Results Card if Tested ── */}
+      {testResults && (
+        <div className="p-4 sm:p-5 rounded-2xl border border-primary/20 bg-primary/5 space-y-3 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+              <Sparkles size={14} />
+              <span>Live Diagnostic Report</span>
+            </h3>
+            <button
+              type="button"
+              onClick={() => setTestResults(null)}
+              className="text-[11px] text-muted-foreground hover:text-foreground font-semibold"
+            >
+              Dismiss
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            {/* GTM */}
+            <div className="p-3 rounded-xl border border-border bg-card">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-foreground">Google Tag Manager</span>
+                <span className={cn("px-2 py-0.5 rounded-md text-[10px] font-bold uppercase", 
+                  testResults.gtm?.status === 'valid' ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300" : "bg-muted text-muted-foreground")}>
+                  {testResults.gtm?.status}
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">{testResults.gtm?.message || 'Not enabled'}</p>
+            </div>
+
+            {/* GA4 */}
+            <div className="p-3 rounded-xl border border-border bg-card">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-foreground">Google Analytics 4</span>
+                <span className={cn("px-2 py-0.5 rounded-md text-[10px] font-bold uppercase", 
+                  testResults.ga4?.status === 'valid' ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300" : "bg-muted text-muted-foreground")}>
+                  {testResults.ga4?.status}
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">{testResults.ga4?.message || 'Not enabled'}</p>
+            </div>
+
+            {/* Meta CAPI */}
+            <div className="p-3 rounded-xl border border-border bg-card">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-foreground">Meta Conversions API</span>
+                <span className={cn("px-2 py-0.5 rounded-md text-[10px] font-bold uppercase", 
+                  testResults.metaCapi?.status === 'connected' ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300" : "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300")}>
+                  {testResults.metaCapi?.status}
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">{testResults.metaCapi?.message || 'Not enabled'}</p>
+            </div>
+
+            {/* TikTok Events API */}
+            <div className="p-3 rounded-xl border border-border bg-card">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-foreground">TikTok Events API</span>
+                <span className={cn("px-2 py-0.5 rounded-md text-[10px] font-bold uppercase", 
+                  testResults.tiktokEventsApi?.status === 'connected' ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300" : "bg-muted text-muted-foreground")}>
+                  {testResults.tiktokEventsApi?.status}
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">{testResults.tiktokEventsApi?.message || 'Not enabled'}</p>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Save button */}
-      <div className="flex items-center justify-between pt-2 border-t border-border/50">
-        <p className="text-xs text-muted-foreground">Changes apply after the storefront next loads.</p>
-        <button
-          type="button"
-          onClick={save}
-          disabled={saving}
-          className={cn(
-            "flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition-all",
-            saved
-              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30"
-              : "bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
+      {/* ── Section 1: Google (GTM, GA4, Google Ads) ── */}
+      <div className="p-5 sm:p-6 rounded-2xl border border-border bg-card shadow-2xs space-y-5">
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-600 flex items-center justify-center font-bold">
+              <Zap size={16} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-foreground">Google Suite (GTM & GA4)</h3>
+              <p className="text-[11px] text-muted-foreground">Standardized dataLayer integration with zero duplicate events.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <SwitchToggle
+            label="Enable Google Tag Manager (GTM)"
+            desc="Loads GTM container script and dispatches all ecommerce events to window.dataLayer."
+            checked={cfg.gtm_enabled}
+            onChange={v => setCfg(c => ({ ...c, gtm_enabled: v }))}
+          />
+
+          {cfg.gtm_enabled && (
+            <FormField
+              label="GTM Container ID"
+              placeholder="e.g. GTM-XXXXXXX"
+              value={cfg.gtm_container_id}
+              onChange={v => setCfg(c => ({ ...c, gtm_container_id: v }))}
+              badge="required"
+              monospace
+              hint="Found in your Google Tag Manager container overview."
+            />
           )}
-        >
-          {saving ? <Loader2 size={15} className="animate-spin" />
-            : saved ? <CheckCircle size={15} /> : <Save size={15} />}
-          {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Settings'}
-        </button>
+
+          <div className="pt-2 border-t border-border/50">
+            <SwitchToggle
+              label="Enable Direct GA4 Measurement"
+              desc="Only active when GTM is disabled to prevent duplicate GA4 pageviews."
+              checked={cfg.ga4_enabled}
+              onChange={v => setCfg(c => ({ ...c, ga4_enabled: v }))}
+            />
+
+            {cfg.ga4_enabled && (
+              <div className="pt-2">
+                <FormField
+                  label="GA4 Measurement ID"
+                  placeholder="e.g. G-XXXXXXXXXX"
+                  value={cfg.ga4_measurement_id}
+                  onChange={v => setCfg(c => ({ ...c, ga4_measurement_id: v }))}
+                  badge="required"
+                  monospace
+                  hint="Found under Google Analytics Admin → Data Streams."
+                />
+              </div>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* ── Section 2: Meta (Pixel + Conversions API) ── */}
+      <div className="p-5 sm:p-6 rounded-2xl border border-border bg-card shadow-2xs space-y-5">
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold">
+              <ShieldCheck size={16} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-foreground">Meta (Facebook & Instagram)</h3>
+              <p className="text-[11px] text-muted-foreground">Browser Meta Pixel and server-side Conversions API with SHA-256 matching.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <SwitchToggle
+            label="Enable Meta Pixel"
+            desc="Fires client-side fbq() standard ecommerce events (ViewContent, AddToCart, Purchase)."
+            checked={cfg.meta_enabled}
+            onChange={v => setCfg(c => ({ ...c, meta_enabled: v }))}
+          />
+
+          {cfg.meta_enabled && (
+            <FormField
+              label="Meta Dataset / Pixel ID"
+              placeholder="e.g. 1295101048421113"
+              value={cfg.meta_pixel_id}
+              onChange={v => setCfg(c => ({ ...c, meta_pixel_id: v }))}
+              badge="required"
+              monospace
+              hint="Found in Meta Events Manager under Dataset Settings."
+            />
+          )}
+
+          <div className="pt-2 border-t border-border/50 space-y-4">
+            <SwitchToggle
+              label="Enable Meta Conversions API (CAPI)"
+              desc="Dispatches server-side events asynchronously sharing the exact same event_id for 100% deduplication."
+              checked={cfg.meta_capi_enabled}
+              onChange={v => setCfg(c => ({ ...c, meta_capi_enabled: v }))}
+            />
+
+            {cfg.meta_capi_enabled && (
+              <div className="space-y-4 pt-1">
+                <FormField
+                  label="Conversions API Access Token"
+                  placeholder="EAAG..."
+                  value={cfg.meta_capi_token}
+                  onChange={v => setCfg(c => ({ ...c, meta_capi_token: v }))}
+                  badge="server secret"
+                  masked
+                  monospace
+                  hint="Generated in Meta Events Manager under Settings → Generate Access Token. Never exposed to browser."
+                />
+
+                <FormField
+                  label="Test Event Code (Optional for Staging/Testing)"
+                  placeholder="e.g. TEST12345"
+                  value={cfg.meta_capi_test_code}
+                  onChange={v => setCfg(c => ({ ...c, meta_capi_test_code: v }))}
+                  badge="optional"
+                  monospace
+                  hint="Found in Meta Events Manager → Test Events tab. Leave blank for live production."
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Section 3: TikTok (Pixel + Events API) ── */}
+      <div className="p-5 sm:p-6 rounded-2xl border border-border bg-card shadow-2xs space-y-5">
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-pink-500/10 text-pink-600 flex items-center justify-center font-bold">
+              <Activity size={16} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-foreground">TikTok Business Analytics</h3>
+              <p className="text-[11px] text-muted-foreground">TikTok Pixel + TikTok server-side Events API with ttclid pass-through.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <SwitchToggle
+            label="Enable TikTok Pixel"
+            desc="Fires browser-level ttq tracking for product views, cart additions, and payments."
+            checked={cfg.tiktok_enabled}
+            onChange={v => setCfg(c => ({ ...c, tiktok_enabled: v }))}
+          />
+
+          {cfg.tiktok_enabled && (
+            <FormField
+              label="TikTok Pixel ID"
+              placeholder="e.g. CXXXXXXXXXXXXXXX"
+              value={cfg.tiktok_pixel_id}
+              onChange={v => setCfg(c => ({ ...c, tiktok_pixel_id: v }))}
+              badge="required"
+              monospace
+              hint="Found in TikTok Ads Manager under Assets → Events."
+            />
+          )}
+
+          <div className="pt-2 border-t border-border/50 space-y-4">
+            <SwitchToggle
+              label="Enable TikTok Events API (Server-Side)"
+              desc="Sends server events via TikTok Business API v1.3 with SHA-256 customer matching."
+              checked={cfg.tiktok_events_api_enabled}
+              onChange={v => setCfg(c => ({ ...c, tiktok_events_api_enabled: v }))}
+            />
+
+            {cfg.tiktok_events_api_enabled && (
+              <div className="space-y-4 pt-1">
+                <FormField
+                  label="TikTok Events API Access Token"
+                  placeholder="Paste TikTok Long-Lived Access Token..."
+                  value={cfg.tiktok_access_token}
+                  onChange={v => setCfg(c => ({ ...c, tiktok_access_token: v }))}
+                  badge="server secret"
+                  masked
+                  monospace
+                  hint="Generated in TikTok Ads Manager under Web Event Settings."
+                />
+
+                <FormField
+                  label="TikTok Test Event Code (Optional)"
+                  placeholder="e.g. TEST..."
+                  value={cfg.tiktok_test_code}
+                  onChange={v => setCfg(c => ({ ...c, tiktok_test_code: v }))}
+                  badge="optional"
+                  monospace
+                  hint="Found in TikTok Ads Manager → Test Events tab."
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Section 4: General Settings & Privacy Controls ── */}
+      <div className="p-5 sm:p-6 rounded-2xl border border-border bg-card shadow-2xs space-y-4">
+        <div className="border-b border-border pb-3">
+          <h3 className="text-sm font-bold text-foreground">General Privacy & Diagnostics</h3>
+          <p className="text-[11px] text-muted-foreground">Control global tracking execution and debugging logs.</p>
+        </div>
+
+        <div className="space-y-3">
+          <SwitchToggle
+            label="Master Ecommerce Tracking"
+            desc="Master switch. When turned off, all marketing pixels and conversion APIs are silenced."
+            checked={cfg.ecommerce_tracking_enabled}
+            onChange={v => setCfg(c => ({ ...c, ecommerce_tracking_enabled: v }))}
+          />
+
+          <SwitchToggle
+            label="Advanced Matching (Hashed Customer Parameters)"
+            desc="Sends SHA-256 hashed customer phone and email with server conversions to boost event match quality."
+            checked={cfg.advanced_matching_enabled}
+            onChange={v => setCfg(c => ({ ...c, advanced_matching_enabled: v }))}
+          />
+
+          <SwitchToggle
+            label="Developer Debug Mode"
+            desc="Outputs formatted event payloads and deduplication IDs directly to the browser console."
+            checked={cfg.debug_mode}
+            onChange={v => setCfg(c => ({ ...c, debug_mode: v }))}
+          />
+        </div>
+      </div>
+
     </div>
   );
 }
