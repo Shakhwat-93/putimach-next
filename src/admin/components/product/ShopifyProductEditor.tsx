@@ -389,7 +389,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-5 sm:space-y-6 pb-32 sm:pb-36 px-1 sm:px-2 md:px-4 min-w-0">
+    <div className="w-full max-w-7xl mx-auto space-y-5 sm:space-y-6 pb-12 sm:pb-16 px-1 sm:px-2 md:px-4 min-w-0">
       {/* ── Top Header Navigation & Title ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-border/80 pb-4 min-w-0">
         <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
@@ -1082,59 +1082,56 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
 
       </div>
 
-      {/* ── STICKY BOTTOM ACTION BAR (Fully responsive with desktop sidebar offset & mobile touch targets) ── */}
-      <div className="fixed bottom-0 left-0 right-0 md:left-64 z-40 bg-card/95 backdrop-blur-md border-t border-border px-3 sm:px-6 py-2.5 sm:py-3 shadow-2xl pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
-            {isDirty ? (
-              <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold text-[11px] sm:text-xs">
-                <AlertTriangle size={13} className="shrink-0" />
-                <span className="hidden xs:inline">Unsaved changes</span>
-                <span className="xs:hidden">Unsaved</span>
-              </span>
-            ) : (
-              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium text-[11px] sm:text-xs">
-                <CheckCircle2 size={13} className="shrink-0" />
-                <span className="hidden xs:inline">All saved</span>
-              </span>
-            )}
-          </div>
+      {/* ── BOTTOM ACTION BAR (In-flow footer card at the end of the form) ── */}
+      <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs min-w-0 w-full">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground self-start sm:self-auto shrink-0">
+          {isDirty ? (
+            <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold text-xs">
+              <AlertTriangle size={14} className="shrink-0" />
+              <span>Unsaved changes</span>
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium text-xs">
+              <CheckCircle2 size={14} className="shrink-0" />
+              <span>All changes saved</span>
+            </span>
+          )}
+        </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2.5 justify-end flex-1 sm:flex-initial">
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleCancelWithCheck}
+            className="rounded-xl text-xs font-semibold px-4 h-9 cursor-pointer flex-1 sm:flex-initial"
+          >
+            Discard
+          </Button>
+
+          {status !== 'draft' && (
             <Button
               type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleCancelWithCheck}
-              className="rounded-xl text-xs font-semibold px-2.5 sm:px-4 h-9 cursor-pointer"
-            >
-              Discard
-            </Button>
-
-            {status !== 'draft' && (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                disabled={isSaving}
-                onClick={() => handleSubmit(undefined, true)}
-                className="rounded-xl text-xs font-bold px-2.5 sm:px-4 h-9 cursor-pointer hidden sm:inline-flex"
-              >
-                Save Draft
-              </Button>
-            )}
-
-            <Button
-              type="button"
+              variant="secondary"
               size="sm"
               disabled={isSaving}
-              onClick={() => handleSubmit(undefined, false)}
-              className="rounded-xl text-xs font-bold px-3.5 sm:px-6 h-9 gap-1.5 sm:gap-2 shadow-sm cursor-pointer flex-1 sm:flex-initial"
+              onClick={() => handleSubmit(undefined, true)}
+              className="rounded-xl text-xs font-bold px-4 h-9 cursor-pointer hidden sm:inline-flex"
             >
-              {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              <span>{isSaving ? 'Saving...' : 'Save Product'}</span>
+              Save Draft
             </Button>
-          </div>
+          )}
+
+          <Button
+            type="button"
+            size="sm"
+            disabled={isSaving}
+            onClick={() => handleSubmit(undefined, false)}
+            className="rounded-xl text-xs font-bold px-6 h-9 gap-2 shadow-sm cursor-pointer flex-1 sm:flex-initial"
+          >
+            {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            <span>{isSaving ? 'Saving...' : 'Save Product'}</span>
+          </Button>
         </div>
       </div>
     </div>
