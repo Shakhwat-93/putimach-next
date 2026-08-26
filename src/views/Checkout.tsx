@@ -15,6 +15,11 @@ import useCartStore from '../store/cartStore';
 import { supabase } from '../lib/supabase';
 import { trackInitiateCheckout, trackPurchase } from '../lib/tracking';
 import { recordDiscountUsage } from '../lib/discounts/db';
+import { 
+  getOrCreateCheckoutSessionId, 
+  trackIncompleteCheckout, 
+  convertIncompleteCheckout 
+} from '../lib/checkout/session';
 
 const formatPrice = (p) => `৳${Number(p).toLocaleString('en-BD')}`;
 
@@ -450,9 +455,11 @@ export default function Checkout() {
     setAppliedCoupon, setDiscountResult, clearDiscount 
   } = useCartStore();
   const [mounted, setMounted] = useState(false);
+  const [checkoutSessionId, setCheckoutSessionId] = useState('');
 
   useEffect(() => {
     setMounted(true);
+    setCheckoutSessionId(getOrCreateCheckoutSessionId());
   }, []);
 
   const [form, setForm] = useState({
@@ -477,6 +484,41 @@ export default function Checkout() {
   const [couponInput, setCouponInput] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
+
+  // Debounced Incomplete Checkout Heartbeat Tracking
+  useEffect(() => {
+    if (!mounted || !checkoutSessionId || !items || items.length === 0 || success) return;
+
+    const timer = setTimeout(() => {
+      const calculatedSub = items.reduce((s, i) => s + (i.product?.price || 0) * i.quantity, 0);
+      const discAmt = discountResult?.valid ? (discountResult.discount_amount || 0) : 0;
+      const isFreeShip = Boolean(discountResult?.valid && discountResult.free_shipping);
+      const baseShip = shippingArea === 'inside' ? shippingRates.inside : shippingArea === 'sub' ? shippingRates.sub : shippingRates.outside;
+      const shipCost = isFreeShip ? 0 : baseShip;
+      const estTotal = Math.max(0, calculatedSub - discAmt) + shipCost;
+
+      trackIncompleteCheckout({
+        checkout_session_id: checkoutSessionId,
+        customer_name: form.name,
+        customer_phone: form.phone,
+        customer_email: form.email,
+        shipping_address: form.address,
+        city: form.city,
+        area: shippingArea === 'inside' ? 'Inside Dhaka' : shippingArea === 'sub' ? 'Sub Dhaka' : 'Outside Dhaka',
+        items,
+        subtotal: calculatedSub,
+        discount: discAmt,
+        shipping_cost: shipCost,
+        estimated_total: estTotal
+      });
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [
+    form.name, form.phone, form.email, form.address, form.city, 
+    shippingArea, items, discountResult, shippingRates, 
+    mounted, success, checkoutSessionId
+  ]);
 
   useEffect(() => {
     async function loadContactPhone() {
@@ -915,6 +957,13 @@ export default function Checkout() {
       setOrderNumber(num);
       clearCart();
       setOrderedItems(orderedItems);
+
+      // Convert Incomplete Checkout attempt to CONVERTED status with order ID link
+      try {
+        await convertIncompleteCheckout(checkoutSessionId, num);
+      } catch (convErr) {
+        console.warn('Failed to convert incomplete checkout status:', convErr);
+      }
 
       // Fire Purchase tracking event
       trackPurchase(

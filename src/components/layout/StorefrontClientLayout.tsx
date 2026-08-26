@@ -4,6 +4,7 @@ import React from 'react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import CartDrawer from '@/components/layout/CartDrawer';
+import CartRecoveryToast from '@/components/cart/CartRecoveryToast';
 import FlyToCartAnimator from '@/components/cart/FlyToCartAnimator';
 import TrackingInitializer from '@/components/TrackingInitializer';
 import VisitorTracker from '@/components/VisitorTracker';
@@ -29,6 +30,7 @@ export default function StorefrontClientLayout({
           initialCategories={cmsData.categories}
         />
         <CartDrawer />
+        <CartRecoveryToast />
         <FlyToCartAnimator />
         <main className="flex-1 min-h-screen">
           {children}

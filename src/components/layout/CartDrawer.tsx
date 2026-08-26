@@ -222,6 +222,13 @@ export default function CartDrawer() {
 
             {/* Items List */}
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3.5 scrollbar-none">
+              {/* Revalidation Notice */}
+              {revalidationNotice && (
+                <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/50 text-amber-800 dark:text-amber-300 text-xs font-semibold flex items-center justify-between gap-2">
+                  <span>{revalidationNotice}</span>
+                </div>
+              )}
+
               <AnimatePresence mode="popLayout">
                 {items.length === 0 ? (
                   <motion.div
@@ -245,73 +252,101 @@ export default function CartDrawer() {
                     </button>
                   </motion.div>
                 ) : (
-                  items.map((item) => (
-                    <motion.div
-                      key={item.key}
-                      layout
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      className="p-3 bg-white rounded-2xl border border-[#E9E2D2] flex gap-3.5 shadow-xs relative group"
-                    >
-                      {/* Product Thumbnail */}
-                      <div className="w-16 h-20 rounded-xl overflow-hidden bg-[#F7F4EE] shrink-0 border border-[#E9E2D2]/60">
-                        <img 
-                          src={item.product?.image || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80'} 
-                          alt={item.product?.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
+                  items.map((item) => {
+                    const isItemDisabled = item.isUnavailable || item.isOutOfStock;
+                    return (
+                      <motion.div
+                        key={item.key}
+                        layout
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className={cn(
+                          "p-3 bg-white rounded-2xl border flex gap-3.5 shadow-xs relative group transition-colors",
+                          isItemDisabled ? "border-amber-300 bg-amber-50/20" : "border-[#E9E2D2]"
+                        )}
+                      >
+                        {/* Product Thumbnail */}
+                        <div className="w-16 h-20 rounded-xl overflow-hidden bg-[#F7F4EE] shrink-0 border border-[#E9E2D2]/60 relative">
+                          <img 
+                            src={item.product?.image || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80'} 
+                            alt={item.product?.name}
+                            className={cn("w-full h-full object-cover", isItemDisabled ? "grayscale opacity-75" : "")}
+                          />
+                          {isItemDisabled && (
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center p-1 text-center">
+                              <span className="text-[9px] font-black uppercase text-white bg-rose-600 px-1 py-0.5 rounded">
+                                {item.isUnavailable ? 'Unavailable' : 'Out of Stock'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
 
-                      {/* Product Info & Stepper */}
-                      <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <h4 className="font-bold text-xs text-[#1C1613] truncate">{item.product?.name}</h4>
-                            <p className="text-[11px] text-gray-500 font-medium mt-0.5">
-                              Size: <span className="text-[#1C1613] font-bold">{item.size}</span>
-                              {item.color && item.color !== 'None' && (
-                                <> · Color: <span className="text-[#1C1613] font-bold">{item.color}</span></>
+                        {/* Product Info & Stepper */}
+                        <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <h4 className="font-bold text-xs text-[#1C1613] truncate">{item.product?.name}</h4>
+                              <p className="text-[11px] text-gray-500 font-medium mt-0.5">
+                                Size: <span className="text-[#1C1613] font-bold">{item.size}</span>
+                                {item.color && item.color !== 'None' && (
+                                  <> · Color: <span className="text-[#1C1613] font-bold">{item.color}</span></>
+                                )}
+                              </p>
+                              {item.unavailabilityReason && (
+                                <p className="text-[10px] text-rose-600 font-bold mt-0.5">
+                                  {item.unavailabilityReason}
+                                </p>
                               )}
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => removeItem(item.key)}
-                            className="text-gray-400 hover:text-red-500 p-1 transition-colors cursor-pointer"
-                            aria-label="Remove item"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-
-                        <div className="flex items-center justify-between mt-2 pt-1 border-t border-[#E9E2D2]/40">
-                          <span className="font-mono font-bold text-xs text-[#1C1613]">
-                            {formatPrice(item.product.price * item.quantity)}
-                          </span>
-
-                          <div className="flex items-center gap-1 bg-[#F7F4EE] rounded-lg p-0.5 border border-[#E9E2D2]">
+                            </div>
                             <button
-                              type="button"
-                              onClick={() => updateQuantity(item.key, item.quantity - 1)}
-                              className="w-7 h-7 flex items-center justify-center text-[#1C1613] hover:bg-white rounded-lg transition-colors cursor-pointer active:scale-90"
-                              aria-label="Decrease quantity"
+                              onClick={() => removeItem(item.key)}
+                              className="text-gray-400 hover:text-red-500 p-1 transition-colors cursor-pointer"
+                              aria-label="Remove item"
                             >
-                              <Minus size={12} />
-                            </button>
-                            <span className="w-6 text-center text-xs font-black font-mono select-none">{item.quantity}</span>
-                            <button
-                              type="button"
-                              onClick={() => updateQuantity(item.key, item.quantity + 1)}
-                              className="w-7 h-7 flex items-center justify-center text-[#1C1613] hover:bg-white rounded-lg transition-colors cursor-pointer active:scale-90"
-                              aria-label="Increase quantity"
-                            >
-                              <Plus size={12} />
+                              <Trash2 size={13} />
                             </button>
                           </div>
+
+                          <div className="flex items-center justify-between mt-2 pt-1 border-t border-[#E9E2D2]/40">
+                            <span className="font-mono font-bold text-xs text-[#1C1613]">
+                              {formatPrice(item.product.price * item.quantity)}
+                            </span>
+
+                            {!isItemDisabled ? (
+                              <div className="flex items-center gap-1 bg-[#F7F4EE] rounded-lg p-0.5 border border-[#E9E2D2]">
+                                <button
+                                  type="button"
+                                  onClick={() => updateQuantity(item.key, item.quantity - 1)}
+                                  className="w-7 h-7 flex items-center justify-center text-[#1C1613] hover:bg-white rounded-lg transition-colors cursor-pointer active:scale-90"
+                                  aria-label="Decrease quantity"
+                                >
+                                  <Minus size={12} />
+                                </button>
+                                <span className="w-6 text-center text-xs font-black font-mono select-none">{item.quantity}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => updateQuantity(item.key, item.quantity + 1)}
+                                  className="w-7 h-7 flex items-center justify-center text-[#1C1613] hover:bg-white rounded-lg transition-colors cursor-pointer active:scale-90"
+                                  aria-label="Increase quantity"
+                                >
+                                  <Plus size={12} />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => removeItem(item.key)}
+                                className="text-[11px] font-bold text-rose-600 hover:underline"
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))
+                      </motion.div>
+                    );
+                  })
                 )}
               </AnimatePresence>
             </div>
@@ -348,35 +383,34 @@ export default function CartDrawer() {
                           placeholder="Discount code (e.g. SAVE20)"
                           value={couponInput}
                           onChange={(e) => setCouponInput(e.target.value)}
-                          className="w-full h-9 pl-8 pr-3 rounded-xl border border-[#E9E2D2] bg-[#FDFBF7] text-xs font-mono font-semibold uppercase placeholder:normal-case placeholder:font-sans focus:outline-none focus:border-[#1C1613]"
+                          disabled={couponLoading}
+                          className="w-full pl-8 pr-3 py-2 text-xs rounded-xl bg-[#F7F4EE] border border-[#E9E2D2] text-[#1C1613] placeholder-gray-400 font-mono uppercase focus:outline-none focus:border-[#C5A880] transition-colors"
                         />
                       </div>
                       <button
                         type="submit"
                         disabled={couponLoading || !couponInput.trim()}
-                        className="h-9 px-3.5 rounded-xl bg-[#1C1613] hover:bg-[#FF5533] text-white text-xs font-bold transition-colors disabled:opacity-40 cursor-pointer flex items-center gap-1"
+                        className="px-4 py-2 bg-[#1C1613] text-white text-xs font-bold rounded-xl hover:bg-[#FF5533] disabled:opacity-40 transition-colors cursor-pointer"
                       >
-                        {couponLoading ? <Loader2 size={12} className="animate-spin" /> : 'Apply'}
+                        {couponLoading ? <Loader2 size={13} className="animate-spin" /> : 'Apply'}
                       </button>
                     </div>
                     {couponError && (
-                      <p className="text-[11px] text-red-500 font-medium pl-1">{couponError}</p>
+                      <p className="text-[10px] text-red-500 font-semibold pl-1">{couponError}</p>
                     )}
                   </form>
                 )}
 
-                {/* Totals Breakdown */}
+                {/* Subtotal & Totals */}
                 <div className="space-y-1.5 text-xs">
-                  <div className="flex items-center justify-between text-gray-500">
+                  <div className="flex items-center justify-between text-gray-600">
                     <span>Subtotal</span>
-                    <span className="font-mono text-gray-700">{formatPrice(calculatedSubtotal)}</span>
+                    <span className="font-mono font-bold text-[#1C1613]">{formatPrice(calculatedSubtotal)}</span>
                   </div>
 
                   {discountAmount > 0 && (
-                    <div className="flex items-center justify-between text-emerald-600 font-semibold">
-                      <span className="flex items-center gap-1">
-                        <Tag size={11} /> Discount Savings
-                      </span>
+                    <div className="flex items-center justify-between text-emerald-700 font-bold">
+                      <span>Discount ({discountResult?.discount_code})</span>
                       <span className="font-mono">- {formatPrice(discountAmount)}</span>
                     </div>
                   )}
@@ -397,16 +431,30 @@ export default function CartDrawer() {
                 </div>
 
                 {/* Checkout Primary Button */}
-                <Link
-                  href="/checkout"
-                  id="cart-proceed-checkout-btn"
-                  onClick={() => closeCart()}
-                  prefetch={true}
-                  className="w-full py-4 bg-[#1C1613] hover:bg-[#FF5533] text-white font-black text-xs uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md active:scale-98 group cursor-pointer text-center"
-                >
-                  <span>Proceed to Checkout</span>
-                  <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                </Link>
+                {items.some(i => i.isUnavailable || i.isOutOfStock) ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typeof useCartStore.getState().removeUnavailableItems === 'function') {
+                        useCartStore.getState().removeUnavailableItems();
+                      }
+                    }}
+                    className="w-full py-3.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer text-center"
+                  >
+                    <span>Remove Unavailable Items to Checkout</span>
+                  </button>
+                ) : (
+                  <Link
+                    href="/checkout"
+                    id="cart-proceed-checkout-btn"
+                    onClick={() => closeCart()}
+                    prefetch={true}
+                    className="w-full py-4 bg-[#1C1613] hover:bg-[#FF5533] text-white font-black text-xs uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md active:scale-98 group cursor-pointer text-center"
+                  >
+                    <span>Proceed to Checkout</span>
+                    <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                )}
 
                 {/* Security Trust Badge */}
                 <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold pt-0.5">

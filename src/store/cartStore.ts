@@ -1,8 +1,17 @@
 // @ts-nocheck
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { supabase } from '../lib/supabase';
+import { 
+  getOrCreateCartSessionId, 
+  loadStoredCart, 
+  saveStoredCart, 
+  clearStoredCart,
+  StoredCartItem 
+} from '../lib/cart/persistence';
 
 const CART_STORAGE_KEY = 'putimach-cart';
+const REMINDER_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour threshold for soft recovery reminder
 
 function getInitialCartItems() {
   if (typeof window === 'undefined') return [];
@@ -18,6 +27,31 @@ function getInitialCartItems() {
   }
 }
 
+export interface CartItem {
+  key: string;
+  product: {
+    id: string;
+    slug?: string;
+    name: string;
+    price: number;
+    compare_at_price?: number;
+    image?: string;
+    category?: string;
+    collections?: string[];
+    variants?: any[];
+    status?: string;
+  };
+  size?: string;
+  color?: string;
+  quantity: number;
+  added_at?: number;
+  isUnavailable?: boolean;
+  isOutOfStock?: boolean;
+  unavailabilityReason?: string;
+  wasCapped?: boolean;
+  maxAvailable?: number;
+}
+
 const useCartStore = create(
   persist(
     (set, get) => ({
@@ -26,6 +60,15 @@ const useCartStore = create(
       flyingItems: [],
       badgeBouncing: false,
       _hasHydrated: false,
+      cartSessionId: typeof window !== 'undefined' ? getOrCreateCartSessionId() : 'cs_init',
+
+      // Rehydration & Validation State
+      isRevalidating: false,
+      hasRevalidated: false,
+      revalidationNotice: null,
+
+      // Soft Cart Recovery Reminder State
+      showRecoveryNotification: false,
 
       // Discount & Promotion State
       appliedCouponCode: null,
@@ -36,10 +79,190 @@ const useCartStore = create(
       closeCart: () => set({ isOpen: false }),
       toggleCart: () => set(state => ({ isOpen: !state.isOpen })),
 
+      // Recovery Notification actions
+      dismissRecoveryNotification: () => {
+        set({ showRecoveryNotification: false });
+        if (typeof window !== 'undefined') {
+          saveStoredCart({
+            items: get().getMinimalItems(),
+            appliedCouponCode: get().appliedCouponCode,
+            last_reminder_at: Date.now()
+          });
+        }
+      },
+
       // Discount Actions
       setAppliedCoupon: (code) => set({ appliedCouponCode: code ? code.trim().toUpperCase() : null }),
       setDiscountResult: (res) => set({ discountResult: res }),
       clearDiscount: () => set({ appliedCouponCode: null, discountResult: null }),
+
+      // Helper to serialize minimal items for persistence
+      getMinimalItems: (): StoredCartItem[] => {
+        return get().items.map(item => ({
+          product_id: String(item.product?.id || ''),
+          size: item.size || undefined,
+          color: item.color || undefined,
+          quantity: item.quantity || 1,
+          added_at: item.added_at || Date.now()
+        })).filter(i => Boolean(i.product_id));
+      },
+
+      // Persist state to multi-layer storage
+      persistCartState: (customItems = null) => {
+        if (typeof window === 'undefined') return;
+        const currentItems = customItems || get().items;
+        const minimalItems: StoredCartItem[] = currentItems.map(item => ({
+          product_id: String(item.product?.id || ''),
+          size: item.size || undefined,
+          color: item.color || undefined,
+          quantity: item.quantity || 1,
+          added_at: item.added_at || Date.now()
+        })).filter(i => Boolean(i.product_id));
+
+        saveStoredCart({
+          items: minimalItems,
+          appliedCouponCode: get().appliedCouponCode
+        });
+      },
+
+      /**
+       * Full Live Rehydration with Database
+       * Revalidates live price, stock caps, active status, and variant existence.
+       */
+      rehydrateCartWithDatabase: async () => {
+        const { items, persistCartState } = get();
+        if (!items || items.length === 0) {
+          set({ hasRevalidated: true, isRevalidating: false });
+          return;
+        }
+
+        set({ isRevalidating: true });
+
+        try {
+          const productIds = Array.from(new Set(items.map(i => String(i.product?.id || '')).filter(Boolean)));
+          if (productIds.length === 0) {
+            set({ hasRevalidated: true, isRevalidating: false });
+            return;
+          }
+
+          // Batch query latest live product rows
+          const { data: dbProducts, error } = await supabase
+            .from('products')
+            .select('id, data')
+            .in('id', productIds);
+
+          if (error) throw error;
+
+          const dbMap = new Map();
+          if (Array.isArray(dbProducts)) {
+            dbProducts.forEach(row => {
+              dbMap.set(String(row.id), row.data || {});
+            });
+          }
+
+          let hasChanges = false;
+          let noticeMessage = null;
+
+          const updatedItems: CartItem[] = items.map(item => {
+            const pid = String(item.product?.id || '');
+            const dbData = dbMap.get(pid);
+
+            // 1. Check if product is deleted or archived
+            if (!dbData || dbData.status === 'archived' || dbData.is_active === false) {
+              hasChanges = true;
+              return {
+                ...item,
+                isUnavailable: true,
+                unavailabilityReason: 'This product is no longer available.'
+              };
+            }
+
+            // 2. Refresh live pricing & media
+            const currentPrice = Number(dbData.price !== undefined ? dbData.price : item.product.price);
+            const currentCompareAt = dbData.compare_at_price ? Number(dbData.compare_at_price) : undefined;
+            const currentName = dbData.name || item.product.name;
+            const currentImage = (dbData.images && dbData.images[0]) || dbData.image || item.product.image;
+            const variants = Array.isArray(dbData.variants) ? dbData.variants : [];
+
+            let isOutOfStock = false;
+            let unavailabilityReason = undefined;
+            let maxAvailable = 999;
+            let currentQty = item.quantity;
+            let wasCapped = false;
+
+            // 3. Variant validation
+            if (item.size || (item.color && item.color !== 'None')) {
+              if (variants.length > 0) {
+                const matchedVariant = variants.find(v => {
+                  const sizeMatch = !item.size || !v.size || String(v.size).trim().toLowerCase() === String(item.size).trim().toLowerCase();
+                  const colorMatch = !item.color || item.color === 'None' || !v.color || String(v.color).trim().toLowerCase() === String(item.color).trim().toLowerCase();
+                  return sizeMatch && colorMatch;
+                });
+
+                if (!matchedVariant) {
+                  isOutOfStock = true;
+                  unavailabilityReason = `Selected option (${[item.color, item.size].filter(Boolean).join(' / ')}) is no longer available.`;
+                } else {
+                  const variantStock = Number(matchedVariant.stock !== undefined ? matchedVariant.stock : (dbData.current_stock ?? dbData.inventory_stock ?? 999));
+                  maxAvailable = Math.max(0, variantStock);
+                  if (variantStock <= 0) {
+                    isOutOfStock = true;
+                    unavailabilityReason = 'Out of stock';
+                  } else if (currentQty > variantStock) {
+                    currentQty = variantStock;
+                    wasCapped = true;
+                    noticeMessage = `Quantity for "${currentName}" was adjusted to remaining stock (${variantStock}).`;
+                  }
+                }
+              }
+            } else {
+              // Product without explicit variants
+              const totalStock = Number(dbData.current_stock ?? dbData.inventory_stock ?? 999);
+              maxAvailable = Math.max(0, totalStock);
+              if (totalStock <= 0) {
+                isOutOfStock = true;
+                unavailabilityReason = 'Out of stock';
+              } else if (currentQty > totalStock) {
+                currentQty = totalStock;
+                wasCapped = true;
+                noticeMessage = `Quantity for "${currentName}" was adjusted to remaining stock (${totalStock}).`;
+              }
+            }
+
+            return {
+              ...item,
+              quantity: currentQty,
+              isUnavailable: false,
+              isOutOfStock,
+              unavailabilityReason,
+              wasCapped,
+              maxAvailable,
+              product: {
+                ...item.product,
+                name: currentName,
+                price: currentPrice,
+                compare_at_price: currentCompareAt,
+                image: currentImage,
+                variants: variants,
+                category: dbData.category || item.product.category,
+                collections: dbData.collections || item.product.collections
+              }
+            };
+          });
+
+          set({
+            items: updatedItems,
+            hasRevalidated: true,
+            isRevalidating: false,
+            revalidationNotice: noticeMessage
+          });
+
+          persistCartState(updatedItems);
+        } catch (err) {
+          console.warn('[Cart Rehydration] Database lookup failed, preserving current cart state:', err);
+          set({ hasRevalidated: true, isRevalidating: false });
+        }
+      },
 
       triggerFlyToCart: (imageSrc, clickEventOrRect) => {
         if (typeof window === 'undefined') return;
@@ -70,7 +293,6 @@ const useCartStore = create(
 
         set(state => ({ flyingItems: [...state.flyingItems, newFly] }));
 
-        // Remove item after animation completes & trigger badge bounce
         setTimeout(() => {
           set(state => ({
             flyingItems: state.flyingItems.filter(i => i.id !== id),
@@ -81,7 +303,7 @@ const useCartStore = create(
       },
 
       addItem: (product, size, colorOrQty = null, qtyOrUndefined = 1, event = null) => {
-        const { items, triggerFlyToCart } = get();
+        const { items, triggerFlyToCart, persistCartState } = get();
         
         let color = null;
         let quantity = 1;
@@ -93,32 +315,35 @@ const useCartStore = create(
           quantity = qtyOrUndefined ?? 1;
         }
 
-        const key = `${product.id}-${size}-${color || 'None'}`;
+        const key = `${product.id}-${size || 'Default'}-${color || 'None'}`;
         const existing = items.find(i => i.key === key);
 
         let newItems;
         if (existing) {
           newItems = items.map(i =>
-            i.key === key ? { ...i, quantity: i.quantity + quantity } : i
+            i.key === key ? { ...i, quantity: i.quantity + quantity, isUnavailable: false, isOutOfStock: false } : i
           );
         } else {
-          newItems = [...items, { key, product, size, color, quantity }];
+          newItems = [...items, { 
+            key, 
+            product, 
+            size: size || 'Default', 
+            color: color || null, 
+            quantity, 
+            added_at: Date.now(),
+            isUnavailable: false,
+            isOutOfStock: false
+          }];
         }
 
         set({ items: newItems });
+        persistCartState(newItems);
 
-        // Save fallback immediately
-        if (typeof window !== 'undefined') {
-          try {
-            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ state: { items: newItems, appliedCouponCode: get().appliedCouponCode }, version: 0 }));
-          } catch (e) {}
-        }
-
-        // Trigger Fly To Cart animation
-        const imageSrc = product?.image || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80';
+        // Fly animation
+        const imageSrc = product?.image || (product?.images && product.images[0]) || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80';
         triggerFlyToCart(imageSrc, event);
 
-        // Haptic Feedback for Mobile Devices
+        // Haptic Feedback
         if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
           try {
             window.navigator.vibrate([25, 15, 35]);
@@ -127,32 +352,40 @@ const useCartStore = create(
       },
 
       removeItem: (key) => {
-        const newItems = get().items.filter(i => i.key !== key);
+        const { items, persistCartState } = get();
+        const newItems = items.filter(i => i.key !== key);
         set({ items: newItems });
-        if (typeof window !== 'undefined') {
-          try {
-            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ state: { items: newItems, appliedCouponCode: get().appliedCouponCode }, version: 0 }));
-          } catch (e) {}
-        }
+        persistCartState(newItems);
+      },
+
+      removeUnavailableItems: () => {
+        const { items, persistCartState } = get();
+        const newItems = items.filter(i => !i.isUnavailable && !i.isOutOfStock);
+        set({ items: newItems });
+        persistCartState(newItems);
       },
 
       updateQuantity: (key, quantity) => {
+        const { items, removeItem, persistCartState } = get();
         if (quantity < 1) {
-          get().removeItem(key);
+          removeItem(key);
           return;
         }
-        const newItems = get().items.map(i => i.key === key ? { ...i, quantity } : i);
+        const newItems = items.map(i => {
+          if (i.key === key) {
+            const capped = i.maxAvailable ? Math.min(quantity, i.maxAvailable) : quantity;
+            return { ...i, quantity: capped };
+          }
+          return i;
+        });
         set({ items: newItems });
-        if (typeof window !== 'undefined') {
-          try {
-            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ state: { items: newItems, appliedCouponCode: get().appliedCouponCode }, version: 0 }));
-          } catch (e) {}
-        }
+        persistCartState(newItems);
       },
 
       clearCart: () => {
         set({ items: [], appliedCouponCode: null, discountResult: null });
         if (typeof window !== 'undefined') {
+          clearStoredCart();
           try {
             localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ state: { items: [] }, version: 0 }));
           } catch (e) {}
@@ -160,8 +393,8 @@ const useCartStore = create(
       },
 
       // Derived selectors
-      getTotalItems: () => get().items.reduce((sum, i) => sum + i.quantity, 0),
-      getSubtotal: () => get().items.reduce((sum, i) => sum + (i.product?.price || 0) * i.quantity, 0),
+      getTotalItems: () => get().items.filter(i => !i.isUnavailable && !i.isOutOfStock).reduce((sum, i) => sum + i.quantity, 0),
+      getSubtotal: () => get().items.filter(i => !i.isUnavailable && !i.isOutOfStock).reduce((sum, i) => sum + (i.product?.price || 0) * i.quantity, 0),
       getTotal: () => {
         const sub = get().getSubtotal();
         const discountAmount = get().discountResult?.discount_amount || 0;
@@ -169,10 +402,10 @@ const useCartStore = create(
       },
 
       get totalItems() {
-        return get().items.reduce((sum, i) => sum + i.quantity, 0);
+        return get().items.filter(i => !i.isUnavailable && !i.isOutOfStock).reduce((sum, i) => sum + i.quantity, 0);
       },
       get subtotal() {
-        return get().items.reduce((sum, i) => sum + (i.product?.price || 0) * i.quantity, 0);
+        return get().items.filter(i => !i.isUnavailable && !i.isOutOfStock).reduce((sum, i) => sum + (i.product?.price || 0) * i.quantity, 0);
       },
     }),
     {
@@ -189,11 +422,23 @@ const useCartStore = create(
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.setHasHydrated(true);
-          if ((!state.items || state.items.length === 0) && typeof window !== 'undefined') {
-            const localItems = getInitialCartItems();
-            if (localItems.length > 0) {
-              state.items = localItems;
-            }
+
+          // Check for IndexedDB / persistent local stored state
+          if (typeof window !== 'undefined') {
+            loadStoredCart().then(stored => {
+              if (stored && Array.isArray(stored.items) && stored.items.length > 0) {
+                // Check if we should show recovery reminder (> 1 hour gap)
+                const lastReminder = stored.last_reminder_at || 0;
+                const timeDiff = Date.now() - lastReminder;
+                if (timeDiff > REMINDER_THRESHOLD_MS && state.items.length > 0) {
+                  state.showRecoveryNotification = true;
+                }
+              }
+              // Trigger asynchronous live database validation in background
+              state.rehydrateCartWithDatabase();
+            }).catch(() => {
+              state.rehydrateCartWithDatabase();
+            });
           }
         }
       },

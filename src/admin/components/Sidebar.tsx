@@ -9,7 +9,7 @@ import {
   LayoutDashboard, ShoppingCart, ShieldCheck, Headphones, Truck, 
   Factory, BarChart3, Settings, LogOut, Users, Package, ClipboardList,
   Megaphone, ShieldAlert, ChevronDown, ChevronRight, X, Sun, Moon,
-  DatabaseBackup, Store, Tag
+  DatabaseBackup, Store, Tag, ShoppingBag, Clock
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useBranding } from '../hooks/useBranding';
@@ -30,6 +30,7 @@ const menuItems = [
       { path: '/admin/orders?status=Fake%20Order', label: 'Fake Order', status: 'Fake Order', tone: 'fake' }
     ]
   },
+  { path: '/admin/incomplete-checkouts', label: 'Incomplete Checkouts', icon: Clock, roles: ['Admin', 'Digital Marketer', 'Call Team'], group: 'Main Console' },
   { path: '/admin/storefront', label: 'Storefront', icon: Store, roles: ['Admin'], group: 'Main Console' },
   { path: '/admin/discounts', label: 'Discounts', icon: Tag, roles: ['Admin', 'Digital Marketer'], group: 'Main Console' },
   { path: '/admin/inventory', label: 'Inventory', icon: Package, roles: ['Admin', 'Moderator'], group: 'Main Console' },
