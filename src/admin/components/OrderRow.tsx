@@ -282,7 +282,7 @@ export const OrderRow = ({ order, onDetails, onStatusChange, onEdit, onPrint, on
       {/* 7. Total (BDT) */}
       <td className="px-4 py-3.5 whitespace-nowrap align-middle">
         <span className="text-sm font-extrabold font-mono text-foreground">
-          ৳{Number(order.amount || 0).toLocaleString()}
+          ৳{Number(order.total || order.subtotal || order.amount || 0).toLocaleString()}
         </span>
       </td>
 

@@ -12,7 +12,7 @@ import { getToyBoxStockKey } from '../utils/productCatalog';
 const OrderContext = createContext(null);
 const ORDER_SNAPSHOT_SIZE = 500;
 const ORDER_PAGE_SIZE = 50;
-const DATA_REFRESH_DEBOUNCE_MS = 800;
+const DATA_REFRESH_DEBOUNCE_MS = 600;
 
 export const OrderProvider = ({ children }) => {
   const [orders, setOrders] = useState([]);
@@ -27,6 +27,7 @@ export const OrderProvider = ({ children }) => {
     dateRange: { start: null, end: null }
   });
   const [loading, setLoading] = useState(true);
+  const [realtimeStatus, setRealtimeStatus] = useState('connecting');
   const [stats, setStats] = useState({
     total: 0, completed: 0, pending: 0, revenue: 0,
     addedTodayCount: 0, sourceDistribution: [], trendData: [], confirmationData: []
@@ -40,7 +41,7 @@ export const OrderProvider = ({ children }) => {
   const { user, profile, userRoles, isAdmin } = useAuth();
   const userId = user?.id ?? null;
 
-  // Track current values without causing re-renders  
+  // Ref tracking to avoid stale closures in realtime callbacks
   const pageRef = useRef(page);
   pageRef.current = page;
   const filtersRef = useRef(filters);
@@ -48,6 +49,8 @@ export const OrderProvider = ({ children }) => {
   const fetchIdRef = useRef(0);
   const ordersRef = useRef(orders);
   ordersRef.current = orders;
+  const lastSyncedTimestampRef = useRef(new Date().toISOString());
+
   const statsRefreshTimerRef = useRef(null);
   const inventoryRefreshTimerRef = useRef(null);
   const toyBoxRefreshTimerRef = useRef(null);
@@ -66,6 +69,7 @@ export const OrderProvider = ({ children }) => {
       if (id === fetchIdRef.current) { 
         setOrders(data || []);
         setTotalCount(count || 0);
+        lastSyncedTimestampRef.current = new Date().toISOString();
         if (currentPage === 1 && typeof window !== 'undefined') {
           localStorage.setItem('of_recent_orders', JSON.stringify((data || []).slice(0, ORDER_SNAPSHOT_SIZE)));
         }
@@ -129,6 +133,37 @@ export const OrderProvider = ({ children }) => {
     toyBoxRefreshTimerRef.current = window.setTimeout(() => fetchToyBoxes(), DATA_REFRESH_DEBOUNCE_MS);
   }, [fetchToyBoxes]);
 
+  // ── Reconnect & Outage Reconciliation ────────────────────────────────────
+  const reconcileRecentOrders = useCallback(async () => {
+    const sinceTimestamp = lastSyncedTimestampRef.current;
+    if (!sinceTimestamp) return;
+
+    try {
+      const { data: newRows, error } = await supabase
+        .from('orders')
+        .select('*')
+        .gt('created_at', sinceTimestamp)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (newRows && newRows.length > 0) {
+        console.log(`[Realtime:Reconcile] Fetched ${newRows.length} missed orders since ${sinceTimestamp}`);
+        setOrders(prev => {
+          const existingIds = new Set(prev.map(o => String(o.id)));
+          const toAdd = newRows.filter(r => !existingIds.has(String(r.id)));
+          if (toAdd.length === 0) return prev;
+          return [...toAdd, ...prev].slice(0, ORDER_SNAPSHOT_SIZE);
+        });
+        setTotalCount(prev => prev + newRows.length);
+        scheduleStatsRefresh();
+      }
+      lastSyncedTimestampRef.current = new Date().toISOString();
+    } catch (err) {
+      console.warn('[Realtime:Reconcile] Failed to reconcile orders:', err);
+    }
+  }, [scheduleStatsRefresh]);
+
   const initializeData = useCallback(async () => {
     try {
       await Promise.allSettled([
@@ -143,28 +178,73 @@ export const OrderProvider = ({ children }) => {
     }
   }, [fetchOrders, fetchStats, fetchInventory, fetchToyBoxes]);
 
+  // ── Canonical Realtime Subscription ──────────────────────────────────────
   useEffect(() => {
     initializeData();
 
-    const orderContextChannel = supabase
-      .channel('order_context_changes')
+    const channel = supabase
+      .channel('admin_orders_realtime_v2')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
         if (payload.eventType === 'INSERT') {
-          setOrders((prev) => [payload.new, ...prev.filter(order => order.id !== payload.new.id)].slice(0, ORDER_SNAPSHOT_SIZE));
-          setTotalCount((prev) => prev + 1);
-        } else if (payload.eventType === 'UPDATE') {
+          const newOrder = payload.new;
+          if (!newOrder) return;
+
+          console.log('[Realtime] NEW_ORDER received:', newOrder.order_number || newOrder.id);
+
+          // 1. Idempotently update order list (newest first)
           setOrders((prev) => {
-            const exists = prev.some(order => order.id === payload.new.id);
-            const next = exists
-              ? prev.map(order => order.id === payload.new.id ? payload.new : order)
-              : [payload.new, ...prev];
-            return next.slice(0, ORDER_SNAPSHOT_SIZE);
+            const exists = prev.some(o => String(o.id) === String(newOrder.id) || (newOrder.order_number && String(o.order_number) === String(newOrder.order_number)));
+            if (exists) return prev;
+            return [newOrder, ...prev].slice(0, ORDER_SNAPSHOT_SIZE);
           });
+          setTotalCount((prev) => prev + 1);
+
+          // 2. Optimistically bump stats immediately
+          setStats((prev) => ({
+            ...prev,
+            total: (prev.total || 0) + 1,
+            addedTodayCount: (prev.addedTodayCount || 0) + 1,
+            pending: (prev.pending || 0) + 1,
+          }));
+
+          // 3. Dispatch global custom event for any listening admin components (Toasts, Dashboard, Reports)
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('admin:new_order', { detail: newOrder }));
+          }
+
+          // 4. Update last synced timestamp
+          lastSyncedTimestampRef.current = newOrder.created_at || new Date().toISOString();
+
+          // 5. Schedule debounced full stats re-verification
+          scheduleStatsRefresh();
+        } else if (payload.eventType === 'UPDATE') {
+          const updated = payload.new;
+          if (!updated) return;
+
+          setOrders((prev) => {
+            const exists = prev.some(o => String(o.id) === String(updated.id));
+            if (!exists) return [updated, ...prev].slice(0, ORDER_SNAPSHOT_SIZE);
+            return prev.map(o => String(o.id) === String(updated.id) ? { ...o, ...updated } : o);
+          });
+
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('admin:order_updated', { detail: updated }));
+          }
+
+          scheduleStatsRefresh();
         } else if (payload.eventType === 'DELETE') {
-          setOrders((prev) => prev.filter(order => order.id !== payload.old.id));
+          const old = payload.old;
+          if (!old) return;
+
+          setOrders((prev) => prev.filter(o => String(o.id) !== String(old.id)));
           setTotalCount((prev) => Math.max(0, prev - 1));
+
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('admin:order_deleted', { detail: old }));
+          }
+
+          scheduleStatsRefresh();
         }
-        scheduleStatsRefresh();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, () => {
         scheduleInventoryRefresh();
@@ -172,16 +252,39 @@ export const OrderProvider = ({ children }) => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'toy_box_inventory' }, () => {
         scheduleToyBoxRefresh();
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setRealtimeStatus('connected');
+          console.log('[Realtime] Orders channel active and connected.');
+          reconcileRecentOrders();
+        } else if (status === 'TIMED_OUT' || status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          setRealtimeStatus('disconnected');
+          console.warn('[Realtime] Channel disconnected or error:', status);
+        }
+      });
+
+    // Handle tab focus, visibility change, and online reconnect events
+    const handleReconcileTrigger = () => {
+      if (document.visibilityState === 'visible') {
+        reconcileRecentOrders();
+      }
+    };
+
+    window.addEventListener('visibilitychange', handleReconcileTrigger);
+    window.addEventListener('focus', handleReconcileTrigger);
+    window.addEventListener('online', handleReconcileTrigger);
 
     return () => {
       window.clearTimeout(statsRefreshTimerRef.current);
       window.clearTimeout(inventoryRefreshTimerRef.current);
       window.clearTimeout(toyBoxRefreshTimerRef.current);
       window.clearTimeout(workflowAnalysisTimerRef.current);
-      supabase.removeChannel(orderContextChannel);
+      window.removeEventListener('visibilitychange', handleReconcileTrigger);
+      window.removeEventListener('focus', handleReconcileTrigger);
+      window.removeEventListener('online', handleReconcileTrigger);
+      supabase.removeChannel(channel);
     };
-  }, [initializeData, scheduleInventoryRefresh, scheduleStatsRefresh, scheduleToyBoxRefresh]);
+  }, [initializeData, scheduleInventoryRefresh, scheduleStatsRefresh, scheduleToyBoxRefresh, reconcileRecentOrders]);
 
   // Fraud & Automation Detection Effect
   useEffect(() => {
@@ -343,6 +446,7 @@ export const OrderProvider = ({ children }) => {
       filters,
       setFilters: updateFilters,
       loading,
+      realtimeStatus,
       stats,
       inventory,
       toyBoxes,
@@ -358,6 +462,7 @@ export const OrderProvider = ({ children }) => {
       deleteOrder,
       fetchOrderLogs,
       autoDistributeOrders,
+      reconcileRecentOrders,
       refetch: initializeData
     }}>
       {children}

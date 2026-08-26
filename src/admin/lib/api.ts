@@ -2167,7 +2167,7 @@ export const api = {
     ] = await Promise.all([
       supabase.from('orders').select('*', { count: 'exact', head: true }).neq('status', 'Test'),
       supabase.from('orders')
-        .select('status, amount, phone, product_name, created_at, updated_at, source')
+        .select('status, total, subtotal, amount, phone, product_name, customer_name, created_at, updated_at, source')
         .gte('created_at', thirtyDaysAgo.toISOString())
         .neq('status', 'Test'),
       supabase.from('order_activity_logs')
@@ -2182,18 +2182,18 @@ export const api = {
 
     const orders = recentOrders || [];
     
-    const successfulStatuses = ['Confirmed', 'Completed', 'Shipped', 'Factory Processing'];
+    const successfulStatuses = ['Confirmed', 'confirmed', 'Completed', 'completed', 'Shipped', 'shipped', 'Delivered', 'delivered', 'Factory Processing'];
     const completedOrders = orders.filter(o => successfulStatuses.includes(o.status));
     
     // These counts now reflect the last 30 days strictly
-    const completed = orders.filter(o => o.status === 'Completed').length;
-    const confirmedCount = orders.filter(o => o.status === 'Confirmed').length;
-    const cancelledCount = orders.filter(o => o.status === 'Cancelled').length;
-    const pending = orders.filter(o => o.status === 'New' || o.status === 'Pending Call' || o.status === 'Final Call Pending').length;
-    const processing = orders.filter(o => ['Processing', 'Factory Processing'].includes(o.status)).length;
+    const completed = orders.filter(o => o.status === 'Completed' || o.status === 'completed' || o.status === 'Delivered' || o.status === 'delivered').length;
+    const confirmedCount = orders.filter(o => o.status === 'Confirmed' || o.status === 'confirmed').length;
+    const cancelledCount = orders.filter(o => o.status === 'Cancelled' || o.status === 'cancelled').length;
+    const pending = orders.filter(o => ['New', 'new', 'pending', 'Pending', 'Pending Call', 'Final Call Pending'].includes(o.status)).length;
+    const processing = orders.filter(o => ['Processing', 'processing', 'Factory Processing'].includes(o.status)).length;
 
     // Revenue & AOV
-    const revenue = completedOrders.reduce((sum, o) => sum + Number(o.amount || 0), 0);
+    const revenue = completedOrders.reduce((sum, o) => sum + Number(o.total || o.subtotal || o.amount || 0), 0);
     const averageOrderValue = total > 0 ? revenue / total : 0;
 
     // Customers & Products

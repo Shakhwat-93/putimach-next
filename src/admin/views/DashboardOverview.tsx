@@ -52,9 +52,9 @@ export const DashboardOverview = () => {
 
   const dailySnapshot = useMemo(() => {
     const total = todayOrders.length;
-    const confirmedOrders = todayOrders.filter(o => o.status === 'Confirmed' || o.status === 'Confirmed & Printed');
+    const confirmedOrders = todayOrders.filter(o => o.status === 'Confirmed' || o.status === 'Confirmed & Printed' || o.status === 'confirmed');
     const confirmedPercent = total > 0 ? Math.round((confirmedOrders.length / total) * 100) : 0;
-    const revenue = confirmedOrders.reduce((acc, o) => acc + Number(o.amount || 0), 0);
+    const revenue = confirmedOrders.reduce((acc, o) => acc + Number(o.total || o.subtotal || o.amount || 0), 0);
 
     const calledOrders = todayOrders.filter(o => o.first_call_time);
     const totalDelay = calledOrders.reduce((acc, o) => {

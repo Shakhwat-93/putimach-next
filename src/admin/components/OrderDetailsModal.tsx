@@ -360,7 +360,7 @@ export const OrderDetailsModal = ({ isOpen, onClose, order, onEdit }) => {
           name: order.product_name || 'Unknown Product',
           quantity: order.quantity || 1,
           size: order.size || '',
-          price: Number(order.amount || 0) || 0
+          price: Number(order.total || order.subtotal || order.amount || 0) || 0
         }];
 
   const copyOrderSummary = () => {
@@ -375,7 +375,7 @@ export const OrderDetailsModal = ({ isOpen, onClose, order, onEdit }) => {
       `Customer Name: ${order.customer_name || 'N/A'}`,
       `Phone: ${order.phone || 'N/A'}`,
       `Address: ${order.address || 'N/A'}`,
-      `Amount: ${Number(order.amount || 0).toLocaleString()}`,
+      `Amount: ${Number(order.total || order.subtotal || order.amount || 0).toLocaleString()}`,
       `Date: ${orderDateTime}`,
       'Product Details:',
       productLines
@@ -797,7 +797,7 @@ export const OrderDetailsModal = ({ isOpen, onClose, order, onEdit }) => {
                     <div className="product-price-column">
                       <div className="total-price">
                         <CurrencyIcon size={12} className="currency-icon-elite" />
-                        {Number(order.amount || 0).toLocaleString()}
+                        {Number(order.total || order.subtotal || order.amount || 0).toLocaleString()}
                       </div>
                     </div>
                   </div>

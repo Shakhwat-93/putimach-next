@@ -159,8 +159,8 @@ export const Header = ({ onMenuToggle }) => {
   };
 
   const handleNotifClick = (notif) => {
-    markAsRead(notif.id);
-    router.push(notif.type?.startsWith('TASK_') ? '/admin/taskboard' : '/admin/ordersboard');
+    if (notif.id) markAsRead(notif.id);
+    router.push(notif.type?.startsWith('TASK_') ? '/admin/taskboard' : '/admin/orders');
     setIsNotifOpen(false);
   };
 
@@ -253,10 +253,7 @@ export const Header = ({ onMenuToggle }) => {
         )}
       </div>
 
-      <div className="flex-1" />
-
-      {/* Realtime Live Visitor Counter & Presence Stack */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 ml-auto">
         <LiveVisitorCounter compact />
         <div className={isOverviewPage ? 'block' : 'hidden md:block'}>
           <PresenceStack />
@@ -264,20 +261,25 @@ export const Header = ({ onMenuToggle }) => {
       </div>
 
       {/* Floating toasts */}
-      <div className="fixed top-4 right-4 z-[200] flex flex-col gap-2 pointer-events-none">
+      <div className="fixed top-4 right-4 z-[200] flex flex-col gap-2 pointer-events-none max-w-sm w-full px-2 sm:px-0">
         {toasts.map(toast => (
           <div
-            key={toast.id}
+            key={toast.toastId || toast.id}
             onClick={() => handleNotifClick(toast)}
-            className="pointer-events-auto flex items-center gap-3 rounded-2xl border border-border bg-card/95 backdrop-blur-xl px-4 py-3 shadow-xl animate-slide-up cursor-pointer"
+            className="pointer-events-auto flex items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-card/95 backdrop-blur-xl p-3.5 shadow-2xl animate-slide-up cursor-pointer hover:border-primary/40 hover:scale-[1.01] transition-all"
           >
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              {getNotifIcon(toast.type)}
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                {getNotifIcon(toast.type)}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-black text-foreground truncate">{toast.title}</p>
+                <p className="text-[11px] font-medium text-muted-foreground truncate mt-0.5">{toast.message}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-bold text-foreground">{toast.title}</p>
-              <p className="text-[11px] text-muted-foreground">{toast.message}</p>
-            </div>
+            <span className="text-[10px] font-bold text-primary shrink-0 bg-primary/10 px-2 py-1 rounded-lg">
+              View →
+            </span>
           </div>
         ))}
       </div>
