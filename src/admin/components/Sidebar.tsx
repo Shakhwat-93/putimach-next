@@ -40,7 +40,7 @@ const menuItems = [
   { path: '/admin/call-team', label: 'Call Team', icon: Headphones, roles: ['Admin', 'Call Team'], group: 'Intelligence' },
   { path: '/admin/users', label: 'Users', icon: Users, roles: ['Admin'], group: 'Intelligence' },
   { path: '/admin/fraud', label: 'Fraud', icon: ShieldAlert, roles: ['Admin'], group: 'Intelligence' },
-  { path: '/admin/reports', label: 'Analytics', icon: BarChart3, roles: ['Admin'], group: 'System' },
+  { path: '/admin/reports', label: 'Sales Report', icon: BarChart3, roles: ['Admin'], group: 'System' },
   {
     path: '/admin/digital-marketer', label: 'Marketing', icon: Megaphone, roles: ['Admin', 'Digital Marketer'], group: 'System',
     children: [
