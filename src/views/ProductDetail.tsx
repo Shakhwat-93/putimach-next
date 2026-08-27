@@ -404,6 +404,10 @@ export default function ProductDetailView() {
                     <img
                       src={img}
                       alt={`${product.name} - ${i + 1}`}
+                      // @ts-ignore
+                      fetchpriority={i === 0 ? 'high' : 'auto'}
+                      loading={i === 0 ? 'eager' : 'lazy'}
+                      decoding={i === 0 ? 'sync' : 'async'}
                       onError={(e) => {
                         e.target.onerror = null;
                         e.target.src = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80';

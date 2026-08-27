@@ -10,6 +10,7 @@ interface ProductImageProps {
   alt?: string;
   className?: string;
   loading?: 'lazy' | 'eager';
+  fetchPriority?: 'high' | 'low' | 'auto';
   decoding?: 'async' | 'auto' | 'sync';
   sizes?: string;
   onLoad?: () => void;
@@ -22,8 +23,9 @@ export function ProductImage({
   alt = 'Product Image',
   className = '',
   loading = 'lazy',
+  fetchPriority = 'auto',
   decoding = 'async',
-  sizes,
+  sizes = '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw',
   onLoad,
   onError,
 }: ProductImageProps) {
@@ -96,21 +98,22 @@ export function ProductImage({
         <Skeleton className="absolute inset-0 w-full h-full bg-base-800/90 z-0 animate-pulse" />
       )}
 
-      {/* Render actual image */}
+      {/* Render actual image with zero visual lag */}
       <img
         ref={imgRef}
         src={currentSrc}
         alt={alt}
         loading={loading}
+        // @ts-ignore
+        fetchpriority={fetchPriority}
         decoding={decoding}
         sizes={sizes}
         onLoad={handleImageLoad}
         onError={handleImageError}
-        className={`w-full h-full object-cover relative z-10 transition-opacity duration-300 ${
+        className={`w-full h-full object-cover relative z-10 transition-opacity duration-200 ${
           isLoaded ? 'opacity-100' : 'opacity-0'
         } ${className}`}
         style={{
-          // Fallback visibility insurance: If native image is complete, ensure opacity is 1
           opacity: (typeof window !== 'undefined' && imgRef.current?.complete && imgRef.current?.naturalWidth > 0) ? 1 : undefined,
         }}
       />

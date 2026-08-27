@@ -96,10 +96,12 @@ function Hero({ settings }) {
         <img
           src={activeHeroBg}
           alt="Hero Banner"
-          className="w-full h-full object-cover transition-opacity duration-500 opacity-100"
+          className="w-full h-full object-cover opacity-100"
           draggable="false"
-          fetchPriority="high"
-          decoding="async"
+          // @ts-ignore
+          fetchpriority="high"
+          loading="eager"
+          decoding="sync"
           onError={() => {
             if (activeHeroBg !== fallbackImg) {
               setActiveHeroBg(fallbackImg);
@@ -168,7 +170,11 @@ function Collections({ settings, categories }) {
               src={cat.image}
               alt={`${cat.label} Collection`}
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-              loading="lazy"
+              loading={idx < 4 ? 'eager' : 'lazy'}
+              // @ts-ignore
+              fetchpriority={idx < 2 ? 'high' : 'auto'}
+              decoding="async"
+              sizes="(max-width: 640px) 33vw, 200px"
             />
             {/* Dark overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-[#1C1613]/75 via-[#1C1613]/10 to-transparent group-hover:from-[#1C1613]/85 transition-all duration-300" />

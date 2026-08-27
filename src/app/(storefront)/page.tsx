@@ -3,7 +3,7 @@
 // Zero flicker, zero loading state, zero localStorage dependency.
 import { createClient } from '@supabase/supabase-js';
 import HomeClient from '@/views/Home';
-import { normalizeProduct } from '@/lib/productMedia';
+import { normalizeProduct, cleanImageUrl } from '@/lib/productMedia';
 
 // Force dynamic: fetch fresh data from Supabase on every request
 export const dynamic = 'force-dynamic';
@@ -43,5 +43,21 @@ async function getServerData() {
 
 export default async function Page() {
   const { settings, products, categories } = await getServerData();
-  return <HomeClient initialSettings={settings} initialProducts={products} initialCategories={categories} />;
+  const heroImage = cleanImageUrl(settings?.heroBgImage) || '/api/media/uploads/img_1786604752550_8584.webp';
+
+  return (
+    <>
+      {/* High-priority preload hint for LCP Hero Banner */}
+      {heroImage && (
+        <link
+          rel="preload"
+          as="image"
+          href={heroImage}
+          // @ts-ignore
+          fetchpriority="high"
+        />
+      )}
+      <HomeClient initialSettings={settings} initialProducts={products} initialCategories={categories} />
+    </>
+  );
 }

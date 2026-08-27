@@ -71,7 +71,9 @@ export function ProductCard({ product: rawProduct, index = 0 }: { product: any; 
             fallbackCandidates={product.images}
             alt={product.name || 'Product Image'}
             loading={index < 4 ? 'eager' : 'lazy'}
+            fetchPriority={index < 2 ? 'high' : 'auto'}
             decoding="async"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             className="group-hover:scale-105 transition-transform duration-500 will-change-transform"
           />
 
