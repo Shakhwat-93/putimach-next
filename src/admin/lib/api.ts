@@ -2167,7 +2167,7 @@ export const api = {
     ] = await Promise.all([
       supabase.from('orders').select('*', { count: 'exact', head: true }).neq('status', 'Test'),
       supabase.from('orders')
-        .select('status, total, subtotal, amount, phone, product_name, customer_name, created_at, updated_at, source')
+        .select('*')
         .gte('created_at', thirtyDaysAgo.toISOString())
         .neq('status', 'Test'),
       supabase.from('order_activity_logs')

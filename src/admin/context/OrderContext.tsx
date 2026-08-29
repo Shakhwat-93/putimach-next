@@ -93,8 +93,8 @@ export const OrderProvider = ({ children }) => {
         }
         return newStats;
       });
-    } catch (error) {
-      console.error('Error fetching stats:', error);
+    } catch (error: any) {
+      console.error('Error fetching stats:', error?.message || error);
     }
   }, []);
 
