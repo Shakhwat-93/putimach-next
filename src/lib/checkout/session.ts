@@ -219,6 +219,8 @@ export async function getIncompleteCheckouts(options: {
   searchQuery?: string;
   limit?: number;
 } = {}): Promise<IncompleteCheckoutRecord[]> {
+  if (isTableAvailable === false) return [];
+
   try {
     let query = supabase
       .from('incomplete_checkouts')
@@ -245,7 +247,19 @@ export async function getIncompleteCheckouts(options: {
     }
 
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      if (
+        error.code === 'PGRST204' || 
+        error.code === 'PGRST205' || 
+        error.code === '42P01' || 
+        error.message?.includes('not found') || 
+        error.message?.includes('does not exist')
+      ) {
+        isTableAvailable = false;
+        return [];
+      }
+      throw error;
+    }
 
     if (!Array.isArray(data)) return [];
 
@@ -266,8 +280,18 @@ export async function getIncompleteCheckouts(options: {
         status: computedStatus
       };
     });
-  } catch (err) {
-    console.error('Failed to fetch incomplete checkouts:', err);
+  } catch (err: any) {
+    if (
+      err?.code === 'PGRST204' || 
+      err?.code === 'PGRST205' || 
+      err?.code === '42P01' || 
+      err?.message?.includes('not found') || 
+      err?.message?.includes('does not exist')
+    ) {
+      isTableAvailable = false;
+    } else {
+      console.warn('Incomplete checkouts fetch notice:', err?.message || err);
+    }
     return [];
   }
 }
