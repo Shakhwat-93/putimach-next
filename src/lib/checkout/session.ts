@@ -71,12 +71,13 @@ export function hasMeaningfulCheckoutInfo(form: {
   const phone = String(form?.phone || '').trim();
   const email = String(form?.email || '').trim();
   const address = String(form?.address || '').trim();
+  const city = String(form?.city || '').trim();
 
-  // Track if phone has >= 6 digits OR name has >= 2 letters OR address has >= 5 characters
-  return phone.length >= 6 || name.length >= 2 || address.length >= 5 || email.includes('@');
+  // Track if phone has >= 4 digits OR name has >= 2 letters OR address has >= 4 characters OR email has @ OR city specified
+  return phone.length >= 4 || name.length >= 2 || address.length >= 4 || email.includes('@') || city.length >= 3;
 }
 
-let isTableAvailable: boolean | null = null;
+let isTableAvailable: boolean | null = true;
 
 /**
  * Save or update incomplete checkout record in Supabase
@@ -120,17 +121,17 @@ export async function trackIncompleteCheckout(params: {
 
   const cartSessionId = getOrCreateCartSessionId();
 
-  // Create lightweight snapshot
+  // Create lightweight snapshot with full variant details (color, size, price, quantity)
   const cartSnapshot = items.map(i => ({
-    id: i.product?.id,
-    name: i.product?.name,
-    slug: i.product?.slug,
-    image: i.product?.image || (i.product?.images && i.product.images[0]),
-    price: i.product?.price || 0,
+    id: i.product?.id || i.id,
+    name: i.product?.name || i.name,
+    slug: i.product?.slug || i.slug,
+    image: i.product?.image || (i.product?.images && i.product.images[0]) || i.image,
+    price: Number(i.product?.price ?? i.price ?? 0),
     size: i.size || 'Default',
     color: i.color || null,
-    quantity: i.quantity || 1,
-    line_total: (i.product?.price || 0) * (i.quantity || 1)
+    quantity: Number(i.quantity || 1),
+    line_total: Number(i.product?.price ?? i.price ?? 0) * Number(i.quantity || 1)
   }));
 
   const payload: Partial<IncompleteCheckoutRecord> = {
@@ -173,7 +174,7 @@ export async function trackIncompleteCheckout(params: {
       isTableAvailable = true;
     }
   } catch (err) {
-    isTableAvailable = false;
+    // Keep resilient
   }
 }
 

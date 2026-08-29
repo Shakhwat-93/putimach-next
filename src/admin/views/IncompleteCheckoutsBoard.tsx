@@ -21,8 +21,8 @@ export default function IncompleteCheckoutsBoard() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedRecord, setSelectedRecord] = useState<IncompleteCheckoutRecord | null>(null);
 
-  const fetchRecords = async () => {
-    setLoading(true);
+  const fetchRecords = async (showSpinner = true) => {
+    if (showSpinner) setLoading(true);
     try {
       const data = await getIncompleteCheckouts({
         status: statusFilter,
@@ -32,19 +32,34 @@ export default function IncompleteCheckoutsBoard() {
     } catch (err) {
       console.error('Failed to load incomplete checkouts:', err);
     } finally {
-      setLoading(false);
+      if (showSpinner) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchRecords();
+    fetchRecords(true);
+
+    const channel = supabase
+      .channel('incomplete-checkouts-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'incomplete_checkouts' },
+        () => {
+          fetchRecords(false);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [statusFilter]);
 
   // Handle Search Debounce
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchRecords();
-    }, 400);
+      fetchRecords(false);
+    }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 

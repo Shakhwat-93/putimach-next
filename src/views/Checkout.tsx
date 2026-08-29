@@ -517,40 +517,62 @@ export default function Checkout() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
 
-  // Debounced Incomplete Checkout Heartbeat Tracking
-  useEffect(() => {
+  // Sync Incomplete Checkout Helper
+  const syncIncompleteCheckout = useCallback(() => {
     if (!mounted || !checkoutSessionId || !items || items.length === 0 || confirmedOrder) return;
 
-    const timer = setTimeout(() => {
-      const calculatedSub = items.reduce((s, i) => s + (i.product?.price || 0) * i.quantity, 0);
-      const discAmt = discountResult?.valid ? (discountResult.discount_amount || 0) : 0;
-      const isFreeShip = Boolean(discountResult?.valid && discountResult.free_shipping);
-      const baseShip = shippingArea === 'inside' ? shippingRates.inside : shippingArea === 'sub' ? shippingRates.sub : shippingRates.outside;
-      const shipCost = isFreeShip ? 0 : baseShip;
-      const estTotal = Math.max(0, calculatedSub - discAmt) + shipCost;
+    const calculatedSub = items.reduce((s, i) => s + (i.product?.price || 0) * i.quantity, 0);
+    const discAmt = discountResult?.valid ? (discountResult.discount_amount || 0) : 0;
+    const isFreeShip = Boolean(discountResult?.valid && discountResult.free_shipping);
+    const baseShip = shippingArea === 'inside' ? shippingRates.inside : shippingArea === 'sub' ? shippingRates.sub : shippingRates.outside;
+    const shipCost = isFreeShip ? 0 : baseShip;
+    const estTotal = Math.max(0, calculatedSub - discAmt) + shipCost;
 
-      trackIncompleteCheckout({
-        checkout_session_id: checkoutSessionId,
-        customer_name: form.name,
-        customer_phone: form.phone,
-        customer_email: form.email,
-        shipping_address: form.address,
-        city: form.city,
-        area: shippingArea === 'inside' ? 'Inside Dhaka' : shippingArea === 'sub' ? 'Sub Dhaka' : 'Outside Dhaka',
-        items,
-        subtotal: calculatedSub,
-        discount: discAmt,
-        shipping_cost: shipCost,
-        estimated_total: estTotal
-      });
-    }, 1200);
-
-    return () => clearTimeout(timer);
+    trackIncompleteCheckout({
+      checkout_session_id: checkoutSessionId,
+      customer_name: form.name,
+      customer_phone: form.phone,
+      customer_email: form.email,
+      shipping_address: form.address,
+      city: form.city,
+      area: shippingArea === 'inside' ? 'Inside Dhaka' : shippingArea === 'sub' ? 'Sub Dhaka' : 'Outside Dhaka',
+      items,
+      subtotal: calculatedSub,
+      discount: discAmt,
+      shipping_cost: shipCost,
+      estimated_total: estTotal
+    });
   }, [
     form.name, form.phone, form.email, form.address, form.city, 
     shippingArea, items, discountResult, shippingRates, 
     mounted, confirmedOrder, checkoutSessionId
   ]);
+
+  // Debounced Incomplete Checkout Heartbeat Tracking (400ms)
+  useEffect(() => {
+    if (!mounted || !checkoutSessionId || !items || items.length === 0 || confirmedOrder) return;
+
+    const timer = setTimeout(() => {
+      syncIncompleteCheckout();
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [syncIncompleteCheckout, mounted, checkoutSessionId, items, confirmedOrder]);
+
+  // Flush on page exit / visibility change / tab switch
+  useEffect(() => {
+    const handleExit = () => {
+      syncIncompleteCheckout();
+    };
+    window.addEventListener('pagehide', handleExit);
+    window.addEventListener('beforeunload', handleExit);
+    document.addEventListener('visibilitychange', handleExit);
+    return () => {
+      window.removeEventListener('pagehide', handleExit);
+      window.removeEventListener('beforeunload', handleExit);
+      document.removeEventListener('visibilitychange', handleExit);
+    };
+  }, [syncIncompleteCheckout]);
 
   useEffect(() => {
     async function loadContactPhone() {
