@@ -380,7 +380,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
   }, [price, compareAtPrice]);
 
   return (
-    <form onSubmit={(e) => handleSubmit(e, false)} className="max-w-6xl mx-auto space-y-6 pb-28">
+    <form onSubmit={(e) => handleSubmit(e, false)} className="max-w-6xl mx-auto space-y-6 pb-6">
       {/* Top Breadcrumb & Action Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/80 pb-5">
         <div className="flex items-center gap-3">
@@ -853,8 +853,8 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
         </div>
       </div>
 
-      {/* Sticky Bottom Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 bg-background/95 backdrop-blur-md border-t border-border py-3 px-4 sm:px-8 flex items-center justify-between shadow-lg">
+      {/* Docked Sticky Bottom Action Bar */}
+      <div className="sticky bottom-0 z-20 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3.5 bg-card/95 backdrop-blur-md border-t border-border shadow-lg flex items-center justify-between mt-8 rounded-b-2xl">
         <button
           type="button"
           onClick={onCancel}
