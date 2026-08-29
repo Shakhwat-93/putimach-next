@@ -1,5 +1,5 @@
 // Centralized Product Media Normalizer & Image Resolver
-// Guarantees deterministic, rock-solid image resolution across the entire storefront
+// Guarantees deterministic, rock-solid image resolution across the entire storefront & admin
 
 export const DEFAULT_PRODUCT_FALLBACK = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80';
 export const MEDIA_BASE_URL = '/api/media';
@@ -91,7 +91,7 @@ export function extractProductImages(product: any): string[] {
       }
 
       // Check if it's a comma-separated list of URLs
-      if (trimmed.includes(',') && (trimmed.includes('http') || trimmed.includes('media.putimach.com'))) {
+      if (trimmed.includes(',') && (trimmed.includes('http') || trimmed.includes('media.putimach.com') || trimmed.includes('/api/media'))) {
         trimmed.split(',').forEach((part) => addCandidate(part.trim()));
         return;
       }
@@ -101,12 +101,16 @@ export function extractProductImages(product: any): string[] {
     } else if (Array.isArray(val)) {
       val.forEach(addCandidate);
     } else if (typeof val === 'object' && val !== null) {
-      // If object has url / src / image property
+      // If object is a color-images dictionary or has url / src / image property
       const obj = val as Record<string, unknown>;
       if (obj.url) addCandidate(obj.url);
       else if (obj.src) addCandidate(obj.src);
       else if (obj.image) addCandidate(obj.image);
       else if (obj.image_url) addCandidate(obj.image_url);
+      else {
+        // May be a dictionary of color galleries
+        Object.values(obj).forEach(addCandidate);
+      }
     }
   };
 
@@ -131,8 +135,8 @@ export function extractProductImages(product: any): string[] {
     addCandidate(product.data.primary_image);
   }
 
-  // 4. Color image map
-  const colorMap = product.color_images || product.colorImages || product.data?.color_images || product.data?.colorImages;
+  // 4. Color image map & galleries
+  const colorMap = product.color_images || product.colorImages || product.color_galleries || product.data?.color_images || product.data?.colorImages || product.data?.color_galleries;
   if (colorMap && typeof colorMap === 'object') {
     Object.values(colorMap).forEach(addCandidate);
   }
@@ -163,7 +167,7 @@ export function resolveProductPrimaryImage(product: any, fallback = DEFAULT_PROD
 }
 
 /**
- * Normalizes any raw product from Supabase / API into a consistent shape with resolved images.
+ * Normalizes any raw product from Supabase / API into a consistent shape with multi-color galleries.
  */
 export function normalizeProduct(raw: any): any {
   if (!raw) return null;
@@ -177,17 +181,57 @@ export function normalizeProduct(raw: any): any {
     ...raw,
   };
 
-  const images = extractProductImages(base);
-  const primaryImage = images.length > 0 ? images[0] : DEFAULT_PRODUCT_FALLBACK;
-  const guaranteedImages = images.length > 0 ? images : [primaryImage];
+  const allImages = extractProductImages(base);
+  const primaryImage = allImages.length > 0 ? allImages[0] : DEFAULT_PRODUCT_FALLBACK;
+  const guaranteedImages = allImages.length > 0 ? allImages : [primaryImage];
 
-  // Normalize color_images
-  const rawColorImages = base.color_images || base.colorImages || {};
-  const normalizedColorImages: Record<string, string> = {};
+  // Normalize color_images into multi-image arrays: Record<string, string[]>
+  const rawColorImages = base.color_images || base.colorImages || base.color_galleries || base.colorGalleries || {};
+  const normalizedColorGalleries: Record<string, string[]> = {};
+  const singleColorMap: Record<string, string> = {};
+
   if (typeof rawColorImages === 'object' && rawColorImages !== null) {
-    Object.entries(rawColorImages).forEach(([color, url]) => {
-      const cleaned = cleanImageUrl(url);
-      if (cleaned) normalizedColorImages[color] = cleaned;
+    Object.entries(rawColorImages).forEach(([colorName, val]) => {
+      if (!colorName) return;
+      const cleanColorName = colorName.trim();
+      const list: string[] = [];
+
+      if (Array.isArray(val)) {
+        val.forEach((item) => {
+          const cleaned = cleanImageUrl(item);
+          if (cleaned && !list.includes(cleaned)) list.push(cleaned);
+        });
+      } else if (typeof val === 'string') {
+        const cleaned = cleanImageUrl(val);
+        if (cleaned) list.push(cleaned);
+      }
+
+      if (list.length > 0) {
+        normalizedColorGalleries[cleanColorName] = list;
+        singleColorMap[cleanColorName] = list[0];
+      }
+    });
+  }
+
+  // Also harvest any variant images attached to specific colors
+  const variants = base.variants || base.data?.variants;
+  if (Array.isArray(variants)) {
+    variants.forEach((v) => {
+      if (v?.color && (v.image_url || v.image)) {
+        const cName = String(v.color).trim();
+        const cleaned = cleanImageUrl(v.image_url || v.image);
+        if (cleaned) {
+          if (!normalizedColorGalleries[cName]) {
+            normalizedColorGalleries[cName] = [];
+          }
+          if (!normalizedColorGalleries[cName].includes(cleaned)) {
+            normalizedColorGalleries[cName].push(cleaned);
+          }
+          if (!singleColorMap[cName]) {
+            singleColorMap[cName] = cleaned;
+          }
+        }
+      }
     });
   }
 
@@ -207,7 +251,7 @@ export function normalizeProduct(raw: any): any {
   } else if (typeof base.colors === 'string') {
     colors = base.colors.split(',').map((c) => c.trim()).filter(Boolean);
   }
-  const colorKeys = Object.keys(normalizedColorImages);
+  const colorKeys = Object.keys(normalizedColorGalleries);
   colors = Array.from(new Set([...colors, ...colorKeys])).filter(Boolean);
 
   const price = Number(base.price) || 0;
@@ -223,8 +267,10 @@ export function normalizeProduct(raw: any): any {
     originalPrice,
     image: primaryImage,
     images: guaranteedImages,
-    color_images: normalizedColorImages,
-    colorImages: normalizedColorImages,
+    color_images: normalizedColorGalleries,
+    color_images_map: singleColorMap,
+    colorImages: normalizedColorGalleries,
+    color_galleries: normalizedColorGalleries,
     sizes,
     colors,
     in_stock: base.in_stock !== false && base.inStock !== false,

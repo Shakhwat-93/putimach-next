@@ -54,7 +54,7 @@ export default async function Page() {
           as="image"
           href={heroImage}
           // @ts-ignore
-          fetchpriority="high"
+          fetchPriority="high"
         />
       )}
       <HomeClient initialSettings={settings} initialProducts={products} initialCategories={categories} />

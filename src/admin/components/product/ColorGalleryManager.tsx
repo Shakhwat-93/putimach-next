@@ -1,0 +1,489 @@
+'use client';
+// @ts-nocheck
+import React, { useState, useRef } from 'react';
+import { 
+  Plus, Trash2, UploadCloud, Star, ChevronLeft, ChevronRight, 
+  Loader2, Image as ImageIcon, X, Check, Sparkles, Palette, AlertCircle
+} from 'lucide-react';
+import { uploadImage } from '../../lib/uploadHelper';
+import { cleanImageUrl } from '@/lib/productMedia';
+import { cn } from '../../lib/utils';
+import Swal from 'sweetalert2';
+
+interface ColorGalleryManagerProps {
+  colors: string[];
+  colorGalleries: Record<string, string[]>;
+  onColorsChange: (colors: string[]) => void;
+  onGalleriesChange: (galleries: Record<string, string[]>) => void;
+}
+
+const PRESET_COLORS = [
+  'Black', 'Off White', 'Navy Blue', 'Maroon', 'Olive Green', 
+  'Ash / Grey', 'Beige / Cream', 'Chocolate Brown', 'Pink', 'Sky Blue', 'Emerald Green'
+];
+
+export const ColorGalleryManager: React.FC<ColorGalleryManagerProps> = ({
+  colors = [],
+  colorGalleries = {},
+  onColorsChange,
+  onGalleriesChange,
+}) => {
+  const [newColorInput, setNewColorInput] = useState('');
+  const [isAddingCustom, setIsAddingCustom] = useState(false);
+  const [uploadingState, setUploadingState] = useState<Record<string, number>>({}); // color -> count of uploading files
+  const [dragOverColor, setDragOverColor] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  // Ensure unique colors
+  const activeColors = Array.from(new Set(colors.map(c => c?.trim()).filter(Boolean)));
+
+  const handleAddColor = (colorName: string) => {
+    const trimmed = colorName?.trim();
+    if (!trimmed) return;
+
+    // Check if color already exists case-insensitively
+    const exists = activeColors.some(c => c.toLowerCase() === trimmed.toLowerCase());
+    if (exists) {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'info',
+        title: `Color "${trimmed}" already exists.`,
+        showConfirmButton: false,
+        timer: 2000,
+      });
+      return;
+    }
+
+    const updatedColors = [...activeColors, trimmed];
+    onColorsChange(updatedColors);
+
+    // Initialize gallery if not present
+    if (!colorGalleries[trimmed]) {
+      onGalleriesChange({
+        ...colorGalleries,
+        [trimmed]: []
+      });
+    }
+
+    setNewColorInput('');
+    setIsAddingCustom(false);
+  };
+
+  const handleRemoveColor = (colorName: string) => {
+    const updatedColors = activeColors.filter(c => c !== colorName);
+    onColorsChange(updatedColors);
+
+    const updatedGalleries = { ...colorGalleries };
+    delete updatedGalleries[colorName];
+    onGalleriesChange(updatedGalleries);
+  };
+
+  const handleFilesUpload = async (colorName: string, files: FileList | File[]) => {
+    if (!files || files.length === 0) return;
+    const fileList = Array.from(files);
+
+    setUploadingState(prev => ({
+      ...prev,
+      [colorName]: (prev[colorName] || 0) + fileList.length
+    }));
+
+    const uploadedUrls: string[] = [];
+
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
+      try {
+        const url = await uploadImage(file);
+        if (url) {
+          const clean = cleanImageUrl(url);
+          if (clean) uploadedUrls.push(clean);
+        }
+      } catch (err: any) {
+        console.error(`Failed to upload ${file.name}:`, err);
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'error',
+          title: `Upload error for ${file.name}`,
+          showConfirmButton: false,
+          timer: 3000,
+        });
+      } finally {
+        setUploadingState(prev => ({
+          ...prev,
+          [colorName]: Math.max(0, (prev[colorName] || 1) - 1)
+        }));
+      }
+    }
+
+    if (uploadedUrls.length > 0) {
+      const currentList = Array.isArray(colorGalleries[colorName]) ? colorGalleries[colorName] : [];
+      const updatedList = Array.from(new Set([...currentList, ...uploadedUrls]));
+      onGalleriesChange({
+        ...colorGalleries,
+        [colorName]: updatedList
+      });
+    }
+  };
+
+  const handleDrop = (colorName: string, e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOverColor(null);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFilesUpload(colorName, e.dataTransfer.files);
+    }
+  };
+
+  const setAsPrimary = (colorName: string, url: string) => {
+    const list = Array.isArray(colorGalleries[colorName]) ? [...colorGalleries[colorName]] : [];
+    const reordered = [url, ...list.filter(item => item !== url)];
+    onGalleriesChange({
+      ...colorGalleries,
+      [colorName]: reordered
+    });
+  };
+
+  const removeImage = (colorName: string, urlToRemove: string) => {
+    const list = Array.isArray(colorGalleries[colorName]) ? colorGalleries[colorName] : [];
+    const updated = list.filter(u => u !== urlToRemove);
+    onGalleriesChange({
+      ...colorGalleries,
+      [colorName]: updated
+    });
+  };
+
+  const moveImage = (colorName: string, index: number, direction: number) => {
+    const list = Array.isArray(colorGalleries[colorName]) ? [...colorGalleries[colorName]] : [];
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= list.length) return;
+
+    const temp = list[index];
+    list[index] = list[newIndex];
+    list[newIndex] = temp;
+
+    onGalleriesChange({
+      ...colorGalleries,
+      [colorName]: list
+    });
+  };
+
+  return (
+    <div className="space-y-6 w-full max-w-full min-w-0">
+      {/* Header & Quick Add Color Bar */}
+      <div className="bg-gradient-to-r from-amber-500/10 via-brand/5 to-transparent border border-amber-500/20 rounded-2xl p-4 sm:p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+              <Palette className="w-5 h-5 text-brand" />
+              <span>Multi-Color Product Galleries</span>
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              Add colors and upload photos for each color. On the storefront, selecting a color immediately displays its specific photo gallery.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {!isAddingCustom ? (
+              <button
+                type="button"
+                onClick={() => setIsAddingCustom(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-[#1C1613] text-white hover:bg-black transition-all shadow-sm cursor-pointer"
+              >
+                <Plus size={14} /> Add Color
+              </button>
+            ) : (
+              <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                <input
+                  type="text"
+                  value={newColorInput}
+                  onChange={(e) => setNewColorInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddColor(newColorInput);
+                    }
+                  }}
+                  placeholder="e.g. Royal Blue"
+                  autoFocus
+                  className="px-3 py-1.5 text-xs rounded-xl border border-border bg-background focus:ring-2 focus:ring-brand focus:outline-none w-36 sm:w-44"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleAddColor(newColorInput)}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-brand text-white hover:bg-brand/90 cursor-pointer"
+                >
+                  Add
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsAddingCustom(false); setNewColorInput(''); }}
+                  className="p-1.5 rounded-xl hover:bg-muted text-muted-foreground cursor-pointer"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Preset Color Quick-Pick Chips */}
+        <div className="mt-4 pt-3 border-t border-border/60">
+          <p className="text-[11px] font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
+            Quick Add Popular Colors:
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {PRESET_COLORS.map((preset) => {
+              const isAdded = activeColors.some(c => c.toLowerCase() === preset.toLowerCase());
+              return (
+                <button
+                  key={preset}
+                  type="button"
+                  disabled={isAdded}
+                  onClick={() => handleAddColor(preset)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-lg text-xs font-medium border transition-all cursor-pointer",
+                    isAdded 
+                      ? "bg-muted text-muted-foreground border-transparent opacity-50 cursor-not-allowed"
+                      : "bg-background/80 hover:bg-background border-border text-foreground hover:border-brand/60 active:scale-95"
+                  )}
+                >
+                  {isAdded ? `✓ ${preset}` : `+ ${preset}`}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* No Colors Empty State */}
+      {activeColors.length === 0 && (
+        <div className="text-center py-10 px-4 border-2 border-dashed border-border rounded-2xl bg-card/40">
+          <Palette className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+          <h4 className="text-sm font-bold text-foreground">No colors added yet</h4>
+          <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+            Click "+ Add Color" above to create colors (e.g. Black, Red, White) and upload specific images for each color.
+          </p>
+          <button
+            type="button"
+            onClick={() => setIsAddingCustom(true)}
+            className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-[#1C1613] text-white hover:bg-black transition-all cursor-pointer"
+          >
+            <Plus size={14} /> Add First Color
+          </button>
+        </div>
+      )}
+
+      {/* Color Cards List */}
+      <div className="space-y-5">
+        {activeColors.map((colorName) => {
+          const gallery = Array.isArray(colorGalleries[colorName]) ? colorGalleries[colorName] : [];
+          const isUploading = Boolean(uploadingState[colorName]);
+          const isDragTarget = dragOverColor === colorName;
+
+          return (
+            <div
+              key={colorName}
+              onDragOver={(e) => { e.preventDefault(); setDragOverColor(colorName); }}
+              onDragLeave={() => setDragOverColor(null)}
+              onDrop={(e) => handleDrop(colorName, e)}
+              className={cn(
+                "rounded-2xl border transition-all overflow-hidden bg-card shadow-xs",
+                isDragTarget ? "border-brand ring-2 ring-brand/20 bg-brand/5" : "border-border hover:border-border/90"
+              )}
+            >
+              {/* Color Header Bar */}
+              <div className="px-4 py-3 sm:px-5 sm:py-3.5 bg-muted/40 border-b border-border flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-4 h-4 rounded-full border border-border/80 shadow-xs flex-shrink-0"
+                    style={{
+                      backgroundColor: colorName.toLowerCase().includes('black') ? '#1C1613' :
+                        colorName.toLowerCase().includes('white') ? '#FFFFFF' :
+                        colorName.toLowerCase().includes('red') ? '#DC2626' :
+                        colorName.toLowerCase().includes('blue') ? '#2563EB' :
+                        colorName.toLowerCase().includes('green') ? '#16A34A' :
+                        colorName.toLowerCase().includes('pink') ? '#EC4899' :
+                        colorName.toLowerCase().includes('grey') || colorName.toLowerCase().includes('ash') ? '#6B7280' :
+                        colorName.toLowerCase().includes('brown') ? '#78350F' :
+                        colorName.toLowerCase().includes('maroon') ? '#800000' :
+                        colorName.toLowerCase().includes('beige') || colorName.toLowerCase().includes('cream') ? '#F5F5DC' :
+                        '#D97706'
+                    }}
+                  />
+                  <h4 className="font-bold text-sm text-foreground truncate uppercase tracking-wider font-serif">
+                    {colorName}
+                  </h4>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-background border border-border text-muted-foreground shrink-0">
+                    {gallery.length} {gallery.length === 1 ? 'photo' : 'photos'}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {/* Upload button for this color */}
+                  <input
+                    type="file"
+                    ref={(el) => { fileInputRefs.current[colorName] = el; }}
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (e.target.files) {
+                        handleFilesUpload(colorName, e.target.files);
+                        e.target.value = '';
+                      }
+                    }}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    disabled={isUploading}
+                    onClick={() => fileInputRefs.current[colorName]?.click()}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 size={13} className="animate-spin" />
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UploadCloud size={13} />
+                        <span>Upload {colorName} Photos</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Remove Color */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      Swal.fire({
+                        title: `Delete "${colorName}"?`,
+                        text: `This will remove the color and its ${gallery.length} photo(s).`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, Delete',
+                        cancelButtonText: 'Cancel',
+                        confirmButtonColor: '#DC2626',
+                        cancelButtonColor: '#6B7280',
+                      }).then((res) => {
+                        if (res.isConfirmed) {
+                          handleRemoveColor(colorName);
+                        }
+                      });
+                    }}
+                    className="p-1.5 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                    title={`Delete ${colorName}`}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Photos Grid Container */}
+              <div className="p-4 sm:p-5">
+                {gallery.length === 0 ? (
+                  <div 
+                    onClick={() => fileInputRefs.current[colorName]?.click()}
+                    className="py-8 px-4 text-center rounded-xl border-2 border-dashed border-border/80 hover:border-brand/60 bg-muted/20 hover:bg-brand/5 transition-all cursor-pointer group"
+                  >
+                    <ImageIcon className="w-8 h-8 text-muted-foreground/50 mx-auto mb-2 group-hover:scale-110 transition-transform" />
+                    <p className="text-xs font-bold text-foreground">
+                      No photos uploaded for {colorName} yet
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Click to upload photos, or drag and drop image files here. Multiple images supported.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 sm:gap-4">
+                    {gallery.map((imgUrl, idx) => {
+                      const isPrimary = idx === 0;
+
+                      return (
+                        <div
+                          key={`${imgUrl}-${idx}`}
+                          className={cn(
+                            "group relative aspect-[3/4] rounded-xl overflow-hidden border bg-muted/30 transition-all select-none shadow-xs",
+                            isPrimary ? "ring-2 ring-emerald-500 border-emerald-500" : "border-border hover:border-border/90"
+                          )}
+                        >
+                          <img
+                            src={imgUrl}
+                            alt={`${colorName} photo ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+
+                          {/* Primary Badge */}
+                          {isPrimary ? (
+                            <div className="absolute top-1.5 left-1.5 z-10 px-2 py-0.5 rounded-md bg-emerald-600 text-white text-[9px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1">
+                              <Star size={10} className="fill-white" /> Primary
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setAsPrimary(colorName, imgUrl)}
+                              className="absolute top-1.5 left-1.5 z-10 px-2 py-0.5 rounded-md bg-black/70 hover:bg-emerald-600 text-white text-[9px] font-bold uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-all cursor-pointer shadow-xs"
+                            >
+                              Make Primary
+                            </button>
+                          )}
+
+                          {/* Reorder / Action Overlay Controls */}
+                          <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center gap-0.5">
+                              {idx > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => moveImage(colorName, idx, -1)}
+                                  className="p-1 rounded-md bg-white/20 hover:bg-white text-white hover:text-black transition-colors cursor-pointer"
+                                  title="Move Left"
+                                >
+                                  <ChevronLeft size={12} />
+                                </button>
+                              )}
+                              {idx < gallery.length - 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => moveImage(colorName, idx, 1)}
+                                  className="p-1 rounded-md bg-white/20 hover:bg-white text-white hover:text-black transition-colors cursor-pointer"
+                                  title="Move Right"
+                                >
+                                  <ChevronRight size={12} />
+                                </button>
+                              )}
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => removeImage(colorName, imgUrl)}
+                              className="p-1 rounded-md bg-red-500/80 hover:bg-red-600 text-white transition-colors cursor-pointer ml-auto"
+                              title="Delete Photo"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Quick Add more photos tile */}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRefs.current[colorName]?.click()}
+                      className="aspect-[3/4] rounded-xl border-2 border-dashed border-border/80 hover:border-brand/60 bg-muted/20 hover:bg-brand/5 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground transition-all cursor-pointer active:scale-95"
+                    >
+                      <Plus size={18} />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Add Photo</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+export default ColorGalleryManager;

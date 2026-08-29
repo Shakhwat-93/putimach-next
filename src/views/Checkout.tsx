@@ -207,7 +207,7 @@ function OrderSummary({
             </button>
           </div>
         ) : (
-          <form onSubmit={onApplyCoupon} className="space-y-1.5">
+          <div className="space-y-1.5">
             <div className="flex items-center gap-1.5">
               <div className="relative flex-1">
                 <Tag size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -216,11 +216,21 @@ function OrderSummary({
                   placeholder="Promo Code (e.g. SAVE20)"
                   value={couponInput}
                   onChange={(e) => setCouponInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (!couponLoading && couponInput.trim()) {
+                        onApplyCoupon(e);
+                      }
+                    }
+                  }}
                   className="w-full h-9 pl-8 pr-2.5 rounded-xl border border-input bg-background text-xs font-mono font-semibold uppercase placeholder:normal-case placeholder:font-sans focus:outline-none focus:ring-1 focus:ring-brand"
                 />
               </div>
               <button
-                type="submit"
+                type="button"
+                onClick={onApplyCoupon}
                 disabled={couponLoading || !couponInput.trim()}
                 className="h-9 px-3 rounded-xl bg-[#1C1613] dark:bg-white text-white dark:text-[#1C1613] text-xs font-bold transition-all disabled:opacity-40 cursor-pointer flex items-center gap-1 shrink-0 active:scale-95"
               >
@@ -230,7 +240,7 @@ function OrderSummary({
             {couponError && (
               <p className="text-[11px] text-red-500 dark:text-red-400 font-medium pl-1 leading-tight">{couponError}</p>
             )}
-          </form>
+          </div>
         )}
       </div>
 
@@ -447,6 +457,9 @@ function SuccessScreen({ orderNumber, items, total, onContinue }) {
   );
 }
 
+// Fraud control table availability flag to avoid repeated 404s
+let isBlockedIpSupported = true;
+
 /* ─── Main Checkout Page ───────────────────────────────────────────────── */
 export default function Checkout() {
   const router = useRouter();
@@ -456,10 +469,30 @@ export default function Checkout() {
   } = useCartStore();
   const [mounted, setMounted] = useState(false);
   const [checkoutSessionId, setCheckoutSessionId] = useState('');
+  const [confirmedOrder, setConfirmedOrder] = useState(null);
+  const isSubmittingRef = useRef(false);
 
   useEffect(() => {
     setMounted(true);
-    setCheckoutSessionId(getOrCreateCheckoutSessionId());
+    const sid = getOrCreateCheckoutSessionId();
+    setCheckoutSessionId(sid);
+
+    // Restore confirmed order from URL query or session storage on page reload / direct navigation
+    try {
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderParam = urlParams.get('order') || urlParams.get('order_id');
+        const lastOrderStr = sessionStorage.getItem('putimach_last_order');
+        if (lastOrderStr) {
+          const parsed = JSON.parse(lastOrderStr);
+          if (!orderParam || parsed?.orderNumber === orderParam || parsed?.id === orderParam) {
+            setConfirmedOrder(parsed);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[Checkout] Failed to restore confirmed order state:', e);
+    }
   }, []);
 
   const [form, setForm] = useState({
@@ -472,7 +505,6 @@ export default function Checkout() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
   const [orderedItems, setOrderedItems] = useState([]);
 
@@ -487,7 +519,7 @@ export default function Checkout() {
 
   // Debounced Incomplete Checkout Heartbeat Tracking
   useEffect(() => {
-    if (!mounted || !checkoutSessionId || !items || items.length === 0 || success) return;
+    if (!mounted || !checkoutSessionId || !items || items.length === 0 || confirmedOrder) return;
 
     const timer = setTimeout(() => {
       const calculatedSub = items.reduce((s, i) => s + (i.product?.price || 0) * i.quantity, 0);
@@ -517,7 +549,7 @@ export default function Checkout() {
   }, [
     form.name, form.phone, form.email, form.address, form.city, 
     shippingArea, items, discountResult, shippingRates, 
-    mounted, success, checkoutSessionId
+    mounted, confirmedOrder, checkoutSessionId
   ]);
 
   useEffect(() => {
@@ -708,9 +740,12 @@ export default function Checkout() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmittingRef.current || submitting) return;
     if (items.length === 0) return;
-    setError('');
+
+    isSubmittingRef.current = true;
     setSubmitting(true);
+    setError('');
 
     const num = generateOrderNumber();
 
@@ -719,22 +754,33 @@ export default function Checkout() {
     const trafficSource = getTrafficSource();
 
     // 2. Blocked IP Addresses Guard (Fake Order Protection)
-    if (ipAddress) {
+    if (ipAddress && isBlockedIpSupported) {
       try {
-        const { data: blockedIpData } = await supabase
+        const { data: blockedIpData, error: ipErr } = await supabase
           .from('blocked_ip_addresses')
           .select('ip_address, reason')
           .eq('ip_address', ipAddress)
           .eq('is_active', true)
           .maybeSingle();
 
-        if (blockedIpData) {
+        if (ipErr) {
+          if (
+            ipErr.code === 'PGRST204' || 
+            ipErr.code === 'PGRST205' || 
+            ipErr.code === '42P01' || 
+            ipErr.message?.includes('not found') ||
+            ipErr.message?.includes('does not exist')
+          ) {
+            isBlockedIpSupported = false;
+          }
+        } else if (blockedIpData) {
           setError('Your IP address has been restricted from placing orders due to suspicious activity. Please contact support.');
           setSubmitting(false);
+          isSubmittingRef.current = false;
           return;
         }
       } catch (ipCheckErr) {
-        console.warn('Failed to verify IP blocklist:', ipCheckErr);
+        isBlockedIpSupported = false;
       }
     }
 
@@ -759,6 +805,7 @@ export default function Checkout() {
       if (recentOrders && recentOrders.length > 0) {
         setError('A similar order has already been placed recently. Please wait a few minutes before trying again.');
         setSubmitting(false);
+        isSubmittingRef.current = false;
         return;
       }
     } catch (dupCheckErr) {
@@ -811,14 +858,42 @@ export default function Checkout() {
 
     const calculatedFinalShipping = validatedFreeShipping ? 0 : baseShipping;
     const calculatedFinalAmount = Math.max(0, subtotal - validatedDiscountAmount) + calculatedFinalShipping;
+    const totalItemCount = items.reduce((sum, i) => sum + i.quantity, 0);
+    const mainProduct = items[0]?.product;
 
-    const orderPayload = {
+    // Compose rich metadata in notes
+    const extraDetails: string[] = [];
+    if (appliedCouponCode && validatedDiscountAmount > 0) {
+      extraDetails.push(`Coupon: ${appliedCouponCode} (-৳${validatedDiscountAmount})`);
+    }
+    if (shippingArea) {
+      extraDetails.push(`Zone: ${shippingArea === 'inside' ? 'Inside Dhaka (৳80)' : 'Outside Dhaka (৳150)'}`);
+    }
+    let enrichedNotes = form.note.trim();
+    if (extraDetails.length > 0) {
+      enrichedNotes = enrichedNotes
+        ? `${enrichedNotes}\n[${extraDetails.join(' | ')}]`
+        : `[${extraDetails.join(' | ')}]`;
+    }
+
+    const orderPayload: any = {
       id: num,
       customer_name: form.name.trim(),
       phone: form.phone.trim(),
       email: form.email.trim() || null,
-      address: `${form.address.trim()}, ${form.city.trim()}`,
-      notes: form.note.trim() || null,
+      address: `${form.address.trim()}${form.city.trim() ? ', ' + form.city.trim() : ''}`,
+      product_name: mainProduct?.name || 'Product',
+      size: items.map(i => i.size).filter(Boolean).join(', ') || 'Standard',
+      quantity: totalItemCount,
+      items: totalItemCount,
+      amount: calculatedFinalAmount,
+      shipping_zone: shippingArea === 'inside' ? 'Inside Dhaka' : 'Outside Dhaka',
+      notes: enrichedNotes || null,
+      source: 'Website',
+      status: 'New',
+      payment_status: 'Unpaid',
+      ip_address: ipAddress || null,
+      traffic_source: trafficSource || null,
       ordered_items: items.map(i => ({
         id: i.product.id,
         name: i.product.name,
@@ -829,62 +904,101 @@ export default function Checkout() {
         color: i.color || null,
         quantity: i.quantity,
         line_total: i.product.price * i.quantity,
-      })),
-      amount: calculatedFinalAmount,
-      subtotal: subtotal,
-      shipping_fee: calculatedFinalShipping,
-      discount_id: finalDiscountResult?.discount?.id || null,
-      discount_code: finalDiscountResult?.discount_code || (appliedCouponCode || null),
-      discount_type: finalDiscountResult?.discount_type || null,
-      discount_amount: validatedDiscountAmount,
-      discount_allocations: finalDiscountResult?.item_allocations || [],
-      free_shipping_discount: validatedFreeShipping,
-      items: items.reduce((sum, i) => sum + i.quantity, 0),
-      product_name: items[0]?.product.name || '',
-      size: items[0]?.size || '',
-      quantity: items[0]?.quantity || 1,
-      shipping_zone: shippingArea === 'inside' ? 'Inside Dhaka' : 'Outside Dhaka',
-      source: 'Website',
-      status: 'New',
-      payment_status: 'Unpaid',
-      ip_address: ipAddress,
-      traffic_source: trafficSource,
+      }))
     };
 
     try {
-      let { error: dbError } = await supabase.from('orders').insert([orderPayload]);
+      let { data: insertResult, error: dbError } = await supabase
+        .from('orders')
+        .insert([orderPayload])
+        .select('id, amount, customer_name, status')
+        .maybeSingle();
 
-      // Zero-downtime DB Schema Fallback: If DB does not have the email column, insert without it and prepend to notes
+      // Fallback: If any unrecognized column caused error, remove email/notes and retry
       if (dbError && (dbError.message?.toLowerCase().includes('email') || dbError.code === 'PGRST204')) {
-        console.warn('Orders table does not support email column. Retrying with email in notes...');
+        console.warn('[Checkout] Retrying order insert without optional email column...');
         const fallbackPayload = { ...orderPayload };
         delete fallbackPayload.email;
-        fallbackPayload.notes = `[Email: ${orderPayload.email}]` + (orderPayload.notes ? `\nNote: ${orderPayload.notes}` : '');
-        
-        const { error: retryError } = await supabase.from('orders').insert([fallbackPayload]);
-        dbError = retryError;
+        if (orderPayload.email) {
+          fallbackPayload.notes = `[Email: ${orderPayload.email}]` + (fallbackPayload.notes ? `\n${fallbackPayload.notes}` : '');
+        }
+        const retryRes = await supabase.from('orders').insert([fallbackPayload]).select('id, amount, customer_name, status').maybeSingle();
+        dbError = retryRes.error;
+        insertResult = retryRes.data;
       }
 
       if (dbError) {
-        throw new Error(dbError.message);
+        throw new Error(dbError.message || 'Database error: Could not complete order creation.');
       }
 
-      // Record Discount Usage atomically
-      if (finalDiscountResult?.discount?.id) {
-        try {
-          await recordDiscountUsage(finalDiscountResult.discount.id, form.phone || form.email || 'guest', num);
-        } catch (uErr) {
-          console.warn('Failed to record discount usage:', uErr);
+      // ─── ORDER CONFIRMED BY DATABASE ───
+      const confirmedOrderNumber = insertResult?.id || num;
+      const orderedItemsSnapshot = [...items];
+
+      // Build durable success record
+      const successRecord = {
+        orderNumber: confirmedOrderNumber,
+        items: orderedItemsSnapshot,
+        total: calculatedFinalAmount,
+        customerName: form.name.trim(),
+        phone: form.phone.trim(),
+        address: `${form.address.trim()}${form.city.trim() ? ', ' + form.city.trim() : ''}`,
+        createdAt: new Date().toISOString()
+      };
+
+      // 1. Persist to sessionStorage so refresh/back-button never loses order info
+      try {
+        sessionStorage.setItem('putimach_last_order', JSON.stringify(successRecord));
+        sessionStorage.setItem(`order_success_${confirmedOrderNumber}`, JSON.stringify(successRecord));
+      } catch (e) {}
+
+      // 2. Update URL query param with confirmed order
+      try {
+        if (typeof window !== 'undefined') {
+          window.history.replaceState(null, '', `/checkout?order=${confirmedOrderNumber}`);
         }
-      }
+      } catch (e) {}
 
-      // Snapshot items BEFORE clearing cart so success screen can show them
-      const orderedItems = [...items];
+      // 3. Set confirmed order in React state
+      setConfirmedOrder(successRecord);
+      setOrderNumber(confirmedOrderNumber);
+      setOrderedItems(orderedItemsSnapshot);
 
-      // Decrement inventory stock and product variant stock for items
-      for (const item of orderedItems) {
+      // 4. ONLY NOW CLEAR THE CART (Cart is preserved if anything above failed)
+      clearCart();
+
+      // 5. Async side-effects (non-blocking)
+      try {
+        await convertIncompleteCheckout(checkoutSessionId, confirmedOrderNumber);
+      } catch (_) {}
+
+      try {
+        if (finalDiscountResult?.discount?.id) {
+          await recordDiscountUsage(finalDiscountResult.discount.id, form.phone || form.email || 'guest', confirmedOrderNumber);
+        }
+      } catch (_) {}
+
+      try {
+        trackPurchase(
+          {
+            ...orderPayload,
+            id: confirmedOrderNumber,
+            ordered_items: orderedItemsSnapshot.map(i => ({
+              id: i.product.id,
+              name: i.product.name,
+              price: i.product.price,
+              quantity: i.quantity,
+              size: i.size,
+            })),
+            shipping_fee: finalShipping,
+          },
+          { phone: form.phone, email: form.email }
+        );
+      } catch (_) {}
+
+      // 6. Update inventory & variant stock in background
+      for (const item of orderedItemsSnapshot) {
         try {
-          // 1. Fetch latest product details — cb_products stores all fields inside a JSON `data` column
           const { data: dbProductRow } = await supabase
             .from('products')
             .select('id, data')
@@ -907,11 +1021,9 @@ export default function Checkout() {
               });
             }
 
-            // Recalculate total product stock across variants
             const totalStock = updatedVariants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
             const inStock = updatedVariants.length > 0 ? (totalStock > 0) : (productData.in_stock !== false);
 
-            // 2. Save updated variants & in_stock status back into the product's data JSONB column
             await supabase
               .from('products')
               .update({
@@ -923,17 +1035,14 @@ export default function Checkout() {
               })
               .eq('id', dbProductRow.id);
 
-            // 3. Decrement linked inventory item stock level if exists
             const targetInventoryId = productData.inventory_id;
             if (targetInventoryId) {
               if (updatedVariants.length > 0) {
-                // If it has variants, inventory stock is the sum of variants
                 await supabase
                   .from('inventory')
                   .update({ current_stock: totalStock })
                   .eq('id', targetInventoryId);
               } else {
-                // Otherwise, just decrement the inventory directly
                 const { data: invItem } = await supabase
                   .from('inventory')
                   .select('current_stock')
@@ -954,43 +1063,33 @@ export default function Checkout() {
         }
       }
 
-      setOrderNumber(num);
-      clearCart();
-      setOrderedItems(orderedItems);
-
-      // Convert Incomplete Checkout attempt to CONVERTED status with order ID link
-      try {
-        await convertIncompleteCheckout(checkoutSessionId, num);
-      } catch (convErr) {
-        console.warn('Failed to convert incomplete checkout status:', convErr);
-      }
-
-      // Fire Purchase tracking event
-      trackPurchase(
-        { ...orderPayload, ordered_items: orderedItems.map(i => ({
-            id: i.product.id,
-            name: i.product.name,
-            price: i.product.price,
-            quantity: i.quantity,
-            size: i.size,
-          })),
-          shipping_fee: shipping,
-        },
-        { phone: form.phone, email: form.email }
-      );
-
-      setSuccess(true);
     } catch (err) {
-      setError(err.message || 'Something went wrong. Please try again.');
+      console.error('[Checkout Submission Error]:', err);
+      setError(err.message || 'Order could not be created. Your cart is preserved.');
     } finally {
       setSubmitting(false);
+      isSubmittingRef.current = false;
     }
   };
 
-  if (success) {
-    return <SuccessScreen orderNumber={orderNumber} items={orderedItems} total={total} onContinue={() => router.push('/')} />;
+  // 1. If an order was confirmed, show SuccessScreen
+  if (confirmedOrder) {
+    return (
+      <SuccessScreen 
+        orderNumber={confirmedOrder.orderNumber || orderNumber} 
+        items={confirmedOrder.items || orderedItems} 
+        total={confirmedOrder.total ?? total} 
+        onContinue={() => {
+          try {
+            sessionStorage.removeItem('putimach_last_order');
+          } catch (e) {}
+          router.push('/');
+        }} 
+      />
+    );
   }
 
+  // 2. Loading state during hydration
   if (!mounted) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -1002,15 +1101,7 @@ export default function Checkout() {
     );
   }
 
-  if (!mounted) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-[#FDFBF7]">
-        <Loader2 className="animate-spin text-[#C5A880]" size={36} />
-        <p className="text-xs uppercase tracking-widest text-[#1C1613]/60 font-mono">Loading Checkout...</p>
-      </div>
-    );
-  }
-
+  // 3. If cart is empty AND no confirmed order, show empty cart notice
   if (items.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">

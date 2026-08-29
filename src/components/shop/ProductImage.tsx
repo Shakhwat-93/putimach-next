@@ -104,8 +104,7 @@ export function ProductImage({
         src={currentSrc}
         alt={alt}
         loading={loading}
-        // @ts-ignore
-        fetchpriority={fetchPriority}
+        fetchPriority={fetchPriority}
         decoding={decoding}
         sizes={sizes}
         onLoad={handleImageLoad}

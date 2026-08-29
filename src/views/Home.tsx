@@ -98,8 +98,7 @@ function Hero({ settings }) {
           alt="Hero Banner"
           className="w-full h-full object-cover opacity-100"
           draggable="false"
-          // @ts-ignore
-          fetchpriority="high"
+          fetchPriority="high"
           loading="eager"
           decoding="sync"
           onError={() => {
@@ -171,8 +170,7 @@ function Collections({ settings, categories }) {
               alt={`${cat.label} Collection`}
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
               loading={idx < 4 ? 'eager' : 'lazy'}
-              // @ts-ignore
-              fetchpriority={idx < 2 ? 'high' : 'auto'}
+              fetchPriority={idx < 2 ? 'high' : 'auto'}
               decoding="async"
               sizes="(max-width: 640px) 33vw, 200px"
             />

@@ -180,8 +180,12 @@ const useCartStore = create(
             // 2. Refresh live pricing & media
             const currentPrice = Number(dbData.price !== undefined ? dbData.price : item.product.price);
             const currentCompareAt = dbData.compare_at_price ? Number(dbData.compare_at_price) : undefined;
-            const currentName = dbData.name || item.product.name;
-            const currentImage = (dbData.images && dbData.images[0]) || dbData.image || item.product.image;
+            let currentImage = (dbData.images && dbData.images[0]) || dbData.image || item.product.image;
+            if (item.color && item.color !== 'None' && dbData.color_images) {
+              const cImg = dbData.color_images[item.color];
+              if (Array.isArray(cImg) && cImg[0]) currentImage = cImg[0];
+              else if (typeof cImg === 'string') currentImage = cImg;
+            }
             const variants = Array.isArray(dbData.variants) ? dbData.variants : [];
 
             let isOutOfStock = false;

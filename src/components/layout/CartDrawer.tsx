@@ -5,7 +5,7 @@ import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, ShieldCheck, Truck, Sp
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCartStore } from '../../store/cartStore';
-import { formatPrice } from '../../lib/utils';
+import { formatPrice, cn } from '../../lib/utils';
 import { trackViewCart, trackRemoveFromCart } from '../../lib/tracking';
 
 export default function CartDrawer() {

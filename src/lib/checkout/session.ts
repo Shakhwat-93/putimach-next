@@ -76,6 +76,8 @@ export function hasMeaningfulCheckoutInfo(form: {
   return phone.length >= 6 || name.length >= 2 || address.length >= 5 || email.includes('@');
 }
 
+let isTableAvailable: boolean | null = null;
+
 /**
  * Save or update incomplete checkout record in Supabase
  */
@@ -94,6 +96,8 @@ export async function trackIncompleteCheckout(params: {
   shipping_cost: number;
   estimated_total: number;
 }): Promise<void> {
+  if (isTableAvailable === false) return;
+
   const {
     checkout_session_id,
     customer_id = null,
@@ -156,10 +160,20 @@ export async function trackIncompleteCheckout(params: {
       .upsert(payload, { onConflict: 'checkout_session_id' });
 
     if (error) {
-      console.warn('[Incomplete Checkout Track Error]:', error.message);
+      if (
+        error.code === 'PGRST204' || 
+        error.code === 'PGRST205' || 
+        error.code === '42P01' || 
+        error.message?.includes('not found') || 
+        error.message?.includes('does not exist')
+      ) {
+        isTableAvailable = false;
+      }
+    } else {
+      isTableAvailable = true;
     }
   } catch (err) {
-    console.warn('[Incomplete Checkout Track Exception]:', err);
+    isTableAvailable = false;
   }
 }
 
@@ -167,7 +181,7 @@ export async function trackIncompleteCheckout(params: {
  * Mark incomplete checkout as CONVERTED when order is successfully placed
  */
 export async function convertIncompleteCheckout(checkout_session_id: string, order_id: string): Promise<void> {
-  if (!checkout_session_id) return;
+  if (!checkout_session_id || isTableAvailable === false) return;
 
   try {
     const { error } = await supabase
@@ -180,10 +194,18 @@ export async function convertIncompleteCheckout(checkout_session_id: string, ord
       .eq('checkout_session_id', checkout_session_id);
 
     if (error) {
-      console.warn('[Incomplete Checkout Conversion Update Error]:', error.message);
+      if (
+        error.code === 'PGRST204' || 
+        error.code === 'PGRST205' || 
+        error.code === '42P01' || 
+        error.message?.includes('not found') || 
+        error.message?.includes('does not exist')
+      ) {
+        isTableAvailable = false;
+      }
     }
   } catch (err) {
-    console.warn('[Incomplete Checkout Conversion Exception]:', err);
+    isTableAvailable = false;
   } finally {
     resetCheckoutSessionId();
   }

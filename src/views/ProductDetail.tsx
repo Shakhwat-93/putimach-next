@@ -88,28 +88,67 @@ export default function ProductDetailView() {
     loadContactPhone();
   }, []);
 
-  // Map images by color variant for fast color lookup
-  const colorImageMap = useMemo(() => {
-    const map = {};
-    if (product?.color_images) {
-      Object.assign(map, product.color_images);
-    }
-    if (Array.isArray(product?.variants)) {
-      product.variants.forEach((v) => {
-        const img = v.image_url || v.image;
-        if (v.color && img && !map[v.color]) {
-          map[v.color] = img;
+  // Map color galleries for rapid, race-condition-free color switching
+  const colorGalleriesMap = useMemo(() => {
+    const map: Record<string, string[]> = {};
+
+    // 1. Check normalized color_images / color_galleries
+    const rawColorImages = product?.color_images || product?.colorImages || product?.color_galleries || {};
+    if (typeof rawColorImages === 'object' && rawColorImages !== null) {
+      Object.entries(rawColorImages).forEach(([cName, val]) => {
+        if (!cName) return;
+        const cleanKey = String(cName).trim().toLowerCase();
+        const list: string[] = [];
+
+        if (Array.isArray(val)) {
+          val.forEach(item => {
+            const cl = cleanImageUrl(item);
+            if (cl && !list.includes(cl)) list.push(cl);
+          });
+        } else if (typeof val === 'string') {
+          const cl = cleanImageUrl(val);
+          if (cl) list.push(cl);
+        }
+
+        if (list.length > 0) {
+          map[cleanKey] = list;
         }
       });
     }
+
+    // 2. Check variant items
+    if (Array.isArray(product?.variants)) {
+      product.variants.forEach((v) => {
+        if (v?.color && (v.image_url || v.image)) {
+          const cleanKey = String(v.color).trim().toLowerCase();
+          const cl = cleanImageUrl(v.image_url || v.image);
+          if (cl) {
+            if (!map[cleanKey]) map[cleanKey] = [];
+            if (!map[cleanKey].includes(cl)) map[cleanKey].push(cl);
+          }
+        }
+      });
+    }
+
     return map;
   }, [product]);
 
+  // Derive the active image gallery based on currently selected color
   const images = useMemo(() => {
     if (!product) return [];
+
+    if (selectedColor) {
+      const cleanSelected = String(selectedColor).trim().toLowerCase();
+      const colorSpecific = colorGalleriesMap[cleanSelected];
+      if (Array.isArray(colorSpecific) && colorSpecific.length > 0) {
+        return colorSpecific;
+      }
+    }
+
+    // Fallback to general product images
     const candidateList = extractProductImages(product);
     return candidateList.length > 0 ? candidateList : [DEFAULT_PRODUCT_FALLBACK];
-  }, [product]);
+  }, [product, selectedColor, colorGalleriesMap]);
 
   const sliderRef = useRef(null);
   const thumbnailRowRef = useRef(null);
@@ -159,24 +198,18 @@ export default function ProductDetailView() {
     }, 450);
   };
 
+  // Instant, race-condition-free color switching
   const handleSelectColor = (color) => {
     if (!color) return;
     setSelectedColor(color);
-    
-    // Perform case-insensitive match against colorImageMap
-    const cleanColor = String(color).trim().toLowerCase();
-    const matchedKey = Object.keys(colorImageMap).find(
-      k => String(k).trim().toLowerCase() === cleanColor
-    );
-    const colorImg = matchedKey ? colorImageMap[matchedKey] : null;
+    setActiveImg(0);
 
-    if (colorImg) {
-      const matchIndex = images.findIndex(
-        img => img === colorImg || (typeof img === 'string' && typeof colorImg === 'string' && (img.includes(colorImg) || colorImg.includes(img)))
-      );
-      if (matchIndex !== -1) {
-        handleThumbnailClick(matchIndex);
-      }
+    // Reset slider and thumbnail row scroll immediately
+    if (sliderRef.current) {
+      sliderRef.current.scrollTo({ left: 0, behavior: 'instant' });
+    }
+    if (thumbnailRowRef.current) {
+      thumbnailRowRef.current.scrollTo({ left: 0, behavior: 'instant' });
     }
   };
 
@@ -299,8 +332,13 @@ export default function ProductDetailView() {
       return;
     }
     setAdding(true);
-    addItem(product, selectedSize || 'One Size', selectedColor || 'None', 1, e);
-    trackAddToCart(product, 1, selectedSize || 'One Size');
+    const primaryColorImage = images[0] || product.image;
+    const cartProduct = {
+      ...product,
+      image: primaryColorImage,
+    };
+    addItem(cartProduct, selectedSize || 'One Size', selectedColor || 'None', 1, e);
+    trackAddToCart(cartProduct, 1, selectedSize || 'One Size');
     
     setTimeout(() => {
       setAdding(false);
@@ -318,8 +356,13 @@ export default function ProductDetailView() {
       setTimeout(() => setSizeError(false), 2000);
       return;
     }
-    addItem(product, selectedSize || 'One Size', selectedColor || 'None', 1);
-    trackAddToCart(product, 1, selectedSize || 'One Size');
+    const primaryColorImage = images[0] || product.image;
+    const cartProduct = {
+      ...product,
+      image: primaryColorImage,
+    };
+    addItem(cartProduct, selectedSize || 'One Size', selectedColor || 'None', 1);
+    trackAddToCart(cartProduct, 1, selectedSize || 'One Size');
     router.push('/checkout');
   };
 
@@ -404,8 +447,7 @@ export default function ProductDetailView() {
                     <img
                       src={img}
                       alt={`${product.name} - ${i + 1}`}
-                      // @ts-ignore
-                      fetchpriority={i === 0 ? 'high' : 'auto'}
+                      fetchPriority={i === 0 ? 'high' : 'auto'}
                       loading={i === 0 ? 'eager' : 'lazy'}
                       decoding={i === 0 ? 'sync' : 'async'}
                       onError={(e) => {
