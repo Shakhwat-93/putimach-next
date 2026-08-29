@@ -121,7 +121,7 @@ export default function AddProductPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
+    <div className="w-full max-w-full min-w-0">
       <ShopifyProductEditor
         categories={categories}
         inventoryItems={inventoryItems}

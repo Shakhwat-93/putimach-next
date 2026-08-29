@@ -150,7 +150,7 @@ export default function EditProductPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
+    <div className="w-full max-w-full min-w-0">
       <ShopifyProductEditor
         initialProduct={product}
         categories={categories}

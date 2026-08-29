@@ -380,34 +380,34 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
   }, [price, compareAtPrice]);
 
   return (
-    <form onSubmit={(e) => handleSubmit(e, false)} className="max-w-6xl mx-auto space-y-6 pb-6">
+    <form onSubmit={(e) => handleSubmit(e, false)} className="max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-6">
       {/* Top Breadcrumb & Action Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/80 pb-5">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-border/80 pb-3.5 sm:pb-5">
+        <div className="flex items-center gap-2.5 sm:gap-3">
           <button
             type="button"
             onClick={onCancel}
-            className="p-2 rounded-xl border border-border hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            className="p-1.5 sm:p-2 rounded-xl border border-border hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
             aria-label="Back"
           >
-            <ArrowLeft size={18} />
+            <ArrowLeft size={16} className="sm:w-[18px] sm:h-[18px]" />
           </button>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold font-serif text-foreground">
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-2xl font-bold font-serif text-foreground truncate">
               {isEditMode ? 'Edit Product' : 'Add New Product'}
             </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 truncate">
               Fill in product info, add colors with specific photos, select sizes, and save.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
           <button
             type="button"
             onClick={(e) => handleSubmit(e, true)}
             disabled={isSaving}
-            className="px-4 py-2 rounded-xl text-xs font-bold border border-border bg-background hover:bg-muted text-foreground transition-all cursor-pointer disabled:opacity-50"
+            className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold border border-border bg-background hover:bg-muted text-foreground transition-all cursor-pointer disabled:opacity-50"
           >
             Save as Draft
           </button>
@@ -415,16 +415,16 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
           <button
             type="submit"
             disabled={isSaving}
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold bg-[#1C1613] text-white hover:bg-black transition-all shadow-md cursor-pointer disabled:opacity-50 active:scale-95"
+            className="inline-flex items-center gap-1.5 px-4 sm:px-6 py-1.5 sm:py-2.5 rounded-xl text-xs font-bold bg-[#1C1613] text-white hover:bg-black transition-all shadow-md cursor-pointer disabled:opacity-50 active:scale-95"
           >
             {isSaving ? (
               <>
-                <Loader2 size={15} className="animate-spin" />
-                <span>Saving Product...</span>
+                <Loader2 size={14} className="animate-spin" />
+                <span>Saving...</span>
               </>
             ) : (
               <>
-                <Save size={15} />
+                <Save size={14} />
                 <span>{isEditMode ? 'Update Product' : 'Publish Product'}</span>
               </>
             )}
@@ -432,18 +432,18 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 items-start">
         {/* Left 2 Columns: Main Fast Workflow */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
           {/* Card 1: Product Basics */}
-          <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
-              <Package size={16} className="text-brand" />
+          <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 shadow-xs space-y-3.5 sm:space-y-4">
+            <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5 sm:gap-2">
+              <Package size={15} className="text-brand shrink-0" />
               <span>1. Product Information</span>
             </h2>
 
             <div>
-              <label className="block text-xs font-bold text-foreground mb-1.5">
+              <label className="block text-[11px] sm:text-xs font-bold text-foreground mb-1">
                 Product Title / Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -452,14 +452,14 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                 value={title}
                 onChange={(e) => handleTitleChange(e.target.value)}
                 placeholder="e.g. Vintage Handloom Khadi Shirt"
-                className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-sm font-medium focus:ring-2 focus:ring-brand focus:outline-none"
+                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl border border-border bg-background text-xs sm:text-sm font-medium focus:ring-2 focus:ring-brand focus:outline-none"
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-foreground">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[11px] sm:text-xs font-bold text-foreground">
                     Category <span className="text-red-500">*</span>
                   </label>
                   <button
@@ -493,7 +493,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-sm font-medium focus:ring-2 focus:ring-brand focus:outline-none capitalize cursor-pointer"
+                  className="w-full px-3 py-2 sm:py-2.5 rounded-xl border border-border bg-background text-xs sm:text-sm font-medium focus:ring-2 focus:ring-brand focus:outline-none capitalize cursor-pointer"
                 >
                   {categories.map((c) => (
                     <option key={c.id || c.slug} value={c.slug || c.id}>
@@ -504,13 +504,13 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-foreground mb-1.5">
+                <label className="block text-[11px] sm:text-xs font-bold text-foreground mb-1">
                   Product Badge (Optional)
                 </label>
                 <select
                   value={badge}
                   onChange={(e) => setBadge(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-sm font-medium focus:ring-2 focus:ring-brand focus:outline-none cursor-pointer"
+                  className="w-full px-3 py-2 sm:py-2.5 rounded-xl border border-border bg-background text-xs sm:text-sm font-medium focus:ring-2 focus:ring-brand focus:outline-none cursor-pointer"
                 >
                   <option value="">No Badge</option>
                   <option value="NEW DROP">NEW DROP</option>
@@ -524,19 +524,19 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
           </div>
 
           {/* Card 2: Pricing & Stock */}
-          <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
-              <Tag size={16} className="text-brand" />
+          <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 shadow-xs space-y-3.5 sm:space-y-4">
+            <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5 sm:gap-2">
+              <Tag size={15} className="text-brand shrink-0" />
               <span>2. Pricing & Stock</span>
             </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <div>
-                <label className="block text-xs font-bold text-foreground mb-1.5">
+                <label className="block text-[11px] sm:text-xs font-bold text-foreground mb-1">
                   Selling Price (৳ BDT) <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-sm">৳</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-xs sm:text-sm">৳</span>
                   <input
                     type="number"
                     required
@@ -545,17 +545,17 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
                     placeholder="2500"
-                    className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-border bg-background text-sm font-bold text-foreground focus:ring-2 focus:ring-brand focus:outline-none"
+                    className="w-full pl-7 sm:pl-8 pr-3 py-2 sm:py-2.5 rounded-xl border border-border bg-background text-xs sm:text-sm font-bold text-foreground focus:ring-2 focus:ring-brand focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-foreground mb-1.5">
+                <label className="block text-[11px] sm:text-xs font-bold text-foreground mb-1">
                   Original / Compare Price (৳)
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-sm">৳</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-xs sm:text-sm">৳</span>
                   <input
                     type="number"
                     min="0"
@@ -563,18 +563,18 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                     value={compareAtPrice}
                     onChange={(e) => setCompareAtPrice(e.target.value)}
                     placeholder="3200"
-                    className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-border bg-background text-sm font-medium focus:ring-2 focus:ring-brand focus:outline-none"
+                    className="w-full pl-7 sm:pl-8 pr-3 py-2 sm:py-2.5 rounded-xl border border-border bg-background text-xs sm:text-sm font-medium focus:ring-2 focus:ring-brand focus:outline-none"
                   />
                 </div>
                 {discountPercent && (
-                  <p className="text-[11px] font-bold text-emerald-600 mt-1">
+                  <p className="text-[10px] sm:text-[11px] font-bold text-emerald-600 mt-1">
                     Customer saves {discountPercent}% off
                   </p>
                 )}
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-foreground mb-1.5">
+                <label className="block text-[11px] sm:text-xs font-bold text-foreground mb-1">
                   Total Stock Quantity
                 </label>
                 <input
@@ -583,14 +583,14 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                   value={stockQuantity}
                   onChange={(e) => setStockQuantity(e.target.value)}
                   placeholder="50"
-                  className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-sm font-medium focus:ring-2 focus:ring-brand focus:outline-none"
+                  className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl border border-border bg-background text-xs sm:text-sm font-medium focus:ring-2 focus:ring-brand focus:outline-none"
                 />
               </div>
             </div>
           </div>
 
           {/* Card 3: Colors & Color-Specific Galleries (MAIN REQUIREMENT) */}
-          <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
+          <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 shadow-xs space-y-3.5 sm:space-y-4">
             <ColorGalleryManager
               colors={colors}
               colorGalleries={colorGalleries}
@@ -600,19 +600,19 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
           </div>
 
           {/* Card 4: Sizes */}
-          <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
+          <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 shadow-xs space-y-3 sm:space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
-                <Ruler size={16} className="text-brand" />
+              <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5 sm:gap-2">
+                <Ruler size={15} className="text-brand shrink-0" />
                 <span>4. Available Sizes</span>
               </h2>
-              <span className="text-xs text-muted-foreground font-medium">
+              <span className="text-[11px] sm:text-xs text-muted-foreground font-medium">
                 {sizes.length} selected
               </span>
             </div>
 
             {/* Popular Size Pills */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
               {COMMON_SIZES.map((sz) => {
                 const isSelected = sizes.includes(sz);
                 return (
@@ -621,9 +621,9 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                     type="button"
                     onClick={() => handleToggleSize(sz)}
                     className={cn(
-                      "px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all border cursor-pointer",
+                      "px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-xl font-bold text-[11px] sm:text-xs transition-all border cursor-pointer active:scale-95",
                       isSelected
-                        ? "border-[#1C1613] bg-[#1C1613] text-white shadow-xs scale-105"
+                        ? "border-[#1C1613] bg-[#1C1613] text-white shadow-xs"
                         : "border-border bg-background text-foreground hover:border-[#1C1613]/50"
                     )}
                   >
@@ -634,7 +634,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
             </div>
 
             {/* Custom Size Adder */}
-            <div className="flex items-center gap-2 pt-2">
+            <div className="flex items-center gap-1.5 pt-1 w-full sm:w-auto">
               <input
                 type="text"
                 value={customSizeInput}
@@ -645,42 +645,42 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                     handleAddCustomSize();
                   }
                 }}
-                placeholder="Custom size (e.g. 42, XXL, 6-9M)"
-                className="px-3 py-1.5 text-xs rounded-xl border border-border bg-background focus:ring-2 focus:ring-brand focus:outline-none w-48 sm:w-60"
+                placeholder="Custom size (e.g. 42, XXL)"
+                className="flex-1 sm:flex-initial px-3 py-1.5 text-xs rounded-xl border border-border bg-background focus:ring-2 focus:ring-brand focus:outline-none w-full sm:w-56"
               />
               <button
                 type="button"
                 onClick={handleAddCustomSize}
-                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-muted hover:bg-muted/80 text-foreground cursor-pointer"
+                className="shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold bg-muted hover:bg-muted/80 text-foreground cursor-pointer active:scale-95"
               >
-                + Add Custom Size
+                + Add Size
               </button>
             </div>
           </div>
 
           {/* Card 5: Description & Story */}
-          <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
-              <Info size={16} className="text-brand" />
+          <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 shadow-xs space-y-3 sm:space-y-4">
+            <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5 sm:gap-2">
+              <Info size={15} className="text-brand shrink-0" />
               <span>5. Description & Story</span>
             </h2>
 
             <div>
-              <label className="block text-xs font-bold text-foreground mb-1.5">
+              <label className="block text-[11px] sm:text-xs font-bold text-foreground mb-1">
                 Product Description
               </label>
               <textarea
-                rows={4}
+                rows={3}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe the weave, style, heritage background, and fit..."
-                className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-sm font-normal focus:ring-2 focus:ring-brand focus:outline-none leading-relaxed"
+                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl border border-border bg-background text-xs sm:text-sm font-normal focus:ring-2 focus:ring-brand focus:outline-none leading-relaxed"
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <label className="block text-xs font-bold text-foreground mb-1.5">
+                <label className="block text-[11px] sm:text-xs font-bold text-foreground mb-1">
                   Material Composition
                 </label>
                 <input
@@ -688,12 +688,12 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                   value={material}
                   onChange={(e) => setMaterial(e.target.value)}
                   placeholder="e.g. 100% Handloom Cotton"
-                  className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-xs font-medium focus:ring-2 focus:ring-brand focus:outline-none"
+                  className="w-full px-3 py-1.5 sm:py-2 rounded-xl border border-border bg-background text-xs font-medium focus:ring-2 focus:ring-brand focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-foreground mb-1.5">
+                <label className="block text-[11px] sm:text-xs font-bold text-foreground mb-1">
                   Key Highlights (comma-separated)
                 </label>
                 <input
@@ -701,7 +701,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                   value={features}
                   onChange={(e) => setFeatures(e.target.value)}
                   placeholder="Garment Washed, Oversized Fit, Breathable"
-                  className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-xs font-medium focus:ring-2 focus:ring-brand focus:outline-none"
+                  className="w-full px-3 py-1.5 sm:py-2 rounded-xl border border-border bg-background text-xs font-medium focus:ring-2 focus:ring-brand focus:outline-none"
                 />
               </div>
             </div>
@@ -712,23 +712,23 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
             <button
               type="button"
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-muted/30 transition-colors cursor-pointer"
+              className="w-full px-4 sm:px-5 py-3 sm:py-4 flex items-center justify-between text-left hover:bg-muted/30 transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-2">
-                <Sliders size={16} className="text-muted-foreground" />
-                <span className="text-sm font-bold text-foreground">Advanced Settings (SEO, URL Handle, SKU)</span>
+                <Sliders size={15} className="text-muted-foreground shrink-0" />
+                <span className="text-xs sm:text-sm font-bold text-foreground">Advanced Settings (SEO, URL Handle, SKU)</span>
               </div>
               <ChevronDown
-                size={16}
-                className={cn("text-muted-foreground transition-transform duration-200", showAdvanced && "rotate-180")}
+                size={15}
+                className={cn("text-muted-foreground transition-transform duration-200 shrink-0", showAdvanced && "rotate-180")}
               />
             </button>
 
             {showAdvanced && (
-              <div className="p-5 sm:p-6 border-t border-border space-y-4 bg-muted/10">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-4 sm:p-6 border-t border-border space-y-3.5 sm:space-y-4 bg-muted/10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-foreground mb-1.5">
+                    <label className="block text-[11px] sm:text-xs font-bold text-foreground mb-1">
                       URL Handle / Slug
                     </label>
                     <input
@@ -736,12 +736,12 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                       value={slug}
                       onChange={(e) => { setSlug(e.target.value); setIsSlugAuto(false); }}
                       placeholder="vintage-handloom-shirt"
-                      className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-xs font-mono"
+                      className="w-full px-3 py-1.5 sm:py-2 rounded-xl border border-border bg-background text-xs font-mono"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-foreground mb-1.5">
+                    <label className="block text-[11px] sm:text-xs font-bold text-foreground mb-1">
                       SKU Prefix
                     </label>
                     <input
@@ -749,13 +749,13 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                       value={sku}
                       onChange={(e) => setSku(e.target.value)}
                       placeholder="PM-SHIRT-01"
-                      className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-xs font-mono"
+                      className="w-full px-3 py-1.5 sm:py-2 rounded-xl border border-border bg-background text-xs font-mono"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-foreground mb-1.5">
+                  <label className="block text-[11px] sm:text-xs font-bold text-foreground mb-1">
                     SEO Meta Title
                   </label>
                   <input
@@ -763,12 +763,12 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                     value={seoTitle}
                     onChange={(e) => setSeoTitle(e.target.value)}
                     placeholder={title || 'Page Title'}
-                    className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-xs"
+                    className="w-full px-3 py-1.5 sm:py-2 rounded-xl border border-border bg-background text-xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-foreground mb-1.5">
+                  <label className="block text-[11px] sm:text-xs font-bold text-foreground mb-1">
                     SEO Meta Description
                   </label>
                   <textarea
@@ -776,7 +776,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                     value={seoDescription}
                     onChange={(e) => setSeoDescription(e.target.value)}
                     placeholder="Short description for Google search results..."
-                    className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-xs"
+                    className="w-full px-3 py-1.5 sm:py-2 rounded-xl border border-border bg-background text-xs"
                   />
                 </div>
               </div>
@@ -785,15 +785,15 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
         </div>
 
         {/* Right 1 Column: Status & Summary Sidebar */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Publishing Status Card */}
-          <div className="bg-card border border-border rounded-2xl p-5 shadow-xs space-y-4">
+          <div className="bg-card border border-border rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
               Product Status
             </h3>
 
             <div className="space-y-2">
-              <label className="flex items-center gap-2.5 p-3 rounded-xl border border-border bg-background hover:bg-muted/40 cursor-pointer">
+              <label className="flex items-center gap-2.5 p-2.5 sm:p-3 rounded-xl border border-border bg-background hover:bg-muted/40 cursor-pointer">
                 <input
                   type="radio"
                   name="product_status"
@@ -803,11 +803,11 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                 />
                 <div>
                   <p className="text-xs font-bold text-foreground">Active</p>
-                  <p className="text-[11px] text-muted-foreground">Visible and available for purchase on storefront</p>
+                  <p className="text-[10px] sm:text-[11px] text-muted-foreground">Visible and available for purchase</p>
                 </div>
               </label>
 
-              <label className="flex items-center gap-2.5 p-3 rounded-xl border border-border bg-background hover:bg-muted/40 cursor-pointer">
+              <label className="flex items-center gap-2.5 p-2.5 sm:p-3 rounded-xl border border-border bg-background hover:bg-muted/40 cursor-pointer">
                 <input
                   type="radio"
                   name="product_status"
@@ -817,19 +817,19 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                 />
                 <div>
                   <p className="text-xs font-bold text-foreground">Draft</p>
-                  <p className="text-[11px] text-muted-foreground">Hidden from customers, only visible in admin</p>
+                  <p className="text-[10px] sm:text-[11px] text-muted-foreground">Hidden from customers, admin only</p>
                 </div>
               </label>
             </div>
           </div>
 
           {/* Quick Summary Card */}
-          <div className="bg-card border border-border rounded-2xl p-5 shadow-xs space-y-3">
+          <div className="bg-card border border-border rounded-2xl p-4 sm:p-5 shadow-xs space-y-2.5 sm:space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
               Summary
             </h3>
 
-            <div className="text-xs space-y-2 text-muted-foreground">
+            <div className="text-xs space-y-1.5 text-muted-foreground">
               <div className="flex justify-between py-1 border-b border-border/50">
                 <span>Active Colors:</span>
                 <span className="font-bold text-foreground">{colors.length}</span>
@@ -854,21 +854,21 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
       </div>
 
       {/* Docked Sticky Bottom Action Bar */}
-      <div className="sticky bottom-0 z-20 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3.5 bg-card/95 backdrop-blur-md border-t border-border shadow-lg flex items-center justify-between mt-8 rounded-b-2xl">
+      <div className="sticky bottom-0 z-20 -mx-4 sm:-mx-6 lg:-mx-8 px-3.5 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 bg-card/95 backdrop-blur-md border-t border-border shadow-lg flex items-center justify-between mt-6 sm:mt-8 rounded-b-2xl">
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 rounded-xl text-xs font-bold border border-border hover:bg-muted text-foreground transition-all cursor-pointer"
+          className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs font-bold border border-border hover:bg-muted text-foreground transition-all cursor-pointer"
         >
           Cancel
         </button>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             type="button"
             onClick={(e) => handleSubmit(e, true)}
             disabled={isSaving}
-            className="px-4 py-2 rounded-xl text-xs font-bold border border-border bg-card hover:bg-muted text-foreground transition-all cursor-pointer disabled:opacity-50"
+            className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs font-bold border border-border bg-card hover:bg-muted text-foreground transition-all cursor-pointer disabled:opacity-50"
           >
             Save as Draft
           </button>
@@ -876,16 +876,16 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
           <button
             type="submit"
             disabled={isSaving}
-            className="inline-flex items-center gap-2 px-7 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-[#1C1613] text-white hover:bg-black transition-all shadow-md cursor-pointer disabled:opacity-50 active:scale-95"
+            className="inline-flex items-center gap-1.5 px-4 sm:px-7 py-2 sm:py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-[#1C1613] text-white hover:bg-black transition-all shadow-md cursor-pointer disabled:opacity-50 active:scale-95"
           >
             {isSaving ? (
               <>
-                <Loader2 size={15} className="animate-spin" />
+                <Loader2 size={13} className="animate-spin" />
                 <span>Saving...</span>
               </>
             ) : (
               <>
-                <Save size={15} />
+                <Save size={13} />
                 <span>{isEditMode ? 'Update Product' : 'Save Product'}</span>
               </>
             )}
