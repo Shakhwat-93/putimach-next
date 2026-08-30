@@ -5,7 +5,7 @@ import {
   Image as ImageIcon, UploadCloud, Trash2, Search, RefreshCw, Copy, Check,
   ExternalLink, Download, AlertTriangle, Info, Grid, List, Eye, X,
   CheckCircle2, CircleAlert, FileText, ArrowUpDown, Filter, Sparkles,
-  HardDrive, Layers, ShieldAlert, Loader2, Maximize2
+  HardDrive, Layers, ShieldAlert, Loader2, Maximize2, RotateCcw
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -37,10 +37,13 @@ interface UsageReference {
 export const MediaLibraryPage = () => {
   const { showError, showSuccess } = useConfirmDialog();
 
-  // State
+  // Core Data & Stable Source of Truth
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // Client-side UI Controls (Instant, no re-fetching)
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('All');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'size_desc' | 'size_asc' | 'name_asc' | 'name_desc'>('newest');
@@ -69,31 +72,37 @@ export const MediaLibraryPage = () => {
 
   // Uploading state
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
-  const [uploadProgress, setUploadProgress] = useState<{ [filename: string]: number }>({});
   const [isUploading, setIsUploading] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [copiedType, setCopiedType] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const isMountedRef = useRef(true);
+  const activeRequestCountRef = useRef(0);
+  const hasFetchedOnceRef = useRef(false);
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Fetch Media Items from Server
+  // Fetch Media Items from Server (Rock-solid, idempotent, no repeated loops)
   // ─────────────────────────────────────────────────────────────────────────────
   const fetchMedia = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setInitialLoading(true);
+    }
+    setFetchError(null);
+
+    const reqId = ++activeRequestCountRef.current;
 
     try {
-      const params = new URLSearchParams({
-        limit: '100',
-        sort: sortBy,
-      });
-      if (searchTerm.trim()) params.set('search', searchTerm.trim());
-
-      const res = await fetch(`/admin-api/media?${params.toString()}`);
-      if (!res.ok) throw new Error(`Server returned HTTP ${res.status}`);
+      const res = await fetch('/admin-api/media?limit=1000&sort=newest');
+      if (!res.ok) {
+        throw new Error(`Server returned HTTP ${res.status}`);
+      }
 
       const data = await res.json();
+      if (!isMountedRef.current || reqId !== activeRequestCountRef.current) return;
+
       if (data.success && Array.isArray(data.items)) {
         setMediaItems(data.items);
         setBucketStats({
@@ -103,20 +112,35 @@ export const MediaLibraryPage = () => {
           hasMore: Boolean(data.hasMore),
           nextCursor: data.nextCursor || null,
         });
+        setFetchError(null);
       } else {
         throw new Error(data.error || 'Failed to parse media data');
       }
     } catch (err: any) {
+      if (!isMountedRef.current || reqId !== activeRequestCountRef.current) return;
       console.error('Error fetching media:', err);
-      showError('Failed to fetch media from Cloudflare R2: ' + (err.message || 'Please check server logs.'));
+      setFetchError(err.message || 'Failed to connect to Cloudflare storage.');
+      if (isRefresh) {
+        showError('Refresh failed: ' + (err.message || 'Please try again.'));
+      }
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (isMountedRef.current && reqId === activeRequestCountRef.current) {
+        setInitialLoading(false);
+        setRefreshing(false);
+      }
     }
-  }, [sortBy, searchTerm, showError]);
+  }, [showError]);
 
+  // Initial Fetch on Mount only
   useEffect(() => {
-    fetchMedia();
+    isMountedRef.current = true;
+    if (!hasFetchedOnceRef.current) {
+      hasFetchedOnceRef.current = true;
+      fetchMedia(false);
+    }
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [fetchMedia]);
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -206,7 +230,7 @@ export const MediaLibraryPage = () => {
         throw new Error(data.error || 'Failed to delete file from storage.');
       }
 
-      // Successfully deleted
+      // Successfully deleted — Remove only from local state
       setMediaItems(prev => prev.filter(i => i.key !== deletingItem.key));
       setBucketStats(prev => ({
         ...prev,
@@ -267,7 +291,7 @@ export const MediaLibraryPage = () => {
 
       const newUploadedItems = Array.isArray(data.items) ? data.items : (data.item ? [data.item] : []);
 
-      // Prepend newly uploaded items to local state
+      // Prepend newly uploaded items to local state without full reload
       setMediaItems(prev => [...newUploadedItems, ...prev.filter(item => !newUploadedItems.some(u => u.key === item.key))]);
       setBucketStats(prev => ({
         ...prev,
@@ -303,19 +327,49 @@ export const MediaLibraryPage = () => {
   };
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Filtered & Sorted Media Items
+  // Filtered & Sorted Media Items (Instantaneous client-side computation)
   // ─────────────────────────────────────────────────────────────────────────────
   const filteredMedia = useMemo(() => {
-    return mediaItems.filter(item => {
-      if (selectedType === 'All') return true;
-      const ext = item.name.split('.').pop()?.toLowerCase() || '';
-      if (selectedType === 'WebP') return ext === 'webp';
-      if (selectedType === 'PNG') return ext === 'png';
-      if (selectedType === 'JPG') return ext === 'jpg' || ext === 'jpeg';
-      if (selectedType === 'Other') return !['webp', 'png', 'jpg', 'jpeg'].includes(ext);
-      return true;
-    });
-  }, [mediaItems, selectedType]);
+    let list = [...mediaItems];
+
+    // 1. Filter by search term
+    if (searchTerm.trim()) {
+      const q = searchTerm.trim().toLowerCase();
+      list = list.filter(item => 
+        (item.name && item.name.toLowerCase().includes(q)) || 
+        (item.key && item.key.toLowerCase().includes(q))
+      );
+    }
+
+    // 2. Filter by type
+    if (selectedType !== 'All') {
+      list = list.filter(item => {
+        const ext = item.name.split('.').pop()?.toLowerCase() || '';
+        if (selectedType === 'WebP') return ext === 'webp';
+        if (selectedType === 'PNG') return ext === 'png';
+        if (selectedType === 'JPG') return ext === 'jpg' || ext === 'jpeg';
+        if (selectedType === 'Other') return !['webp', 'png', 'jpg', 'jpeg'].includes(ext);
+        return true;
+      });
+    }
+
+    // 3. Client-side sorting (Instantaneous)
+    if (sortBy === 'newest') {
+      list.sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime());
+    } else if (sortBy === 'oldest') {
+      list.sort((a, b) => new Date(a.lastModified).getTime() - new Date(b.lastModified).getTime());
+    } else if (sortBy === 'size_desc') {
+      list.sort((a, b) => (b.size || 0) - (a.size || 0));
+    } else if (sortBy === 'size_asc') {
+      list.sort((a, b) => (a.size || 0) - (b.size || 0));
+    } else if (sortBy === 'name_asc') {
+      list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    } else if (sortBy === 'name_desc') {
+      list.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+    }
+
+    return list;
+  }, [mediaItems, searchTerm, selectedType, sortBy]);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto animate-fade-in">
@@ -356,7 +410,7 @@ export const MediaLibraryPage = () => {
             className="h-9 gap-1.5 text-xs font-semibold"
           >
             <RefreshCw size={13} className={cn(refreshing && 'animate-spin')} />
-            Refresh
+            {refreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
 
           <Button
@@ -377,7 +431,7 @@ export const MediaLibraryPage = () => {
           <Input
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search files by name, prefix, or extension..."
+            placeholder="Filter files by name, prefix, or extension..."
             className="pl-9 pr-8 h-9 text-xs bg-background/80"
           />
           {searchTerm && (
@@ -450,27 +504,64 @@ export const MediaLibraryPage = () => {
         </div>
       </div>
 
-      {/* ── Main Media Grid / List ── */}
-      {loading ? (
+      {/* ── Main Media Content Area (Distinct, Stable States) ── */}
+
+      {/* 1. INITIAL LOADING STATE */}
+      {initialLoading && mediaItems.length === 0 ? (
         <div className="py-24 text-center flex flex-col items-center justify-center gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
           <p className="text-sm font-semibold text-muted-foreground">Connecting to Cloudflare R2 & Loading Assets...</p>
         </div>
-      ) : filteredMedia.length === 0 ? (
+      ) : null}
+
+      {/* 2. ERROR STATE */}
+      {!initialLoading && fetchError && mediaItems.length === 0 ? (
+        <div className="py-16 text-center border-2 border-dashed border-destructive/40 rounded-2xl bg-destructive/5 flex flex-col items-center justify-center p-6 space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-destructive/10 text-destructive flex items-center justify-center">
+            <CircleAlert size={26} />
+          </div>
+          <h3 className="text-base font-bold text-foreground">Unable to Load Media from Storage</h3>
+          <p className="text-xs text-muted-foreground max-w-md">{fetchError}</p>
+          <Button onClick={() => fetchMedia(false)} className="gap-2 text-xs font-bold mt-2">
+            <RotateCcw size={14} />
+            Retry Connection
+          </Button>
+        </div>
+      ) : null}
+
+      {/* 3. EMPTY STATE */}
+      {!initialLoading && !fetchError && filteredMedia.length === 0 && mediaItems.length === 0 ? (
         <div className="py-20 text-center border-2 border-dashed border-border rounded-2xl flex flex-col items-center justify-center p-6 space-y-3">
           <div className="w-14 h-14 rounded-2xl bg-secondary/80 flex items-center justify-center text-muted-foreground/60">
             <ImageIcon size={28} />
           </div>
           <h3 className="text-base font-bold text-foreground">No media assets found</h3>
           <p className="text-xs text-muted-foreground max-w-sm">
-            {searchTerm ? `No files match your search "${searchTerm}".` : 'Upload product images, brand banners, or size charts to get started.'}
+            Your Cloudflare R2 bucket is currently empty. Upload product images, brand banners, or size charts to get started.
           </p>
           <Button onClick={() => setIsUploadModalOpen(true)} className="gap-2 text-xs font-bold mt-2">
             <UploadCloud size={14} />
             Upload Your First Image
           </Button>
         </div>
-      ) : viewMode === 'grid' ? (
+      ) : null}
+
+      {/* 3b. FILTER EMPTY STATE (Items exist, but none match search filter) */}
+      {!initialLoading && filteredMedia.length === 0 && mediaItems.length > 0 ? (
+        <div className="py-16 text-center border-2 border-dashed border-border rounded-2xl flex flex-col items-center justify-center p-6 space-y-2">
+          <Search size={28} className="text-muted-foreground/40 mb-1" />
+          <h3 className="text-sm font-bold text-foreground">No matching files found</h3>
+          <p className="text-xs text-muted-foreground">
+            No assets match your search &quot;{searchTerm}&quot; in category &quot;{selectedType}&quot;.
+          </p>
+          <Button variant="outline" size="sm" onClick={() => { setSearchTerm(''); setSelectedType('All'); }} className="text-xs mt-2">
+            Reset Filters
+          </Button>
+        </div>
+      ) : null}
+
+      {/* 4. SUCCESS STATE: GRID VIEW */}
+      {filteredMedia.length > 0 && viewMode === 'grid' ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
           {filteredMedia.map((item) => {
             const ext = item.name.split('.').pop()?.toUpperCase() || 'FILE';
@@ -527,7 +618,7 @@ export const MediaLibraryPage = () => {
                         e.stopPropagation();
                         copyToClipboard(item.url, item.key, 'url');
                       }}
-                      className="p-2 rounded-xl bg-white/90 dark:bg-black/90 text-foreground hover:scale-110 active:scale-95 transition-all shadow-md pointer-events-auto"
+                      className="p-2 rounded-xl bg-white/90 dark:bg-black/90 text-foreground hover:scale-110 active:scale-95 transition-all shadow-md pointer-events-auto cursor-pointer"
                       title="Copy Public URL"
                     >
                       {isCopied ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
@@ -538,7 +629,7 @@ export const MediaLibraryPage = () => {
                         e.stopPropagation();
                         handleInspectItem(item);
                       }}
-                      className="p-2 rounded-xl bg-white/90 dark:bg-black/90 text-foreground hover:scale-110 active:scale-95 transition-all shadow-md pointer-events-auto"
+                      className="p-2 rounded-xl bg-white/90 dark:bg-black/90 text-foreground hover:scale-110 active:scale-95 transition-all shadow-md pointer-events-auto cursor-pointer"
                       title="View File Details"
                     >
                       <Eye size={14} />
@@ -549,7 +640,7 @@ export const MediaLibraryPage = () => {
                         e.stopPropagation();
                         handleOpenDeleteDialog(item);
                       }}
-                      className="p-2 rounded-xl bg-destructive/90 text-destructive-foreground hover:scale-110 active:scale-95 transition-all shadow-md pointer-events-auto"
+                      className="p-2 rounded-xl bg-destructive/90 text-destructive-foreground hover:scale-110 active:scale-95 transition-all shadow-md pointer-events-auto cursor-pointer"
                       title="Delete File"
                     >
                       <Trash2 size={14} />
@@ -571,7 +662,7 @@ export const MediaLibraryPage = () => {
                     <button
                       type="button"
                       onClick={() => copyToClipboard(item.url, item.key, 'url')}
-                      className="text-primary hover:underline font-bold"
+                      className="text-primary hover:underline font-bold cursor-pointer"
                     >
                       {isCopied ? 'Copied ✓' : 'Copy URL'}
                     </button>
@@ -581,8 +672,10 @@ export const MediaLibraryPage = () => {
             );
           })}
         </div>
-      ) : (
-        /* List View */
+      ) : null}
+
+      {/* 4b. SUCCESS STATE: LIST VIEW */}
+      {filteredMedia.length > 0 && viewMode === 'list' ? (
         <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
@@ -625,7 +718,7 @@ export const MediaLibraryPage = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => copyToClipboard(item.url, item.key, 'url')}
-                            className="h-7 text-xs font-bold gap-1 text-primary"
+                            className="h-7 text-xs font-bold gap-1 text-primary cursor-pointer"
                           >
                             {isCopied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
                             {isCopied ? 'Copied' : 'Copy'}
@@ -634,7 +727,7 @@ export const MediaLibraryPage = () => {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleInspectItem(item)}
-                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground cursor-pointer"
                           >
                             <Eye size={13} />
                           </Button>
@@ -642,7 +735,7 @@ export const MediaLibraryPage = () => {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleOpenDeleteDialog(item)}
-                            className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                            className="h-7 w-7 text-destructive hover:bg-destructive/10 cursor-pointer"
                           >
                             <Trash2 size={13} />
                           </Button>
@@ -655,7 +748,7 @@ export const MediaLibraryPage = () => {
             </table>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* ── Multi-File Upload Modal ── */}
       <Modal
@@ -706,7 +799,7 @@ export const MediaLibraryPage = () => {
                 <button
                   type="button"
                   onClick={() => setUploadFiles([])}
-                  className="text-destructive hover:underline"
+                  className="text-destructive hover:underline cursor-pointer"
                   disabled={isUploading}
                 >
                   Clear All
@@ -732,7 +825,7 @@ export const MediaLibraryPage = () => {
                     type="button"
                     onClick={() => setUploadFiles(prev => prev.filter((_, i) => i !== idx))}
                     disabled={isUploading}
-                    className="text-muted-foreground hover:text-destructive p-1"
+                    className="text-muted-foreground hover:text-destructive p-1 cursor-pointer"
                   >
                     <X size={14} />
                   </button>
@@ -865,7 +958,7 @@ export const MediaLibraryPage = () => {
                   variant="secondary"
                   size="sm"
                   onClick={() => copyToClipboard(selectedItem.url, selectedItem.key, 'url')}
-                  className="flex-1 text-xs gap-1.5"
+                  className="flex-1 text-xs gap-1.5 cursor-pointer"
                 >
                   {copiedKey === selectedItem.key && copiedType === 'url' ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
                   Copy Public URL
@@ -875,7 +968,7 @@ export const MediaLibraryPage = () => {
                   variant="secondary"
                   size="sm"
                   onClick={() => copyToClipboard(`![${selectedItem.name}](${selectedItem.url})`, selectedItem.key, 'md')}
-                  className="flex-1 text-xs gap-1.5"
+                  className="flex-1 text-xs gap-1.5 cursor-pointer"
                 >
                   {copiedKey === selectedItem.key && copiedType === 'md' ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
                   Copy Markdown
@@ -885,7 +978,7 @@ export const MediaLibraryPage = () => {
                   variant="secondary"
                   size="sm"
                   onClick={() => copyToClipboard(`<img src="${selectedItem.url}" alt="${selectedItem.name}" />`, selectedItem.key, 'html')}
-                  className="flex-1 text-xs gap-1.5"
+                  className="flex-1 text-xs gap-1.5 cursor-pointer"
                 >
                   {copiedKey === selectedItem.key && copiedType === 'html' ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
                   Copy HTML Tag
@@ -904,7 +997,7 @@ export const MediaLibraryPage = () => {
                   setSelectedItem(null);
                   handleOpenDeleteDialog(item);
                 }}
-                className="gap-1.5 text-xs font-bold"
+                className="gap-1.5 text-xs font-bold cursor-pointer"
               >
                 <Trash2 size={13} />
                 Delete File
@@ -916,7 +1009,7 @@ export const MediaLibraryPage = () => {
                   variant="outline"
                   size="sm"
                   onClick={() => window.open(selectedItem.url, '_blank')}
-                  className="gap-1 text-xs"
+                  className="gap-1 text-xs cursor-pointer"
                 >
                   <ExternalLink size={13} />
                   Open Original
@@ -994,7 +1087,7 @@ export const MediaLibraryPage = () => {
                 variant="destructive"
                 disabled={isDeleting || (deleteUsageWarning?.inUse && !forceDeleteConfirmed)}
                 onClick={handleConfirmDelete}
-                className="gap-1.5 font-bold"
+                className="gap-1.5 font-bold cursor-pointer"
               >
                 {isDeleting ? (
                   <>

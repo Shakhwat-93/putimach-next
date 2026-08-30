@@ -7,7 +7,7 @@
 //   2. alertDialog({ title, message, type: 'success'|'error'|'warning'|'info' })
 //      → One-button modal replacing native alert()
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -84,7 +84,7 @@ export function useConfirmDialog() {
   });
 
   // ── confirmDialog ────────────────────────────────────────────────────────────
-  const confirmDialog = ({
+  const confirmDialog = useCallback(({
     title = 'Confirm Action',
     description = '',
     message = '',
@@ -126,18 +126,18 @@ export function useConfirmDialog() {
         }
       });
     });
-  };
+  }, []);
 
   // ── alertDialog ──────────────────────────────────────────────────────────────
-  const alertDialog = ({ title, message, type = 'info' }) => {
+  const alertDialog = useCallback(({ title, message, type = 'info' }) => {
     setAlertState({ isOpen: true, title, message, type });
-  };
+  }, []);
 
   // Short-hand helpers matching native alert() usage patterns
-  const showSuccess = (message, title = 'Success')  => alertDialog({ title, message, type: 'success' });
-  const showError   = (message, title = 'Error')    => alertDialog({ title, message, type: 'error' });
-  const showWarning = (message, title = 'Warning')  => alertDialog({ title, message, type: 'warning' });
-  const showInfo    = (message, title = 'Info')     => alertDialog({ title, message, type: 'info' });
+  const showSuccess = useCallback((message, title = 'Success')  => alertDialog({ title, message, type: 'success' }), [alertDialog]);
+  const showError   = useCallback((message, title = 'Error')    => alertDialog({ title, message, type: 'error' }), [alertDialog]);
+  const showWarning = useCallback((message, title = 'Warning')  => alertDialog({ title, message, type: 'warning' }), [alertDialog]);
+  const showInfo    = useCallback((message, title = 'Info')     => alertDialog({ title, message, type: 'info' }), [alertDialog]);
 
   // ── JSX ──────────────────────────────────────────────────────────────────────
   const { Icon, btnClass, label } = TYPE_CONFIG[alertState.type] || TYPE_CONFIG.info;

@@ -170,7 +170,7 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const cursor = searchParams.get('cursor') || undefined;
-    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '60', 10), 10), 100);
+    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '500', 10), 1), 1000);
     const search = (searchParams.get('search') || '').trim().toLowerCase();
     const sort = searchParams.get('sort') || 'newest'; // newest, oldest, size_desc, size_asc, name_asc, name_desc
 
