@@ -1,10 +1,10 @@
 'use client';
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ChevronLeft, ShoppingBag, Heart, Star, Check, ChevronDown,
+  ChevronLeft, ChevronRight, ShoppingBag, Heart, Star, Check, ChevronDown,
   Zap, ArrowRight, X, Ruler, Loader2, Share2, Truck, ShieldCheck, RefreshCw
 } from 'lucide-react';
 import { getProductBySlug, getProducts } from '../lib/api';
@@ -154,8 +154,88 @@ export default function ProductDetailView() {
   const thumbnailRowRef = useRef(null);
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isInteracting, setIsInteracting] = useState(false);
+  const autoplayTimerRef = useRef(null);
+  const resumeTimerRef = useRef(null);
 
   const totalCartCount = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  // Smoothly navigate to specific slide index
+  const goToSlide = useCallback((index: number, smooth = true) => {
+    if (index < 0 || index >= images.length) return;
+    setActiveImg(index);
+    isScrollingRef.current = true;
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+
+    if (sliderRef.current) {
+      const width = sliderRef.current.offsetWidth;
+      sliderRef.current.scrollTo({
+        left: width * index,
+        behavior: smooth ? 'smooth' : 'instant',
+      });
+    }
+
+    if (thumbnailRowRef.current) {
+      const buttons = thumbnailRowRef.current.querySelectorAll('button');
+      if (buttons[index]) {
+        buttons[index].scrollIntoView({
+          behavior: smooth ? 'smooth' : 'instant',
+          block: 'nearest',
+          inline: 'center',
+        });
+      }
+    }
+
+    scrollTimeoutRef.current = setTimeout(() => {
+      isScrollingRef.current = false;
+    }, 450);
+  }, [images.length]);
+
+  // Autoplay auto-slide with smooth 4s interval, pause on hover/interaction
+  useEffect(() => {
+    if (images.length <= 1 || isHovered || isInteracting) {
+      if (autoplayTimerRef.current) clearInterval(autoplayTimerRef.current);
+      return;
+    }
+
+    autoplayTimerRef.current = setInterval(() => {
+      setActiveImg((prev) => {
+        const next = (prev + 1) % images.length;
+        if (sliderRef.current) {
+          const width = sliderRef.current.offsetWidth;
+          sliderRef.current.scrollTo({
+            left: width * next,
+            behavior: 'smooth',
+          });
+        }
+        if (thumbnailRowRef.current) {
+          const buttons = thumbnailRowRef.current.querySelectorAll('button');
+          if (buttons[next]) {
+            buttons[next].scrollIntoView({
+              behavior: 'smooth',
+              block: 'nearest',
+              inline: 'center',
+            });
+          }
+        }
+        return next;
+      });
+    }, 4000);
+
+    return () => {
+      if (autoplayTimerRef.current) clearInterval(autoplayTimerRef.current);
+    };
+  }, [images.length, isHovered, isInteracting]);
+
+  // Temporarily pause autoplay on user interaction
+  const handleUserInteraction = () => {
+    setIsInteracting(true);
+    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    resumeTimerRef.current = setTimeout(() => {
+      setIsInteracting(false);
+    }, 6000);
+  };
 
   const handleScroll = (e) => {
     if (isScrollingRef.current) return;
@@ -169,33 +249,22 @@ export default function ProductDetailView() {
   };
 
   const handleThumbnailClick = (index) => {
-    if (index < 0 || index >= images.length) return;
-    setActiveImg(index);
-    isScrollingRef.current = true;
-    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    handleUserInteraction();
+    goToSlide(index, true);
+  };
 
-    if (sliderRef.current) {
-      const width = sliderRef.current.offsetWidth;
-      sliderRef.current.scrollTo({
-        left: width * index,
-        behavior: 'smooth'
-      });
-    }
+  const handlePrevSlide = (e) => {
+    e.stopPropagation();
+    handleUserInteraction();
+    const prev = activeImg > 0 ? activeImg - 1 : images.length - 1;
+    goToSlide(prev, true);
+  };
 
-    if (thumbnailRowRef.current) {
-      const buttons = thumbnailRowRef.current.querySelectorAll('button');
-      if (buttons[index]) {
-        buttons[index].scrollIntoView({
-          behavior: 'smooth',
-          block: 'nearest',
-          inline: 'center'
-        });
-      }
-    }
-
-    scrollTimeoutRef.current = setTimeout(() => {
-      isScrollingRef.current = false;
-    }, 450);
+  const handleNextSlide = (e) => {
+    e.stopPropagation();
+    handleUserInteraction();
+    const next = (activeImg + 1) % images.length;
+    goToSlide(next, true);
   };
 
   // Instant, race-condition-free color switching
@@ -411,10 +480,10 @@ export default function ProductDetailView() {
         </div>
       </motion.div>
 
-      <div className="container-site py-4 lg:py-8 w-full max-w-full min-w-0 overflow-x-hidden">
+      <div className="container-site py-4 lg:py-6 w-full max-w-full min-w-0 overflow-x-hidden">
         
         {/* Desktop Breadcrumb Navigation */}
-        <nav className="hidden lg:flex items-center gap-2 text-xs text-gray-500 mb-8">
+        <nav className="hidden lg:flex items-center gap-2 text-xs text-gray-500 mb-4 lg:mb-5">
           <Link href="/" className="hover:text-[#1C1613] transition-colors">Home</Link>
           <ChevronLeft size={12} className="rotate-180 text-gray-400" />
           <Link href="/shop" className="hover:text-[#1C1613] transition-colors">Shop</Link>
@@ -425,24 +494,29 @@ export default function ProductDetailView() {
         </nav>
 
         {/* Main Product Layout Grid */}
-        <div className="grid lg:grid-cols-12 gap-8 lg:gap-14 items-start w-full max-w-full min-w-0">
+        <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 xl:gap-10 items-start w-full max-w-full min-w-0">
 
           {/* Left Column: Product Image Gallery Showcase (lg:col-span-7) */}
-          <div className="lg:col-span-7 space-y-4 lg:sticky lg:top-28 w-full max-w-full min-w-0 overflow-hidden">
+          <div className="lg:col-span-7 space-y-3 lg:sticky lg:top-24 w-full max-w-full min-w-0 overflow-hidden">
             
             {/* Main Hero Card Container */}
-            <div className="relative w-full max-w-full min-w-0 rounded-2xl sm:rounded-[2.2rem] bg-gradient-to-b from-[#F7F4EE] via-[#F4EFE6] to-[#EFEADF] border border-[#E9E2D2] shadow-sm overflow-hidden flex items-center justify-center p-2 sm:p-6 min-h-[320px] sm:min-h-[480px]">
+            <div 
+              className="relative w-full max-w-full min-w-0 rounded-2xl sm:rounded-[1.8rem] bg-gradient-to-b from-[#F7F4EE] via-[#F4EFE6] to-[#EFEADF] border border-[#E9E2D2] shadow-xs overflow-hidden flex items-center justify-center p-2 sm:p-4 h-[300px] xs:h-[340px] sm:h-[380px] md:h-[420px] lg:h-[430px] xl:h-[460px] max-h-[46vh] lg:max-h-[460px] group/gallery"
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              onTouchStart={() => handleUserInteraction()}
+            >
               
               <div 
                 ref={sliderRef}
                 onScroll={handleScroll}
-                className="w-full flex overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-none"
+                className="w-full h-full flex overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-none"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
                 {images.map((img, i) => (
                   <div 
                     key={i} 
-                    className="w-full flex-shrink-0 snap-start flex items-center justify-center p-1 sm:p-2"
+                    className="w-full h-full flex-shrink-0 snap-start flex items-center justify-center p-1 sm:p-2"
                   >
                     <img
                       src={img}
@@ -454,16 +528,38 @@ export default function ProductDetailView() {
                         e.target.onerror = null;
                         e.target.src = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80';
                       }}
-                      className="w-full h-auto max-h-[52vh] sm:max-h-[62vh] object-contain rounded-xl sm:rounded-2xl drop-shadow-md select-none hover:scale-105 transition-transform duration-500 cursor-zoom-in"
+                      className="max-h-full max-w-full w-auto h-auto object-contain rounded-xl drop-shadow-sm select-none transition-transform duration-300 group-hover/gallery:scale-[1.02]"
                     />
                   </div>
                 ))}
               </div>
 
+              {/* Prev / Next Controls on Desktop Hover */}
+              {images.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handlePrevSlide}
+                    className="hidden lg:flex absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/85 hover:bg-white text-[#1C1613] backdrop-blur-md border border-[#E9E2D2] items-center justify-center shadow-md opacity-0 group-hover/gallery:opacity-100 transition-all z-10 active:scale-95 cursor-pointer"
+                    aria-label="Previous image"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleNextSlide}
+                    className="hidden lg:flex absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/85 hover:bg-white text-[#1C1613] backdrop-blur-md border border-[#E9E2D2] items-center justify-center shadow-md opacity-0 group-hover/gallery:opacity-100 transition-all z-10 active:scale-95 cursor-pointer"
+                    aria-label="Next image"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </>
+              )}
+
               {/* Floating Badges */}
-              <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
+              <div className="absolute top-3.5 left-3.5 flex flex-col gap-1.5 z-10">
                 {product.badge && (
-                  <span className={`px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${
+                  <span className={`px-3 py-1 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider shadow-xs ${
                     product.badge === 'LIMITED' ? 'bg-[#1C1613] text-[#C5A880]' :
                     product.badge === 'NEW DROP' ? 'bg-emerald-600 text-white' :
                     product.badge === 'SALE' ? 'bg-[#FF5533] text-white' :
@@ -473,12 +569,12 @@ export default function ProductDetailView() {
                   </span>
                 )}
                 {discount && (
-                  <span className="px-3.5 py-1.5 rounded-full text-[10px] font-black bg-[#FF5533] text-white tracking-widest shadow-sm">
+                  <span className="px-3 py-1 rounded-full text-[9px] sm:text-[10px] font-black bg-[#FF5533] text-white tracking-wider shadow-xs">
                     -{discount}% OFF
                   </span>
                 )}
                 {!inStock && (
-                  <span className="px-3.5 py-1.5 rounded-full text-[10px] font-black bg-red-600 text-white tracking-widest animate-pulse shadow-sm">
+                  <span className="px-3 py-1 rounded-full text-[9px] sm:text-[10px] font-black bg-red-600 text-white tracking-wider animate-pulse shadow-xs">
                     SOLD OUT
                   </span>
                 )}
@@ -487,23 +583,23 @@ export default function ProductDetailView() {
               {/* Wishlist Button */}
               <button
                 onClick={() => setLiked(!liked)}
-                className="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/85 backdrop-blur-md border border-[#E9E2D2] flex items-center justify-center hover:bg-white transition-all shadow-sm z-10 active:scale-90"
+                className="absolute top-3.5 right-3.5 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/85 backdrop-blur-md border border-[#E9E2D2] flex items-center justify-center hover:bg-white transition-all shadow-xs z-10 active:scale-90"
                 aria-label="Save to Wishlist"
               >
                 <Heart
-                  size={19}
+                  size={17}
                   className={`transition-colors ${liked ? 'fill-[#FF5533] text-[#FF5533]' : 'text-[#1C1613]'}`}
                 />
               </button>
 
               {/* Pagination Dots Indicator */}
               {images.length > 1 && (
-                <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-10 pointer-events-none">
+                <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-10 pointer-events-none">
                   {images.map((_, i) => (
                     <span
                       key={i}
                       className={`h-1.5 rounded-full transition-all duration-300 ${
-                        activeImg === i ? 'bg-[#FF5533] w-6' : 'bg-[#1C1613]/30 w-1.5'
+                        activeImg === i ? 'bg-[#FF5533] w-5' : 'bg-[#1C1613]/25 w-1.5'
                       }`}
                     />
                   ))}
@@ -515,7 +611,7 @@ export default function ProductDetailView() {
             {images.length > 1 && (
               <div 
                 ref={thumbnailRowRef}
-                className="flex gap-3 sm:gap-3.5 overflow-x-auto pb-3 pt-1 scrollbar-none px-1 w-full max-w-full min-w-0 items-center scroll-smooth"
+                className="flex gap-2 sm:gap-2.5 overflow-x-auto pb-1 pt-0.5 scrollbar-none px-0.5 w-full max-w-full min-w-0 items-center scroll-smooth"
               >
                 {images.map((img, i) => {
                   const isSelected = activeImg === i;
@@ -525,9 +621,9 @@ export default function ProductDetailView() {
                       key={i}
                       onClick={() => handleThumbnailClick(i)}
                       aria-label={`View image ${i + 1}`}
-                      className={`relative w-20 h-20 xs:w-22 xs:h-22 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 shrink-0 transition-all duration-200 bg-[#F7F4EE] p-1.5 flex-shrink-0 cursor-pointer active:scale-95 touch-manipulation select-none ${
+                      className={`relative w-14 h-14 xs:w-15 xs:h-15 sm:w-16 sm:h-16 rounded-xl overflow-hidden border-2 shrink-0 transition-all duration-150 bg-[#F7F4EE] p-1 flex-shrink-0 cursor-pointer active:scale-95 touch-manipulation select-none ${
                         isSelected 
-                          ? 'border-[#FF5533] shadow-md ring-2 ring-[#FF5533]/30 scale-105 opacity-100 z-10' 
+                          ? 'border-[#FF5533] shadow-xs ring-2 ring-[#FF5533]/25 scale-105 opacity-100 z-10' 
                           : 'border-[#E9E2D2] opacity-70 hover:opacity-100 hover:border-[#1C1613]/40'
                       }`}
                     >
@@ -538,7 +634,7 @@ export default function ProductDetailView() {
                           e.target.onerror = null;
                           e.target.src = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80';
                         }}
-                        className="w-full h-full object-cover rounded-xl pointer-events-none"
+                        className="w-full h-full object-cover rounded-lg pointer-events-none"
                       />
                     </button>
                   );
@@ -548,41 +644,41 @@ export default function ProductDetailView() {
           </div>
 
           {/* Right Column: Product Information & Purchase Controls (lg:col-span-5) */}
-          <div className="lg:col-span-5 space-y-6 w-full max-w-full min-w-0 overflow-hidden">
+          <div className="lg:col-span-5 space-y-3.5 sm:space-y-4 w-full max-w-full min-w-0 overflow-hidden">
             
             {/* Header Info */}
             <div>
-              <div className="flex items-center justify-between gap-3 mb-2">
-                <p className="text-xs font-bold text-[#C5A880] uppercase tracking-[0.25em] font-serif">
+              <div className="flex items-center justify-between gap-3 mb-1.5">
+                <p className="text-[11px] font-bold text-[#C5A880] uppercase tracking-[0.2em] font-serif">
                   {product.category || 'Luxury Streetwear'}
                 </p>
                 {inStock ? (
-                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/60 uppercase tracking-wider">
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60 uppercase tracking-wider">
                     In Stock
                   </span>
                 ) : (
-                  <span className="text-[10px] font-bold text-red-700 bg-red-50 px-2.5 py-1 rounded-full border border-red-200/60 uppercase tracking-wider">
+                  <span className="text-[10px] font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded-full border border-red-200/60 uppercase tracking-wider">
                     {isVariantOutOfStock ? 'Size Sold Out' : 'Sold Out'}
                   </span>
                 )}
               </div>
 
-              <h1 className="font-serif text-2xl sm:text-4xl font-black text-[#1C1613] tracking-wide mb-4 leading-tight break-words">
+              <h1 className="font-serif text-xl sm:text-2xl lg:text-3xl font-black text-[#1C1613] tracking-wide mb-2 leading-snug break-words">
                 {product.name}
               </h1>
             </div>
 
             {/* Price Tag Container */}
-            <div className="flex flex-wrap items-baseline gap-2.5 sm:gap-3 bg-[#F4EFE6]/60 p-4 sm:p-5 rounded-2xl border border-[#E9E2D2] w-full max-w-full min-w-0">
-              <span className="font-serif font-black text-3xl sm:text-4xl text-[#1C1613]">
+            <div className="flex flex-wrap items-baseline gap-2.5 sm:gap-3 bg-[#F4EFE6]/60 p-3 sm:p-3.5 rounded-xl border border-[#E9E2D2] w-full max-w-full min-w-0">
+              <span className="font-serif font-black text-2xl sm:text-3xl text-[#1C1613]">
                 {formatPrice(product.price)}
               </span>
               {originalPrice && (
                 <>
-                  <span className="text-base text-gray-400 line-through">
+                  <span className="text-sm text-gray-400 line-through">
                     {formatPrice(originalPrice)}
                   </span>
-                  <span className="text-xs font-bold bg-[#FF5533] text-white px-2.5 py-1 rounded-full uppercase tracking-wider">
+                  <span className="text-[10px] font-bold bg-[#FF5533] text-white px-2 py-0.5 rounded-full uppercase tracking-wider">
                     Save {discount}%
                   </span>
                 </>
@@ -592,7 +688,7 @@ export default function ProductDetailView() {
             {/* Color Selector */}
             {product.colors?.length > 0 && (
               <div>
-                <p className="font-serif font-bold text-xs uppercase tracking-wider text-[#1C1613] mb-2.5">
+                <p className="font-serif font-bold text-[11px] uppercase tracking-wider text-[#1C1613] mb-1.5">
                   Select Color
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -603,9 +699,9 @@ export default function ProductDetailView() {
                         type="button"
                         key={color}
                         onClick={() => handleSelectColor(color)}
-                        className={`max-w-full px-3.5 py-2 rounded-xl font-bold text-xs text-left transition-all duration-200 border whitespace-normal break-words leading-snug cursor-pointer ${
+                        className={`max-w-full px-3 py-1.5 rounded-lg font-bold text-xs text-left transition-all duration-150 border whitespace-normal break-words leading-snug cursor-pointer ${
                           isSelected
-                            ? 'border-[#1C1613] bg-[#1C1613] text-white shadow-sm'
+                            ? 'border-[#1C1613] bg-[#1C1613] text-white shadow-xs'
                             : 'border-[#E9E2D2] bg-white text-[#1C1613] hover:border-[#1C1613]/50'
                         }`}
                       >
@@ -620,21 +716,21 @@ export default function ProductDetailView() {
             {/* Size Selector */}
             {product.sizes?.length > 0 && (
               <div>
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
-                  <p className="font-serif font-bold text-xs uppercase tracking-wider text-[#1C1613]">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                  <p className="font-serif font-bold text-[11px] uppercase tracking-wider text-[#1C1613]">
                     Select Size
                   </p>
                   <button
                     type="button"
                     onClick={() => setSizeGuideOpen(true)}
-                    className="text-[10px] sm:text-[11px] font-bold text-[#C5A880] hover:text-[#1C1613] transition-colors flex items-center gap-1 bg-white border border-[#E9E2D2] px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-full active:scale-95 shadow-sm shrink-0 cursor-pointer"
+                    className="text-[10px] sm:text-[11px] font-bold text-[#C5A880] hover:text-[#1C1613] transition-colors flex items-center gap-1 bg-white border border-[#E9E2D2] px-2.5 py-1 rounded-full active:scale-95 shadow-2xs shrink-0 cursor-pointer"
                   >
-                    <Ruler size={12} className="text-[#C5A880]" />
+                    <Ruler size={11} className="text-[#C5A880]" />
                     <span>Size Guide & Chart</span>
                   </button>
                 </div>
 
-                <div className="flex flex-wrap gap-2 sm:gap-2.5">
+                <div className="flex flex-wrap gap-2">
                   {product.sizes.map((size) => {
                     const isSelected = selectedSize === size;
                     return (
@@ -645,9 +741,9 @@ export default function ProductDetailView() {
                           setSelectedSize(size);
                           setSizeError(false);
                         }}
-                        className={`min-w-[46px] sm:min-w-[52px] h-10 sm:h-12 px-3 sm:px-4 rounded-xl font-black text-xs uppercase transition-all duration-200 border cursor-pointer ${
+                        className={`min-w-[42px] sm:min-w-[46px] h-9 sm:h-10 px-2.5 sm:px-3 rounded-lg font-black text-xs uppercase transition-all duration-150 border cursor-pointer ${
                           isSelected
-                            ? 'border-[#1C1613] bg-[#1C1613] text-white shadow-md scale-105'
+                            ? 'border-[#1C1613] bg-[#1C1613] text-white shadow-xs scale-105'
                             : 'border-[#E9E2D2] bg-white text-[#1C1613] hover:border-[#1C1613]/50'
                         }`}
                       >
@@ -663,7 +759,7 @@ export default function ProductDetailView() {
                       initial={{ opacity: 0, y: -4 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
-                      className="text-xs text-red-500 mt-2 font-bold flex items-center gap-1"
+                      className="text-xs text-red-500 mt-1.5 font-bold flex items-center gap-1"
                     >
                       ⚠️ Please select a size to proceed
                     </motion.p>
@@ -671,23 +767,23 @@ export default function ProductDetailView() {
                 </AnimatePresence>
 
                 {/* WhatsApp Size Assistance Guide Banner */}
-                <div className="mt-3.5 p-3 rounded-2xl bg-[#25D366]/10 border border-[#25D366]/30 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 shadow-sm w-full max-w-full min-w-0 overflow-hidden">
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <div className="w-8 h-8 rounded-full bg-[#25D366] text-white flex items-center justify-center shrink-0 shadow-md">
-                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                <div className="mt-2.5 p-2.5 rounded-xl bg-[#25D366]/10 border border-[#25D366]/30 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 shadow-2xs w-full max-w-full min-w-0 overflow-hidden">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className="w-7 h-7 rounded-full bg-[#25D366] text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
                         <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-1.151 4.204 4.294-1.127z"/>
                       </svg>
                     </div>
                     <div className="text-xs min-w-0 flex-1">
                       <p className="font-bold text-[#1C1613] leading-tight truncate">সাইজ বুঝতে সমস্যা হচ্ছে?</p>
-                      <p className="text-[11px] text-[#7C6E65] truncate">আমাদের সাথে হোয়াটসঅ্যাপে কথা বলুন</p>
+                      <p className="text-[10px] text-[#7C6E65] truncate">আমাদের সাথে হোয়াটসঅ্যাপে কথা বলুন</p>
                     </div>
                   </div>
                   <a
                     href={`https://wa.me/${whatsappPhone}?text=${encodeURIComponent(`হ্যালো PutiMach! আমি "${product.name}" এর সঠিক সাইজ নির্বাচনে সাহায্য চাচ্ছি।`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="shrink-0 bg-[#25D366] hover:bg-[#20ba5a] text-white text-[11px] sm:text-xs font-bold px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl shadow-sm hover:shadow transition-all flex items-center justify-center gap-1 active:scale-95 text-center"
+                    className="shrink-0 bg-[#25D366] hover:bg-[#20ba5a] text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-xs transition-all flex items-center justify-center gap-1 active:scale-95 text-center"
                   >
                     <span>WhatsApp Help</span>
                   </a>
@@ -696,12 +792,12 @@ export default function ProductDetailView() {
             )}
 
             {/* Desktop Action Buttons */}
-            <div className="hidden lg:flex gap-3 pt-2">
+            <div className="hidden lg:flex gap-2.5 pt-1">
               <button
                 type="button"
                 disabled={!inStock}
                 onClick={handleAddToCart}
-                className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 border-2 cursor-pointer ${
+                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all duration-200 border-2 cursor-pointer ${
                   !inStock
                     ? 'border-gray-200 text-gray-400 bg-gray-100 cursor-not-allowed'
                     : added
@@ -713,11 +809,11 @@ export default function ProductDetailView() {
                   'Sold Out'
                 ) : added ? (
                   <>
-                    <Check size={16} /> Added To Cart
+                    <Check size={15} /> Added To Cart
                   </>
                 ) : (
                   <>
-                    <ShoppingBag size={16} /> Add To Cart
+                    <ShoppingBag size={15} /> Add To Cart
                   </>
                 )}
               </button>
@@ -726,27 +822,25 @@ export default function ProductDetailView() {
                 type="button"
                 disabled={!inStock}
                 onClick={handleBuyNow}
-                className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 shadow-md cursor-pointer ${
+                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all duration-200 shadow-xs cursor-pointer ${
                   !inStock
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     : 'bg-[#FF5533] text-white hover:bg-[#e04422]'
                 }`}
               >
-                <Zap size={16} /> Buy Now
+                <Zap size={15} /> Buy Now
               </button>
             </div>
 
-
-
             {/* Product Accordions */}
-            <div className="space-y-3 pt-2">
-              <div className="rounded-2xl border border-[#E9E2D2] bg-white overflow-hidden">
+            <div className="space-y-2.5 pt-1">
+              <div className="rounded-xl border border-[#E9E2D2] bg-white overflow-hidden">
                 <button
                   onClick={() => setDescOpen(!descOpen)}
-                  className="w-full flex items-center justify-between px-5 py-4 font-serif font-bold text-xs uppercase tracking-wider text-[#1C1613]"
+                  className="w-full flex items-center justify-between px-4 py-3 font-serif font-bold text-xs uppercase tracking-wider text-[#1C1613]"
                 >
                   Product Description
-                  <ChevronDown size={16} className={`transition-transform duration-300 ${descOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown size={15} className={`transition-transform duration-200 ${descOpen ? 'rotate-180' : ''}`} />
                 </button>
                 <AnimatePresence>
                   {descOpen && (
@@ -756,7 +850,7 @@ export default function ProductDetailView() {
                       exit={{ height: 0 }}
                       className="overflow-hidden"
                     >
-                      <p className="px-5 pb-5 text-xs text-gray-600 leading-relaxed whitespace-pre-line border-t border-[#E9E2D2]/50 pt-3">
+                      <p className="px-4 pb-4 text-xs text-gray-600 leading-relaxed whitespace-pre-line border-t border-[#E9E2D2]/50 pt-2.5">
                         {longDesc}
                       </p>
                     </motion.div>
@@ -764,13 +858,13 @@ export default function ProductDetailView() {
                 </AnimatePresence>
               </div>
 
-              <div className="rounded-2xl border border-[#E9E2D2] bg-white overflow-hidden">
+              <div className="rounded-xl border border-[#E9E2D2] bg-white overflow-hidden">
                 <button
                   onClick={() => setFeatOpen(!featOpen)}
-                  className="w-full flex items-center justify-between px-5 py-4 font-serif font-bold text-xs uppercase tracking-wider text-[#1C1613]"
+                  className="w-full flex items-center justify-between px-4 py-3 font-serif font-bold text-xs uppercase tracking-wider text-[#1C1613]"
                 >
                   Features & Details
-                  <ChevronDown size={16} className={`transition-transform duration-300 ${featOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown size={15} className={`transition-transform duration-200 ${featOpen ? 'rotate-180' : ''}`} />
                 </button>
                 <AnimatePresence>
                   {featOpen && (
@@ -780,10 +874,10 @@ export default function ProductDetailView() {
                       exit={{ height: 0 }}
                       className="overflow-hidden"
                     >
-                      <ul className="px-5 pb-5 space-y-2 border-t border-[#E9E2D2]/50 pt-3">
+                      <ul className="px-4 pb-4 space-y-1.5 border-t border-[#E9E2D2]/50 pt-2.5">
                         {featuresList.map((f) => (
                           <li key={f} className="flex items-center gap-2 text-xs text-gray-600">
-                            <Check size={14} className="text-[#C5A880] flex-shrink-0" />
+                            <Check size={13} className="text-[#C5A880] flex-shrink-0" />
                             {f}
                           </li>
                         ))}
