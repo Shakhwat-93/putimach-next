@@ -14,6 +14,7 @@ import { Badge } from '../components/ui/badge';
 // Other components
 import { Modal } from '../components/Modal';
 import { OrderRow } from '../components/OrderRow';
+import { OrderStatusDropdown } from '../components/OrderStatusDropdown';
 import { OrderEditModal } from '../components/OrderEditModal';
 import { OrderDetailsModal } from '../components/OrderDetailsModal';
 import { DateRangePicker } from '../components/DateRangePicker';
@@ -552,47 +553,17 @@ export const ModeratorPanel = () => {
 
                 <div className="flex items-center gap-2 ml-auto">
                   {/* Status dropdown */}
-                  <div className="relative">
+                  <div className="relative" onClick={(e) => e.stopPropagation()}>
                     {isSaving
                       ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><Loader2 size={12} className="animate-spin" /> Saving...</span>
                       : (
-                        <div>
-                          <button 
-                            className={cn(
-                              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border bg-secondary/50 text-xs font-medium transition-colors hover:bg-secondary",
-                              openStatusDropdownId === order.id && "bg-secondary border-primary/30"
-                            )}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenStatusDropdownId(openStatusDropdownId === order.id ? null : order.id);
-                            }}
-                          >
-                            <span className={cn("w-1.5 h-1.5 rounded-full", getStatusDot(order.status))} />
-                            <span className="truncate max-w-[80px]">{order.status}</span>
-                            <ChevronDown size={12} className={cn("text-muted-foreground transition-transform", openStatusDropdownId === order.id && "rotate-180")} />
-                          </button>
-
-                          {openStatusDropdownId === order.id && (
-                            <div className="absolute bottom-full right-0 mb-1 w-48 bg-card border border-border rounded-xl shadow-xl z-50 p-1 max-h-[250px] overflow-y-auto">
-                              {ORDER_STATUSES.map(s => (
-                                <button
-                                  key={s}
-                                  className={cn(
-                                    "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-secondary transition-colors text-left",
-                                    order.status === s && "bg-primary/10 text-primary font-medium"
-                                  )}
-                                  onClick={() => {
-                                    handleMobileStatusChange(order.id, s);
-                                    setOpenStatusDropdownId(null);
-                                  }}
-                                >
-                                  <span className={cn("w-2 h-2 rounded-full", getStatusDot(s))} />
-                                  {s}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                        <OrderStatusDropdown
+                          currentStatus={order.status}
+                          orderId={order.id}
+                          onStatusChange={handleMobileStatusChange}
+                          triggerBadge={false}
+                          size="sm"
+                        />
                       )
                     }
                   </div>

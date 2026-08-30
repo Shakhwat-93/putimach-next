@@ -7,6 +7,7 @@ import { FileText, AlertTriangle, Phone, Copy, MessageCircle, Edit2, Printer, Tr
 import CurrencyIcon from './CurrencyIcon';
 import { ResponseTimer } from './ResponseTimer';
 import { StatusBadge } from './StatusBadge';
+import { OrderStatusDropdown } from './OrderStatusDropdown';
 import './OrderRow.css';
 
 /**
@@ -65,24 +66,6 @@ export const OrderRow = ({ order, onDetails, onStatusChange, onEdit, onPrint, on
     if (minsElapsed > 10) return 'rt-row-warning';
     return 'rt-row-ontime';
   })();
-
-  const [showStatusMenu, setShowStatusMenu] = useState(false);
-  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
-  const statusBtnRef = useRef(null);
-
-  const toggleStatusMenu = () => {
-    if (!showStatusMenu && statusBtnRef.current) {
-      const rect = statusBtnRef.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const menuHeight = 280;
-      if (spaceBelow > menuHeight) {
-        setMenuPos({ top: rect.bottom + 4, left: rect.left });
-      } else {
-        setMenuPos({ top: rect.top - menuHeight, left: rect.left });
-      }
-    }
-    setShowStatusMenu(!showStatusMenu);
-  };
 
   const handleCopy = (e, text) => {
     e.stopPropagation();
@@ -217,43 +200,12 @@ export const OrderRow = ({ order, onDetails, onStatusChange, onEdit, onPrint, on
 
       {/* 4. Status */}
       <td className="px-4 py-3.5 whitespace-nowrap align-middle" onClick={(e) => e.stopPropagation()}>
-        <div className="relative inline-block" ref={statusBtnRef}>
-          <button 
-            type="button"
-            className="cursor-pointer hover:opacity-85 transition-opacity"
-            onClick={toggleStatusMenu}
-            title="Click to change status"
-          >
-            <StatusBadge status={order.status} size="sm" />
-          </button>
-          
-          {showStatusMenu && ReactDOM.createPortal(
-            <>
-              <div className="fixed inset-0 z-[99990]" onClick={() => setShowStatusMenu(false)} />
-              <div 
-                className="fixed z-[99999] rounded-xl border border-border bg-card shadow-2xl p-1 min-w-[150px] animate-in fade-in zoom-in-95 duration-150"
-                style={{ 
-                  top: menuPos.top, 
-                  left: menuPos.left,
-                }}
-              >
-                {ORDER_STATUSES.map(status => (
-                  <button 
-                    key={status}
-                    className={`w-full text-left px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center justify-between ${order.status === status ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-secondary'}`}
-                    onClick={() => {
-                      onStatusChange(order.id, status);
-                      setShowStatusMenu(false);
-                    }}
-                  >
-                    {status}
-                  </button>
-                ))}
-              </div>
-            </>,
-            document.body
-          )}
-        </div>
+        <OrderStatusDropdown
+          currentStatus={order.status}
+          orderId={order.id}
+          onStatusChange={onStatusChange}
+          size="sm"
+        />
       </td>
 
       {/* 5. Payment */}

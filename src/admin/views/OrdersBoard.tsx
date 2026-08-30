@@ -21,6 +21,7 @@ import { PremiumSearch } from '../components/PremiumSearch';
 import { Input } from '../components/Input';
 import { DateRangePicker } from '../components/DateRangePicker';
 import { OrderRow } from '../components/OrderRow';
+import { OrderStatusDropdown } from '../components/OrderStatusDropdown';
 import { OrderEditModal } from '../components/OrderEditModal';
 import BulkOrderCreator from '../components/BulkOrderCreator';
 import OrdersSkeleton from '@/components/skeletons/admin/OrdersSkeleton';
@@ -1072,7 +1073,14 @@ export const OrdersBoard = () => {
                   {order.created_at ? new Date(order.created_at).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }) : 'N/A'}
                 </span>
               </div>
-              <StatusBadge status={order.status} size="sm" />
+              <div onClick={(e) => e.stopPropagation()}>
+                <OrderStatusDropdown
+                  currentStatus={order.status}
+                  orderId={order.id}
+                  onStatusChange={updateOrderStatus}
+                  size="sm"
+                />
+              </div>
             </div>
 
             <div className="space-y-2.5">
