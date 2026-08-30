@@ -173,87 +173,95 @@ export const Header = ({ onMenuToggle }) => {
   };
 
   return (
-    <header className="relative z-50 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card/90 backdrop-blur-md px-4">
-      {/* Hamburger — mobile only */}
-      <button
-        onClick={onMenuToggle}
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors md:hidden"
-        aria-label="Toggle menu"
-      >
-        <Menu size={18} />
-      </button>
+    <header className="relative z-40 flex h-13 shrink-0 items-center justify-between gap-2.5 sm:gap-4 border-b border-border/50 bg-card/80 backdrop-blur-xl px-3.5 sm:px-6">
+      <div className="flex items-center gap-2.5 flex-1 min-w-0">
+        {/* Hamburger — mobile only */}
+        <button
+          onClick={onMenuToggle}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors md:hidden active:scale-95 cursor-pointer"
+          aria-label="Toggle menu"
+        >
+          <Menu size={17} />
+        </button>
 
-      {/* Search */}
-      <div ref={searchRef} className="relative flex-1 max-w-sm">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-        <input
-          type="text"
-          placeholder="Search... (Ctrl+K)"
-          value={searchQuery}
-          onChange={e => { setSearchQuery(e.target.value); setIsSearchDropdownOpen(true); }}
-          onFocus={() => setIsSearchDropdownOpen(true)}
-          className="h-9 w-full rounded-xl border border-input bg-background/60 pl-9 pr-4 text-sm font-medium text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-        />
-        {isSearching && <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground" />}
+        {/* Search */}
+        <div ref={searchRef} className="relative flex-1 max-w-[200px] xs:max-w-xs sm:max-w-sm">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search... (Ctrl+K)"
+            value={searchQuery}
+            onChange={e => { setSearchQuery(e.target.value); setIsSearchDropdownOpen(true); }}
+            onFocus={() => setIsSearchDropdownOpen(true)}
+            className="h-8.5 w-full rounded-xl border border-border/60 bg-muted/30 hover:bg-muted/50 focus:bg-background pl-8.5 pr-8 text-xs font-medium text-foreground placeholder:text-muted-foreground/50 focus:border-border focus:outline-none focus:ring-1 focus:ring-foreground/10 transition-all"
+          />
+          {isSearching ? (
+            <Loader2 size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground/60" />
+          ) : (
+            <kbd className="hidden sm:inline-flex absolute right-2 top-1/2 -translate-y-1/2 items-center px-1.5 py-0.5 text-[9px] font-mono text-muted-foreground/50 bg-background/60 border border-border/50 rounded-md">
+              ⌘K
+            </kbd>
+          )}
 
-        {/* Search dropdown */}
-        {isSearchDropdownOpen && searchQuery.trim() && (
-          <div className="absolute top-full left-0 mt-2 w-full min-w-[260px] sm:min-w-[320px] max-w-[calc(100vw-24px)] rounded-2xl border border-border bg-card shadow-xl z-50 overflow-hidden animate-slide-up">
-            {searchResults.orders.length > 0 && (
-              <div>
-                <div className="flex items-center gap-1.5 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground border-b border-border/50">
-                  <Package size={11} /> Orders
-                </div>
-                {searchResults.orders.map(order => (
-                  <button key={order.id} onClick={() => navigateToOrder(order)}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 hover:bg-secondary transition-colors text-left">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <Package size={14} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-foreground truncate">
-                        {order.customer_name} <span className="text-muted-foreground font-normal">#{order.id}</span>
+          {/* Search dropdown */}
+          {isSearchDropdownOpen && searchQuery.trim() && (
+            <div className="absolute top-full left-0 mt-2 w-full min-w-[260px] sm:min-w-[320px] max-w-[calc(100vw-24px)] rounded-2xl border border-border bg-card shadow-xl z-50 overflow-hidden animate-slide-up">
+              {searchResults.orders.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-1.5 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground border-b border-border/50">
+                    <Package size={11} /> Orders
+                  </div>
+                  {searchResults.orders.map(order => (
+                    <button key={order.id} onClick={() => navigateToOrder(order)}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 hover:bg-secondary transition-colors text-left">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <Package size={14} />
                       </div>
-                      <div className="text-xs text-muted-foreground truncate">{order.product_name}</div>
-                    </div>
-                    <ChevronRight size={13} className="text-muted-foreground shrink-0" />
-                  </button>
-                ))}
-              </div>
-            )}
-            {searchResults.users.length > 0 && (
-              <div>
-                <div className="flex items-center gap-1.5 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground border-b border-border/50">
-                  <Users size={11} /> Staff
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-foreground truncate">
+                          {order.customer_name} <span className="text-muted-foreground font-normal">#{order.id}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">{order.product_name}</div>
+                      </div>
+                      <ChevronRight size={13} className="text-muted-foreground shrink-0" />
+                    </button>
+                  ))}
                 </div>
-                {searchResults.users.map(u => (
-                  <button key={u.id} onClick={() => navigateToUser(u)}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 hover:bg-secondary transition-colors text-left">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-secondary text-muted-foreground">
-                      <UserIcon size={14} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-foreground">{u.name}</div>
-                      <div className="text-xs text-muted-foreground truncate">{u.email}</div>
-                    </div>
-                  </button>
-                ))}
+              )}
+              {searchResults.users.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-1.5 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground border-b border-border/50">
+                    <Users size={11} /> Staff
+                  </div>
+                  {searchResults.users.map(u => (
+                    <button key={u.id} onClick={() => navigateToUser(u)}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 hover:bg-secondary transition-colors text-left">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-secondary text-muted-foreground">
+                        <UserIcon size={14} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-foreground">{u.name}</div>
+                        <div className="text-xs text-muted-foreground truncate">{u.email}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {!isSearching && !searchResults.orders.length && !searchResults.users.length && (
+                <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
+                  <Command size={22} strokeWidth={1.5} />
+                  <p className="text-xs font-semibold">No results for "{searchQuery}"</p>
+                </div>
+              )}
+              <div className="border-t border-border/50 px-4 py-2">
+                <span className="text-[10px] text-muted-foreground">Press <kbd className="rounded bg-secondary px-1 py-0.5 font-mono text-[10px]">Esc</kbd> to close</span>
               </div>
-            )}
-            {!isSearching && !searchResults.orders.length && !searchResults.users.length && (
-              <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
-                <Command size={22} strokeWidth={1.5} />
-                <p className="text-xs font-semibold">No results for "{searchQuery}"</p>
-              </div>
-            )}
-            <div className="border-t border-border/50 px-4 py-2">
-              <span className="text-[10px] text-muted-foreground">Press <kbd className="rounded bg-secondary px-1 py-0.5 font-mono text-[10px]">Esc</kbd> to close</span>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      <div className="flex items-center gap-2 ml-auto">
+      <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
         <LiveVisitorCounter compact />
         <div className={isOverviewPage ? 'block' : 'hidden md:block'}>
           <PresenceStack />
@@ -328,13 +336,12 @@ export const Header = ({ onMenuToggle }) => {
       <div ref={notifRef} className="relative">
         <button
           onClick={() => setIsNotifOpen(!isNotifOpen)}
-          className="relative flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+          className="relative flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors active:scale-95 cursor-pointer"
+          aria-label="Notifications"
         >
-          <Bell size={17} />
+          <Bell size={16} />
           {unreadCount > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[9px] font-black text-primary-foreground">
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </span>
+            <span className="absolute top-1 right-1 flex h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-card" />
           )}
         </button>
 
@@ -424,10 +431,10 @@ export const Header = ({ onMenuToggle }) => {
       {/* User dropdown */}
       <div ref={dropdownRef} className="relative">
         <button onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border-2 border-border bg-secondary text-xs font-black text-foreground transition-all hover:border-primary hover:shadow-md">
+          className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-border/70 bg-muted/60 hover:bg-muted text-xs font-bold text-foreground transition-all hover:border-border active:scale-95 cursor-pointer">
           {profile?.avatar_url
             ? <img src={profile.avatar_url} alt="Profile" className="h-full w-full object-cover" />
-            : (profile?.name?.substring(0, 2)?.toUpperCase() || 'U')
+            : (profile?.name?.substring(0, 2)?.toUpperCase() || 'RA')
           }
         </button>
 

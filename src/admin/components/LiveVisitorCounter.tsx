@@ -47,15 +47,15 @@ export function LiveVisitorCounter({ compact = false }: { compact?: boolean }) {
         <button
           type="button"
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-mono text-xs font-semibold hover:bg-emerald-500/20 transition-all cursor-pointer shadow-sm"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/8 hover:bg-emerald-500/15 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-mono text-xs font-medium transition-all cursor-pointer select-none active:scale-95"
           title="Click to view detailed live visitor analytics"
         >
-          <span className="relative flex h-2 w-2">
+          <span className="relative flex h-1.5 w-1.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
           </span>
-          <span className="font-bold">{visitorCount}</span>
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Live</span>
+          <span className="font-bold text-xs">{visitorCount}</span>
+          <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-sans font-medium">Live</span>
         </button>
 
         {/* Detailed Modal */}
