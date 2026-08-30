@@ -214,57 +214,6 @@ function Recommended({ products, settings }) {
   );
 }
 
-/* ─── Brand Story ────────────────────────────────────────────────────── */
-function BrandStory({ settings }) {
-  const img1 = settings.brandStoryImage || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80';
-
-  return (
-    <section className="relative overflow-hidden py-16 bg-[#F5F0E6] border-y border-[#E9E2D2]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          <Reveal>
-            <div className="relative">
-              <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-xl border border-[#E9E2D2]">
-                <img
-                  src={img1}
-                  alt="Our Heritage"
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-              </div>
-            </div>
-          </Reveal>
-
-          <Reveal delay={0.2}>
-            <div className="space-y-6">
-              <p className="text-xs font-bold text-[#C5A880] uppercase tracking-[0.25em] font-serif">
-                {settings.brandStoryLabel || 'OUR HERITAGE & STORIES'}
-              </p>
-              <h2 className="text-2xl sm:text-3xl font-serif text-[#1C1613] leading-tight uppercase tracking-wide">
-                {settings.brandStoryTitle || 'Woven in Nostalgia,\nTailored for Today.'}
-              </h2>
-              <p className="text-sm text-[#1C1613]/70 font-sans leading-relaxed">
-                {settings.brandStoryText1 || 'PutiMach was born out of frustration — the frustration of losing our handloom heritage, and the rush of fast fashion that ignores stories and craft.'}
-              </p>
-              <p className="text-sm text-[#1C1613]/70 font-sans leading-relaxed">
-                {settings.brandStoryText2 || 'Every weave carries the legacy of master weavers of Sonargaon and Tangail. Timeless patterns, handcrafted detail, made to age elegantly.'}
-              </p>
-              <div className="grid grid-cols-3 gap-6 pt-4 border-t border-[#E9E2D2]">
-                {(settings.brandStoryStats || defaultHome.brandStoryStats).map((st, i) => (
-                  <div key={i}>
-                    <p className="text-xl font-serif font-bold text-[#1C1613]">{st.val}</p>
-                    <p className="text-[10px] text-[#C5A880] uppercase tracking-wider font-sans font-medium">{st.label}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Reveal>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 /* ─── New Arrivals ───────────────────────────────────────────────────── */
 function NewArrivals({ products, settings }) {
   const latest = products.slice(0, 8);
@@ -441,7 +390,6 @@ export default function Home({ initialSettings = null, initialProducts = [], ini
       {products.length > 0 && (
         <>
           <Recommended products={products} settings={settings} />
-          <BrandStory settings={settings} />
           <NewArrivals products={products} settings={settings} />
         </>
       )}
