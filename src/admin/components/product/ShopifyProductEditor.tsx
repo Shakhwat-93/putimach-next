@@ -5,7 +5,8 @@ import {
   Save, ArrowLeft, Plus, Trash2, Eye, Sparkles, Copy, Check,
   Layers, Package, Globe, Tag, ChevronDown, ChevronRight, Sliders,
   HelpCircle, AlertTriangle, Loader2, CheckCircle2, RotateCcw,
-  Store, Truck, ShieldCheck, Video, ExternalLink, Palette, Ruler, Info
+  Store, Truck, ShieldCheck, Video, ExternalLink, Palette, Ruler, Info,
+  UploadCloud, Image as ImageIcon
 } from 'lucide-react';
 import { RichTextEditor } from './RichTextEditor';
 import { ColorGalleryManager } from './ColorGalleryManager';
@@ -15,6 +16,7 @@ import { Button } from '../Button';
 import { Card } from '../Card';
 import { Switch } from '../ui/switch';
 import { cleanImageUrl, extractProductImages } from '@/lib/productMedia';
+import { uploadImage } from '../../lib/uploadHelper';
 import { cn } from '../../lib/utils';
 import Swal from 'sweetalert2';
 
@@ -96,6 +98,8 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
   const [customSizeInput, setCustomSizeInput] = useState('');
   const [sizeGuide, setSizeGuide] = useState(defaultSizeGuide);
   const [sizeChartImageUrl, setSizeChartImageUrl] = useState('');
+  const [isUploadingSizeChart, setIsUploadingSizeChart] = useState(false);
+  const sizeChartFileInputRef = useRef<HTMLInputElement | null>(null);
 
   // 6. Description & Story
   const [description, setDescription] = useState('');
@@ -242,6 +246,36 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
     setCustomSizeInput('');
   };
 
+  const handleSizeChartUpload = async (file: File) => {
+    if (!file) return;
+    setIsUploadingSizeChart(true);
+    try {
+      const url = await uploadImage(file);
+      if (url) {
+        const clean = cleanImageUrl(url);
+        setSizeChartImageUrl(clean || url);
+        setSizeGuide(prev => ({ ...(prev || defaultSizeGuide), image_url: clean || url }));
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: 'Size chart image uploaded!',
+          showConfirmButton: false,
+          timer: 1800,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to upload size chart image:', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Upload Failed',
+        text: err?.message || 'Could not upload size chart image.'
+      });
+    } finally {
+      setIsUploadingSizeChart(false);
+    }
+  };
+
   const handleQuickAddCatSubmit = async () => {
     const trimmed = newCatName.trim();
     if (!trimmed || !onQuickAddCategory) return;
@@ -354,6 +388,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
         ...sizeGuide,
         image_url: sizeChartImageUrl || sizeGuide?.image_url || null
       },
+      size_chart_image: sizeChartImageUrl || null,
 
       // Status & Settings
       in_stock: finalStatus === 'active' && (Number(stockQuantity) || 50) > 0,
@@ -655,6 +690,108 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
               >
                 + Add Size
               </button>
+            </div>
+
+            {/* Size Chart Image Upload Section */}
+            <div className="pt-3.5 border-t border-border/70 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs sm:text-sm font-bold text-foreground flex items-center gap-1.5">
+                    <ImageIcon size={14} className="text-brand shrink-0" />
+                    <span>Size Chart / Measurement Guide Image</span>
+                  </h3>
+                  <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5">
+                    Upload a size guide chart or measurement diagram. Shown in the "Size Guide" popup on the storefront.
+                  </p>
+                </div>
+                {sizeChartImageUrl && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSizeChartImageUrl('');
+                      setSizeGuide(prev => ({ ...(prev || defaultSizeGuide), image_url: null }));
+                    }}
+                    className="text-[11px] text-destructive hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <Trash2 size={12} /> Remove
+                  </button>
+                )}
+              </div>
+
+              <input
+                type="file"
+                ref={sizeChartFileInputRef}
+                accept="image/*"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    handleSizeChartUpload(e.target.files[0]);
+                    e.target.value = '';
+                  }
+                }}
+                className="hidden"
+              />
+
+              {sizeChartImageUrl ? (
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 rounded-xl border border-emerald-500/30 bg-emerald-50/10 dark:bg-emerald-950/10">
+                  <div className="relative w-28 h-20 sm:w-36 sm:h-24 rounded-lg overflow-hidden border border-border bg-muted/40 shrink-0">
+                    <img
+                      src={sizeChartImageUrl}
+                      alt="Size chart preview"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
+                      <CheckCircle2 size={14} />
+                      <span>Size Chart Image Attached</span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground truncate max-w-md font-mono">
+                      {sizeChartImageUrl}
+                    </p>
+                    <div className="flex items-center gap-2 pt-0.5">
+                      <button
+                        type="button"
+                        disabled={isUploadingSizeChart}
+                        onClick={() => sizeChartFileInputRef.current?.click()}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-background border border-border hover:bg-muted text-foreground transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        {isUploadingSizeChart ? <Loader2 size={12} className="animate-spin" /> : <UploadCloud size={12} />}
+                        <span>Replace Image</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => window.open(sizeChartImageUrl, '_blank')}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                      >
+                        <ExternalLink size={12} />
+                        <span>View Full</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  onClick={() => sizeChartFileInputRef.current?.click()}
+                  className="py-5 px-3 text-center rounded-xl border-2 border-dashed border-border/80 hover:border-brand/60 bg-muted/20 hover:bg-brand/5 transition-all cursor-pointer group"
+                >
+                  {isUploadingSizeChart ? (
+                    <div className="flex flex-col items-center justify-center gap-1.5 py-2">
+                      <Loader2 className="w-6 h-6 text-brand animate-spin" />
+                      <p className="text-xs font-bold text-foreground">Uploading Size Chart...</p>
+                    </div>
+                  ) : (
+                    <>
+                      <UploadCloud className="w-6 h-6 text-muted-foreground/60 mx-auto mb-1.5 group-hover:scale-110 transition-transform" />
+                      <p className="text-xs font-bold text-foreground">
+                        Click to upload Size Chart Image
+                      </p>
+                      <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5">
+                        Supports PNG, JPG, WEBP measurement tables and diagrams
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
