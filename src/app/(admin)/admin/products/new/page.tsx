@@ -56,13 +56,53 @@ export default function AddProductPage() {
           }]);
       } catch (_) {}
 
-      // Sync inventory stock
-      if (payload.inventory_id && payload.variants?.length > 0) {
-        const totalStock = payload.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+      // Sync/connect inventory with product image and details
+      const primaryImg = payload.image || payload.images?.[0] || Object.values(payload.color_images || {})[0] || null;
+      const totalStock = payload.variants?.length > 0
+        ? payload.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
+        : (Number(payload.stock) || 50);
+
+      if (payload.inventory_id) {
         await supabase
           .from('inventory')
-          .update({ current_stock: totalStock })
+          .update({
+            current_stock: totalStock,
+            image: primaryImg,
+            image_url: primaryImg,
+            product_id: targetId,
+            selling_price: Number(payload.price) || 0,
+            unit_price: Number(payload.price) || 0,
+            variants: payload.variants || []
+          })
           .eq('id', payload.inventory_id);
+      } else {
+        // Auto-create matching inventory record if one doesn't exist
+        try {
+          const invId = (typeof crypto !== 'undefined' && crypto.randomUUID) 
+            ? crypto.randomUUID() 
+            : 'inv-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
+          await supabase
+            .from('inventory')
+            .insert([{
+              id: invId,
+              name: payload.name,
+              sku: payload.sku || `SKU-${targetId.slice(0, 4).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`,
+              category: payload.category || 'general',
+              current_stock: totalStock,
+              min_stock_level: 5,
+              selling_price: Number(payload.price) || 0,
+              unit_price: Number(payload.price) || 0,
+              making_cost: (Number(payload.price) || 0) * 0.4,
+              image: primaryImg,
+              image_url: primaryImg,
+              product_id: targetId,
+              variants: payload.variants || [],
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }]);
+        } catch (invErr) {
+          console.warn('Auto inventory creation notice:', invErr);
+        }
       }
 
       await Swal.fire({

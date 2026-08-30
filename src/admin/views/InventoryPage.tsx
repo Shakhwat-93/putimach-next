@@ -1,6 +1,6 @@
 'use client';
 // @ts-nocheck
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import './InventoryPage.css';
 import { useOrders } from '../context/OrderContext';
 import { Modal } from '../components/Modal';
@@ -8,13 +8,16 @@ import CurrencyIcon from '../components/CurrencyIcon';
 import {
   Search, Plus, Package, AlertTriangle, ArrowUpRight, ArrowDownRight,
   Edit2, Trash2, Tag, Bot, Loader2, CheckCircle2, CircleAlert, ChevronDown, Sparkles,
-  TrendingUp, TrendingDown, DollarSign, BarChart2
+  TrendingUp, TrendingDown, DollarSign, BarChart2, UploadCloud, Image as ImageIcon,
+  ExternalLink, X, Check, RefreshCw
 } from 'lucide-react';
 import { PremiumSearch } from '../components/PremiumSearch';
 import { usePersistentState } from '../utils/persistentState';
 import { getSerialTrackedProducts } from '../utils/productCatalog';
 import { supabase } from '../lib/supabase';
 import { useConfirmDialog } from '../hooks/useConfirmDialog';
+import { uploadImage } from '../lib/uploadHelper';
+import { cleanImageUrl } from '@/lib/productMedia';
 
 // Tailwind / shadcn utils and components
 import { cn } from '../lib/utils';
@@ -45,6 +48,21 @@ export const InventoryPage = () => {
   const [categoryFilter, setCategoryFilter] = usePersistentState('panel:inventory:category', 'All');
 
   const [dbCategories, setDbCategories] = useState([]);
+  const [storefrontProducts, setStorefrontProducts] = useState([]);
+
+  // Fetch storefront products to auto-resolve images
+  const fetchStorefrontProducts = useCallback(async () => {
+    try {
+      const { data } = await supabase.from('products').select('id, data');
+      if (data) setStorefrontProducts(data);
+    } catch (err) {
+      console.error('Error fetching products for inventory:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStorefrontProducts();
+  }, [fetchStorefrontProducts]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -89,13 +107,20 @@ export const InventoryPage = () => {
   const [toyBoxInitialStock, setToyBoxInitialStock] = useState(0);
   const [toyBoxProductName, setToyBoxProductName] = useState('');
 
+  const [isUploadingMainImage, setIsUploadingMainImage] = useState(false);
+  const [uploadingColorKey, setUploadingColorKey] = useState<string | null>(null);
+  const mainImageFileInputRef = useRef<HTMLInputElement | null>(null);
+  const colorFileInputRef = useRef<HTMLInputElement | null>(null);
+  const activeColorForUploadRef = useRef<string | null>(null);
+
   const [sizesInput, setSizesInput] = useState('S, M, L, XL');
   const [colorsInput, setColorsInput] = useState('Black, White, Grey');
 
   const [formData, setFormData] = useState({
     name: '', sku: '', category: 'Other', current_stock: 0, min_stock_level: 5,
     unit_price: 0, selling_price: 0, making_cost: 0, supports_serial_tracking: false,
-    variants: []
+    image: '', image_url: '', product_id: '',
+    images: [], color_images: {}, variants: []
   });
 
   const handleVariantChange = (index, field, value) => {
@@ -168,6 +193,111 @@ export const InventoryPage = () => {
     setFormData({ ...formData, variants: combinations });
   };
 
+  const resolveInventoryImage = useCallback((item, prodsList = storefrontProducts) => {
+    if (!item) return null;
+    if (item.image_url && typeof item.image_url === 'string' && item.image_url.trim()) {
+      return cleanImageUrl(item.image_url.trim());
+    }
+    if (item.image && typeof item.image === 'string' && item.image.trim()) {
+      return cleanImageUrl(item.image.trim());
+    }
+
+    // Look for matching storefront product
+    const itemName = (item.name || '').trim().toLowerCase();
+    const itemSku = (item.sku || '').trim().toLowerCase();
+    const itemSlug = itemName.replace(/[\s\W-]+/g, '-');
+
+    const matchedProduct = (prodsList || []).find(p => {
+      const pData = p.data || p;
+      const pId = String(p.id || pData.id || pData.slug || '').toLowerCase();
+      const pName = String(pData.name || '').trim().toLowerCase();
+      const pSku = String(pData.sku || '').trim().toLowerCase();
+      const pInvId = String(pData.inventory_id || '');
+
+      return (
+        (item.product_id && (pId === String(item.product_id).toLowerCase() || p.id === item.product_id)) ||
+        (pInvId && pInvId === String(item.id)) ||
+        (pId && itemSlug && (pId === itemSlug || pId.includes(itemSlug) || itemSlug.includes(pId))) ||
+        (pName && itemName && (pName === itemName || pName.includes(itemName) || itemName.includes(pName))) ||
+        (pSku && itemSku && pSku === itemSku)
+      );
+    });
+
+    if (matchedProduct) {
+      const pData = matchedProduct.data || matchedProduct;
+      if (pData.image && typeof pData.image === 'string' && pData.image.trim()) {
+        return cleanImageUrl(pData.image.trim());
+      }
+      if (Array.isArray(pData.images) && pData.images.length > 0 && pData.images[0]) {
+        return cleanImageUrl(pData.images[0]);
+      }
+      if (pData.color_images && typeof pData.color_images === 'object') {
+        const firstVal = Object.values(pData.color_images)[0];
+        if (typeof firstVal === 'string' && firstVal.trim()) return cleanImageUrl(firstVal.trim());
+        if (Array.isArray(firstVal) && firstVal[0]) return cleanImageUrl(firstVal[0]);
+      }
+      if (pData.color_galleries && typeof pData.color_galleries === 'object') {
+        const firstGal = Object.values(pData.color_galleries)[0];
+        if (Array.isArray(firstGal) && firstGal[0]) return cleanImageUrl(firstGal[0]);
+      }
+    }
+    return null;
+  }, [storefrontProducts]);
+
+  const handleMainImageUpload = async (file) => {
+    if (!file) return;
+    setIsUploadingMainImage(true);
+    try {
+      const url = await uploadImage(file);
+      if (url) {
+        const cleaned = cleanImageUrl(url);
+        setFormData(prev => ({
+          ...prev,
+          image: cleaned,
+          image_url: cleaned,
+          images: prev.images?.length > 0 ? [cleaned, ...prev.images.filter(img => img !== cleaned)] : [cleaned]
+        }));
+        showSuccess('Product image uploaded successfully!');
+      }
+    } catch (err) {
+      console.error('Failed to upload image:', err);
+      showError('Failed to upload image: ' + (err.message || 'Please try again.'));
+    } finally {
+      setIsUploadingMainImage(false);
+    }
+  };
+
+  const handleColorImageUpload = async (file, color) => {
+    if (!file || !color) return;
+    setUploadingColorKey(color);
+    try {
+      const url = await uploadImage(file);
+      if (url) {
+        const cleaned = cleanImageUrl(url);
+        setFormData(prev => {
+          const updatedColorImages = { ...(prev.color_images || {}), [color]: cleaned };
+          const updatedVariants = (prev.variants || []).map(v => {
+            if (v.color?.toLowerCase() === color.toLowerCase()) {
+              return { ...v, image_url: cleaned };
+            }
+            return v;
+          });
+          return {
+            ...prev,
+            color_images: updatedColorImages,
+            variants: updatedVariants
+          };
+        });
+        showSuccess(`Photo uploaded for ${color}!`);
+      }
+    } catch (err) {
+      console.error(`Failed to upload photo for ${color}:`, err);
+      showError(`Upload failed for ${color}: ` + err.message);
+    } finally {
+      setUploadingColorKey(null);
+    }
+  };
+
   const handleOpenProductModal = (product = null) => {
     if (product) {
       setEditingProduct(product);
@@ -186,6 +316,8 @@ export const InventoryPage = () => {
       setSizesInput(extractedSizes || 'S, M, L, XL');
       setColorsInput(extractedColors || 'Black, Off White, Grey/Ash');
 
+      const resolvedImg = product.image_url || product.image || resolveInventoryImage(product, storefrontProducts) || '';
+
       setFormData({
         name: product.name,
         sku: product.sku || '',
@@ -196,8 +328,10 @@ export const InventoryPage = () => {
         selling_price: Number(product.selling_price) || Number(product.unit_price) || 0,
         making_cost: Number(product.making_cost) || 0,
         supports_serial_tracking: Boolean(product.supports_serial_tracking ?? (product.category === 'TOY BOX')),
-        image: product.image || '',
-        images: Array.isArray(product.images) ? product.images : [],
+        image: resolvedImg,
+        image_url: resolvedImg,
+        product_id: product.product_id || '',
+        images: Array.isArray(product.images) ? product.images : (resolvedImg ? [resolvedImg] : []),
         color_images: product.color_images || {},
         variants: existingVariants
       });
@@ -208,7 +342,8 @@ export const InventoryPage = () => {
       setFormData({
         name: '', sku: '', category: 'Other', current_stock: 0, min_stock_level: 5,
         unit_price: 0, selling_price: 0, making_cost: 0, supports_serial_tracking: false,
-        image: '', images: [], color_images: {}, variants: []
+        image: '', image_url: '', product_id: '',
+        images: [], color_images: {}, variants: []
       });
     }
     setIsProductModalOpen(true);
@@ -219,7 +354,7 @@ export const InventoryPage = () => {
   const handleSaveProduct = async (e) => {
     e.preventDefault();
     if (!formData.name?.trim()) {
-      alert('Product name is required');
+      showError('Product name is required');
       return;
     }
     setIsSavingProduct(true);
@@ -229,21 +364,29 @@ export const InventoryPage = () => {
         ? formData.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
         : Number(formData.current_stock) || 0;
         
+      const finalImg = formData.image_url || formData.image || null;
+
       const payload = {
         ...formData,
         name: formData.name.trim(),
-        current_stock: finalStock
+        current_stock: finalStock,
+        image: finalImg,
+        image_url: finalImg,
+        product_id: formData.product_id || null,
+        variants: formData.variants || []
       };
 
       if (editingProduct) {
         await updateInventoryItem(editingProduct.id, payload);
+        showSuccess('Product updated successfully!');
       } else {
         await addInventoryItem(payload);
+        showSuccess('Product created and added to inventory!');
       }
       setIsProductModalOpen(false);
     } catch (err) {
       console.error('Save product error:', err);
-      alert('Failed to save product: ' + (err.message || 'Please check input data and try again.'));
+      showError('Failed to save product: ' + (err.message || 'Please check input data and try again.'));
     } finally {
       setIsSavingProduct(false);
     }
@@ -531,12 +674,33 @@ export const InventoryPage = () => {
                item.current_stock <= item.min_stock_level ? 'Low Stock' : 'In Stock';
              
              const sellingPrice = Number(item.selling_price) || Number(item.unit_price) || 0;
+             const resolvedImage = resolveInventoryImage(item, storefrontProducts);
 
              return (
-               <div key={item.id} className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow group animate-slide-up flex flex-col">
-                  <div className="aspect-square bg-muted overflow-hidden relative p-4 flex items-center justify-center">
-                     <Package size={48} className="text-muted-foreground/30 group-hover:scale-110 transition-transform duration-300" />
-                     <div className="absolute top-2 right-2">
+               <div key={item.id} className="rounded-2xl border border-border bg-card overflow-hidden shadow-xs hover:shadow-md transition-shadow group animate-slide-up flex flex-col">
+                  {/* Card Product Image */}
+                  <div className="aspect-square bg-muted/40 overflow-hidden relative group/img flex items-center justify-center border-b border-border/50">
+                     {resolvedImage ? (
+                       <img
+                         src={resolvedImage}
+                         alt={item.name}
+                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                         loading="lazy"
+                         onError={(e) => {
+                           e.currentTarget.style.display = 'none';
+                           const fallback = e.currentTarget.parentElement?.querySelector('.inventory-fallback-placeholder');
+                           if (fallback) fallback.classList.remove('hidden');
+                         }}
+                       />
+                     ) : null}
+                     <div className={cn(
+                       "inventory-fallback-placeholder flex-col items-center justify-center text-muted-foreground/40 p-4",
+                       resolvedImage ? "hidden" : "flex"
+                     )}>
+                        <Package size={42} className="group-hover:scale-110 transition-transform duration-300 opacity-60" />
+                        <span className="text-[10px] font-semibold text-muted-foreground/60 mt-1 uppercase tracking-wider">No Image</span>
+                     </div>
+                     <div className="absolute top-2.5 right-2.5 z-10">
                         <StatusBadge status={stockStatus} size="sm" />
                      </div>
                   </div>
@@ -779,23 +943,132 @@ export const InventoryPage = () => {
           {/* Section: Product Media & Color-Wise Photos */}
           <div className="space-y-4 pt-2">
             <h4 className="text-xs font-bold uppercase tracking-wider border-b border-border pb-1.5 text-muted-foreground font-sans flex items-center justify-between">
-              <span>🖼️ Product Media & Color-Wise Photos</span>
-              <span className="text-[10px] normal-case text-primary font-normal">Add general gallery images + color specific photos</span>
+              <span className="flex items-center gap-1.5">
+                <ImageIcon size={14} className="text-primary" /> Product Image & Gallery
+              </span>
+              <span className="text-[10px] normal-case text-muted-foreground font-normal">Primary cover photo + color specific images</span>
             </h4>
 
-            {/* Main Cover Image URL */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">Main Cover Image URL</label>
-              <Input
-                value={formData.image || ''}
-                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                placeholder="https://... main product photo URL"
-                className="h-9 text-xs font-mono"
-              />
+            {/* Hidden file inputs */}
+            <input
+              type="file"
+              ref={mainImageFileInputRef}
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  handleMainImageUpload(e.target.files[0]);
+                  e.target.value = '';
+                }
+              }}
+            />
+            <input
+              type="file"
+              ref={colorFileInputRef}
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0] && activeColorForUploadRef.current) {
+                  handleColorImageUpload(e.target.files[0], activeColorForUploadRef.current);
+                  e.target.value = '';
+                }
+              }}
+            />
+
+            {/* Main Cover Image Uploader & Preview */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+                <span>Primary / Cover Image</span>
+                {(formData.image || formData.image_url) && (
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, image: '', image_url: '' }))}
+                    className="text-[11px] text-destructive hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <Trash2 size={12} /> Remove
+                  </button>
+                )}
+              </label>
+
+              {(formData.image || formData.image_url) ? (
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 rounded-xl border border-emerald-500/30 bg-emerald-50/10 dark:bg-emerald-950/10">
+                  <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden border border-border bg-muted/40 shrink-0">
+                    <img
+                      src={formData.image || formData.image_url}
+                      alt="Primary product"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
+                      <CheckCircle2 size={14} />
+                      <span>Primary Image Attached</span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground truncate max-w-sm font-mono">
+                      {formData.image || formData.image_url}
+                    </p>
+                    <div className="flex items-center gap-2 pt-1">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        disabled={isUploadingMainImage}
+                        onClick={() => mainImageFileInputRef.current?.click()}
+                        className="h-7 text-xs font-bold"
+                      >
+                        {isUploadingMainImage ? <Loader2 size={12} className="animate-spin mr-1" /> : <UploadCloud size={12} className="mr-1" />}
+                        Replace Image
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => window.open(formData.image || formData.image_url, '_blank')}
+                        className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        <ExternalLink size={12} className="mr-1" />
+                        View Full
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  onClick={() => mainImageFileInputRef.current?.click()}
+                  className="py-6 px-4 text-center rounded-xl border-2 border-dashed border-border/80 hover:border-primary/60 bg-muted/20 hover:bg-primary/5 transition-all cursor-pointer group"
+                >
+                  {isUploadingMainImage ? (
+                    <div className="flex flex-col items-center justify-center gap-1.5 py-2">
+                      <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                      <p className="text-xs font-bold text-foreground">Uploading Image to CDN...</p>
+                    </div>
+                  ) : (
+                    <>
+                      <UploadCloud className="w-6 h-6 text-muted-foreground/60 mx-auto mb-1.5 group-hover:scale-110 transition-transform" />
+                      <p className="text-xs font-bold text-foreground">
+                        Click to upload Product Image, or drag and drop
+                      </p>
+                      <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5">
+                        Supports PNG, JPG, WEBP (Auto-optimized to WebP)
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Direct URL input fallback */}
+              <div className="pt-1">
+                <Input
+                  value={formData.image || formData.image_url || ''}
+                  onChange={(e) => setFormData({ ...formData, image: e.target.value, image_url: e.target.value })}
+                  placeholder="Or paste direct image URL (https://...)"
+                  className="h-8 text-xs font-mono text-muted-foreground focus:text-foreground"
+                />
+              </div>
             </div>
 
             {/* Additional Gallery Image URLs */}
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 pt-1">
               <label className="text-xs font-semibold text-foreground">Additional Gallery Images (Comma or Newline separated)</label>
               <textarea
                 rows={2}
@@ -810,12 +1083,12 @@ export const InventoryPage = () => {
             </div>
 
             {/* Color-Specific Photos Mapping */}
-            <div className="p-3.5 rounded-xl bg-primary/5 border border-primary/20 space-y-3">
+            <div className="p-3.5 rounded-xl bg-secondary/30 border border-border space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
                   🎨 Color-Wise Specific Photos
                 </span>
-                <span className="text-[10px] text-muted-foreground">Selecting a color on single product page will show these photos</span>
+                <span className="text-[10px] text-muted-foreground">Photos shown when a specific color is selected</span>
               </div>
 
               {/* Grid of detected colors */}
@@ -838,10 +1111,13 @@ export const InventoryPage = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {uniqueColors.map((color) => {
                       const currentUrl = formData.color_images?.[color] || '';
+                      const isColorUploading = uploadingColorKey === color;
                       return (
                         <div key={color} className="p-2.5 rounded-lg border border-border bg-background flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-md border border-border overflow-hidden bg-secondary/30 shrink-0 flex items-center justify-center">
-                            {currentUrl ? (
+                          <div className="w-12 h-12 rounded-md border border-border overflow-hidden bg-secondary/30 shrink-0 flex items-center justify-center relative">
+                            {isColorUploading ? (
+                              <Loader2 size={16} className="animate-spin text-primary" />
+                            ) : currentUrl ? (
                               <img src={currentUrl} alt={color} className="w-full h-full object-cover" />
                             ) : (
                               <span className="text-[9px] font-bold text-muted-foreground text-center px-1">No Pic</span>
@@ -850,34 +1126,42 @@ export const InventoryPage = () => {
                           <div className="flex-1 min-w-0 space-y-1">
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-bold text-foreground truncate">{color}</span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setFormData(prev => {
-                                    const updatedColorImages = { ...(prev.color_images || {}) };
-                                    delete updatedColorImages[color];
-                                    const updatedVariants = (prev.variants || []).filter(
-                                      v => v.color?.toLowerCase() !== color.toLowerCase()
-                                    );
-                                    return {
-                                      ...prev,
-                                      color_images: updatedColorImages,
-                                      variants: updatedVariants
-                                    };
-                                  });
-                                  setColorsInput(prev =>
-                                    prev
-                                      .split(',')
-                                      .map(c => c.trim())
-                                      .filter(c => c && c.toLowerCase() !== color.toLowerCase())
-                                      .join(', ')
-                                  );
-                                }}
-                                className="text-muted-foreground hover:text-destructive text-[11px] p-0.5 transition-colors cursor-pointer"
-                                title="Remove this color photo"
-                              >
-                                <Trash2 size={13} />
-                              </button>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  disabled={isColorUploading}
+                                  onClick={() => {
+                                    activeColorForUploadRef.current = color;
+                                    colorFileInputRef.current?.click();
+                                  }}
+                                  className="text-[10px] font-bold text-primary hover:underline flex items-center gap-0.5 cursor-pointer disabled:opacity-50"
+                                >
+                                  <UploadCloud size={11} /> Upload
+                                </button>
+                                {currentUrl && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setFormData(prev => {
+                                        const updatedColorImages = { ...(prev.color_images || {}) };
+                                        delete updatedColorImages[color];
+                                        const updatedVariants = (prev.variants || []).filter(
+                                          v => v.color?.toLowerCase() !== color.toLowerCase()
+                                        );
+                                        return {
+                                          ...prev,
+                                          color_images: updatedColorImages,
+                                          variants: updatedVariants
+                                        };
+                                      });
+                                    }}
+                                    className="text-muted-foreground hover:text-destructive text-[11px] p-0.5 transition-colors cursor-pointer"
+                                    title="Remove this color photo"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                )}
+                              </div>
                             </div>
                             <Input
                               className="h-7 text-[11px] px-2 font-mono"

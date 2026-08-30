@@ -2429,7 +2429,7 @@ export const api = {
    * Helper to build clean inventory payload containing only valid database columns
    */
   buildInventoryPayload(itemData) {
-    const allowedKeys = ['name', 'sku', 'category', 'current_stock', 'min_stock_level', 'unit_price', 'making_cost', 'selling_price', 'supports_serial_tracking'];
+    const allowedKeys = ['name', 'sku', 'category', 'current_stock', 'min_stock_level', 'unit_price', 'making_cost', 'selling_price', 'supports_serial_tracking', 'image', 'image_url', 'product_id', 'variants'];
     const payload = {};
     for (const key of allowedKeys) {
       if (Object.prototype.hasOwnProperty.call(itemData, key) && itemData[key] !== undefined) {
@@ -2446,6 +2446,10 @@ export const api = {
     if (payload.supports_serial_tracking !== undefined) {
       payload.supports_serial_tracking = Boolean(payload.supports_serial_tracking);
     }
+    if (payload.image_url !== undefined) payload.image_url = payload.image_url || null;
+    if (payload.image !== undefined) payload.image = payload.image || payload.image_url || null;
+    if (payload.product_id !== undefined) payload.product_id = payload.product_id || null;
+    if (payload.variants !== undefined) payload.variants = Array.isArray(payload.variants) ? payload.variants : [];
     return payload;
   },
 

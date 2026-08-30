@@ -64,13 +64,48 @@ export default function EditProductPage() {
           .eq('id', targetId);
       } catch (_) {}
 
-      // Sync inventory stock
-      if (payload.inventory_id && payload.variants?.length > 0) {
-        const totalStock = payload.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+      // Sync/connect inventory with product image and details
+      const primaryImg = payload.image || payload.images?.[0] || Object.values(payload.color_images || {})[0] || null;
+      const totalStock = payload.variants?.length > 0
+        ? payload.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
+        : (Number(payload.stock) || 50);
+
+      if (payload.inventory_id) {
         await supabase
           .from('inventory')
-          .update({ current_stock: totalStock })
+          .update({
+            current_stock: totalStock,
+            image: primaryImg,
+            image_url: primaryImg,
+            product_id: targetId,
+            selling_price: Number(payload.price) || 0,
+            unit_price: Number(payload.price) || 0,
+            variants: payload.variants || []
+          })
           .eq('id', payload.inventory_id);
+      } else {
+        // Find existing inventory item by product_id or matching name to keep image & stock synchronized
+        const { data: matchedInv } = await supabase
+          .from('inventory')
+          .select('id')
+          .or(`product_id.eq.${targetId},name.ilike.${payload.name}`)
+          .limit(1)
+          .maybeSingle();
+
+        if (matchedInv && matchedInv.id) {
+          await supabase
+            .from('inventory')
+            .update({
+              current_stock: totalStock,
+              image: primaryImg,
+              image_url: primaryImg,
+              product_id: targetId,
+              selling_price: Number(payload.price) || 0,
+              unit_price: Number(payload.price) || 0,
+              variants: payload.variants || []
+            })
+            .eq('id', matchedInv.id);
+        }
       }
 
       await Swal.fire({

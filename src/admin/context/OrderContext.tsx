@@ -436,6 +436,53 @@ export const OrderProvider = ({ children }) => {
     }
   }, [orders, page, fetchOrders]);
 
+  const addInventoryItem = useCallback(async (itemData) => {
+    try {
+      const created = await api.createInventoryItem(itemData);
+      setInventory(prev => [created, ...prev.filter(i => i.id !== created.id)]);
+      scheduleInventoryRefresh();
+      return created;
+    } catch (err) {
+      console.error('Failed to add inventory item:', err);
+      throw err;
+    }
+  }, [scheduleInventoryRefresh]);
+
+  const updateInventoryItem = useCallback(async (id, updates) => {
+    try {
+      const updated = await api.updateInventoryItem(id, updates);
+      setInventory(prev => prev.map(i => i.id === id ? { ...i, ...updated } : i));
+      scheduleInventoryRefresh();
+      return updated;
+    } catch (err) {
+      console.error('Failed to update inventory item:', err);
+      throw err;
+    }
+  }, [scheduleInventoryRefresh]);
+
+  const deleteInventoryItem = useCallback(async (id) => {
+    try {
+      await api.deleteInventoryItem(id);
+      setInventory(prev => prev.filter(i => i.id !== id));
+      scheduleInventoryRefresh();
+    } catch (err) {
+      console.error('Failed to delete inventory item:', err);
+      throw err;
+    }
+  }, [scheduleInventoryRefresh]);
+
+  const adjustStock = useCallback(async (id, quantityChange, options = {}) => {
+    try {
+      const updated = await api.adjustStock(id, quantityChange, options);
+      setInventory(prev => prev.map(i => i.id === id ? { ...i, ...updated } : i));
+      scheduleInventoryRefresh();
+      return updated;
+    } catch (err) {
+      console.error('Failed to adjust stock:', err);
+      throw err;
+    }
+  }, [scheduleInventoryRefresh]);
+
   return (
     <OrderContext.Provider value={{
       orders,
@@ -457,6 +504,10 @@ export const OrderProvider = ({ children }) => {
       fetchStats,
       fetchInventory,
       fetchToyBoxes,
+      addInventoryItem,
+      updateInventoryItem,
+      deleteInventoryItem,
+      adjustStock,
       updateOrderStatus,
       addOrder,
       deleteOrder,

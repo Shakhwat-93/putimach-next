@@ -1028,6 +1028,8 @@ export const StorefrontManagement = () => {
         ? crypto.randomUUID() 
         : 'inv-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
 
+      const primaryImg = prodForm.image || prodForm.images?.[0] || Object.values(prodForm.color_images || {})[0] || null;
+
       const payload = {
         id: generatedId,
         name: prodForm.name,
@@ -1038,6 +1040,9 @@ export const StorefrontManagement = () => {
         selling_price: Number(prodForm.price) || 0,
         unit_price: Number(prodForm.price) || 0,
         making_cost: (Number(prodForm.price) || 0) * 0.4,
+        image: primaryImg,
+        image_url: primaryImg,
+        product_id: editingProduct?.id || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -1261,11 +1266,23 @@ export const StorefrontManagement = () => {
       }
 
       // Sync with inventory table if connected
-      if (payload.inventory_id && payload.variants?.length > 0) {
-        const totalVariantsStock = payload.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+      if (payload.inventory_id) {
+        const totalVariantsStock = payload.variants?.length > 0
+          ? payload.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
+          : (Number(payload.stock) || 50);
+        const resolvedImg = payload.image || payload.images?.[0] || Object.values(payload.color_images || {})[0] || null;
+
         await supabase
           .from('inventory')
-          .update({ current_stock: totalVariantsStock })
+          .update({
+            current_stock: totalVariantsStock,
+            image: resolvedImg,
+            image_url: resolvedImg,
+            product_id: targetId,
+            selling_price: Number(payload.price) || 0,
+            unit_price: Number(payload.price) || 0,
+            variants: payload.variants || []
+          })
           .eq('id', payload.inventory_id);
       }
 
