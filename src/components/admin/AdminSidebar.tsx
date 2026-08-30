@@ -5,13 +5,14 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Package, ShoppingCart, Users,
-  FolderKanban, Settings, LogOut, ArrowLeft, Globe, X, Zap
+  FolderKanban, Settings, LogOut, ArrowLeft, Globe, X, Zap, Image as ImageIcon
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 
 const navItems = [
   { to: '/admin', end: true, icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/admin/products', icon: Package, label: 'Products' },
+  { to: '/admin/media', icon: ImageIcon, label: 'Media' },
   { to: '/admin/categories', icon: FolderKanban, label: 'Categories' },
   { to: '/admin/orders', icon: ShoppingCart, label: 'Orders' },
   { to: '/admin/customers', icon: Users, label: 'Customers' },

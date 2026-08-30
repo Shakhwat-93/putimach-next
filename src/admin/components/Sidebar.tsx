@@ -9,7 +9,7 @@ import {
   LayoutDashboard, ShoppingCart, ShieldCheck, Headphones, Truck, 
   Factory, BarChart3, Settings, LogOut, Users, Package, ClipboardList,
   Megaphone, ShieldAlert, ChevronDown, ChevronRight, X, Sun, Moon,
-  DatabaseBackup, Store, Tag, ShoppingBag, Clock
+  DatabaseBackup, Store, Tag, ShoppingBag, Clock, Image as ImageIcon
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useBranding } from '../hooks/useBranding';
@@ -34,6 +34,7 @@ const menuItems = [
   { path: '/admin/storefront', label: 'Storefront', icon: Store, roles: ['Admin'], group: 'Main Console' },
   { path: '/admin/discounts', label: 'Discounts', icon: Tag, roles: ['Admin', 'Digital Marketer'], group: 'Main Console' },
   { path: '/admin/inventory', label: 'Inventory', icon: Package, roles: ['Admin', 'Moderator'], group: 'Main Console' },
+  { path: '/admin/media', label: 'Media', icon: ImageIcon, roles: ['Admin', 'Digital Marketer'], group: 'Main Console' },
   { path: '/admin/factory', label: 'Confirmed', icon: Factory, roles: ['Admin', 'Factory Team'], group: 'Logistics' },
   { path: '/admin/steadfast', label: 'Courier Hub', icon: Truck, roles: ['Admin', 'Courier Team', 'Moderator'], group: 'Logistics' },
   { path: '/admin/moderator', label: 'Moderator', icon: ShieldCheck, roles: ['Admin', 'Moderator'], group: 'Intelligence' },
