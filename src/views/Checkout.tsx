@@ -1198,7 +1198,7 @@ export default function Checkout() {
   // 3. If cart is empty AND no confirmed order, show empty cart notice
   if (items.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="min-h-screen flex items-center justify-center px-4 pt-24 sm:pt-28">
         <div className="text-center space-y-4">
           <ShoppingBag size={48} className="text-surface-muted mx-auto" />
           <h2 className="font-black text-2xl">Your cart is empty</h2>
@@ -1211,22 +1211,38 @@ export default function Checkout() {
     );
   }
 
+  const handleBack = (e) => {
+    e?.preventDefault?.();
+    if (typeof window !== 'undefined') {
+      if (window.history.length > 1 && document.referrer && document.referrer.includes(window.location.host)) {
+        router.back();
+      } else {
+        router.push('/shop');
+      }
+    } else {
+      router.push('/shop');
+    }
+  };
+
   return (
-    <div className="min-h-screen relative w-full max-w-full overflow-x-hidden">
+    <div className="min-h-screen relative w-full max-w-full overflow-x-hidden pt-24 sm:pt-28 lg:pt-32 pb-16">
       {/* Subtle background glows */}
       <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-brand/5 rounded-full blur-[160px] pointer-events-none" />
       <div className="fixed bottom-0 left-0 w-[400px] h-[400px] bg-orange-900/10 rounded-full blur-[140px] pointer-events-none" />
 
-      <div className="container-site py-6 sm:py-8 lg:py-12 relative z-10 w-full max-w-full min-w-0 px-3.5 sm:px-6 lg:px-8">
+      <div className="container-site relative z-10 w-full max-w-full min-w-0 px-3.5 sm:px-6 lg:px-8">
         {/* Back button */}
         <motion.button
-          onClick={() => router.back()}
-          initial={{ opacity: 0, x: -12 }}
+          type="button"
+          onClick={handleBack}
+          initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-2 text-surface-muted hover:text-surface-primary text-sm font-medium transition-colors mb-6 sm:mb-8 group"
+          whileHover={{ x: -3 }}
+          whileTap={{ scale: 0.96 }}
+          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-[#1C1613] hover:bg-[#EBE5D9]/70 text-[#1C1613] dark:text-white text-xs font-bold tracking-wide uppercase transition-all duration-200 mb-6 sm:mb-8 group cursor-pointer border border-[#E9E2D2] dark:border-white/10 shadow-xs active:scale-95"
         >
-          <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-          Back
+          <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+          <span>Back</span>
         </motion.button>
 
         {/* Page heading */}
