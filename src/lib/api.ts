@@ -332,12 +332,32 @@ export async function getOrders() {
 }
 
 export async function updateOrderStatus(id, status) {
+  const { data: oldData } = await supabase
+    .from('orders')
+    .select('status')
+    .eq('id', id)
+    .maybeSingle();
+
   const { data, error } = await supabase
     .from('orders')
-    .update({ status })
+    .update({ status, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select()
     .single();
+
   if (error) throw error;
+
+  if (oldData) {
+    try {
+      const adminApi = (await import('../admin/lib/api')).default;
+      if (adminApi && typeof adminApi.adjustOrderStock === 'function') {
+        await adminApi.adjustOrderStock(id, oldData.status, status, 'System');
+      }
+    } catch (e) {
+      console.warn('Stock adjustment notice:', e);
+    }
+  }
+
+  invalidateCache();
   return data;
 }

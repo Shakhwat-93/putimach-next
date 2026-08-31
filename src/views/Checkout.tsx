@@ -974,6 +974,7 @@ export default function Checkout() {
       source: 'Website',
       status: 'New',
       payment_status: 'Unpaid',
+      inventory_deducted: true,
       ip_address: ipAddress || null,
       traffic_source: trafficSource || null,
       ordered_items: items.map(i => ({

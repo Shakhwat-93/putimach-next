@@ -1655,47 +1655,90 @@ export const api = {
     return resultData;
   },
 
-  async adjustOrderStock(orderId, oldStatus, newStatus, userName) {
-    const isOldCancelled = ['Cancelled', 'Fake Order'].includes(oldStatus);
-    const isNewCancelled = ['Cancelled', 'Fake Order'].includes(newStatus);
+  /**
+   * Helper to check if a status is stock-restoring (Cancelled, Fake Order, Test)
+   */
+  isStockRestoringStatus(status) {
+    if (!status) return false;
+    const s = String(status).trim().toLowerCase();
+    return s === 'cancelled' || s === 'fake order' || s === 'fake' || s === 'test' || s === 'test order';
+  },
 
-    if (isOldCancelled === isNewCancelled) {
-      // No transition between cancelled and active statuses
+  /**
+   * Status-Transition-Safe Stock Deduction & Restoration
+   */
+  async adjustOrderStock(orderId, oldStatus, newStatus, userName = 'System') {
+    if (!orderId) return;
+
+    const wasRestoring = this.isStockRestoringStatus(oldStatus);
+    const isNowRestoring = this.isStockRestoringStatus(newStatus);
+
+    // If status category hasn't changed (e.g. Confirmed -> Shipped, or Cancelled -> Fake Order), do nothing!
+    if (wasRestoring === isNowRestoring) {
       return;
     }
 
-    // multiplier: 1 means ADD stock back (moving to cancelled). -1 means DEDUCT stock again (reactivating a cancelled order).
-    const multiplier = isNewCancelled ? 1 : -1;
-
     try {
-      const { data: order } = await supabase
+      const { data: order, error: orderErr } = await supabase
         .from('orders')
-        .select('ordered_items')
+        .select('id, status, ordered_items')
         .eq('id', orderId)
         .single();
 
-      if (!order || !Array.isArray(order.ordered_items)) return;
+      if (orderErr || !order) {
+        console.warn(`[adjustOrderStock] Could not load order #${orderId}:`, orderErr?.message);
+        return;
+      }
 
-      for (const item of order.ordered_items) {
-        const { data: productRow } = await supabase
-          .from('products')
-          .select('id, data')
-          .eq('data->>slug', item.slug)
-          .maybeSingle();
+      let items = [];
+      if (Array.isArray(order.ordered_items)) {
+        items = order.ordered_items;
+      } else if (typeof order.ordered_items === 'string') {
+        try { items = JSON.parse(order.ordered_items); } catch (_) {}
+      }
 
-        const product = productRow ? { id: productRow.id, ...productRow.data } : null;
+      if (!Array.isArray(items) || items.length === 0) {
+        return;
+      }
 
-        if (product) {
-          let updatedVariants = Array.isArray(product.variants) ? [...product.variants] : [];
+      const isRestoration = isNowRestoring;
+      const multiplier = isRestoration ? 1 : -1;
+
+      for (const item of items) {
+        const qty = Math.max(1, Number(item.quantity) || 1);
+        const itemSlug = item.slug || item.id;
+        const itemId = item.id || item.product_id;
+        const itemName = item.name || item.title;
+        const targetSize = item.selectedSize || item.size || '';
+        const targetColor = item.selectedColor || item.color || '';
+
+        // Find target product in database
+        let productRow = null;
+        if (itemId) {
+          const { data } = await supabase.from('products').select('id, data').eq('id', itemId).maybeSingle();
+          if (data) productRow = data;
+        }
+        if (!productRow && itemSlug) {
+          const { data } = await supabase.from('products').select('id, data').eq('data->>slug', itemSlug).maybeSingle();
+          if (data) productRow = data;
+        }
+        if (!productRow && itemName) {
+          const { data } = await supabase.from('products').select('id, data').ilike('data->>name', itemName).maybeSingle();
+          if (data) productRow = data;
+        }
+
+        if (productRow) {
+          const pData = productRow.data || {};
+          let updatedVariants = Array.isArray(pData.variants) ? [...pData.variants] : [];
           let variantFound = false;
 
           if (updatedVariants.length > 0) {
             updatedVariants = updatedVariants.map(v => {
-              const sizeMatch = !v.size || String(v.size).trim().toLowerCase() === String(item.selectedSize || item.size || '').trim().toLowerCase();
-              const colorMatch = !v.color || String(v.color).trim().toLowerCase() === String(item.selectedColor || item.color || '').trim().toLowerCase();
-              if (sizeMatch && colorMatch) {
+              const sizeMatch = !targetSize || !v.size || String(v.size).trim().toLowerCase() === String(targetSize).trim().toLowerCase();
+              const colorMatch = !targetColor || !v.color || String(v.color).trim().toLowerCase() === String(targetColor).trim().toLowerCase();
+              if (sizeMatch && colorMatch && !variantFound) {
                 variantFound = true;
-                const change = item.quantity * multiplier;
+                const change = qty * multiplier;
                 const newQty = Math.max(0, (Number(v.stock) || 0) + change);
                 return { ...v, stock: newQty };
               }
@@ -1703,50 +1746,70 @@ export const api = {
             });
           }
 
-          const totalStock = updatedVariants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
-          const inStock = updatedVariants.length > 0 ? (totalStock > 0) : product.in_stock;
+          const totalVariantsStock = updatedVariants.length > 0
+            ? updatedVariants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
+            : null;
 
-          // Save back to product
-          await supabase
-            .from('products')
-            .update({ 
-              data: {
-                ...productRow.data,
-                variants: updatedVariants,
-                in_stock: inStock
-              }
-            })
-            .eq('id', product.id);
+          const currentProdStock = Number(pData.stock) || 0;
+          const newProdStock = totalVariantsStock !== null 
+            ? totalVariantsStock 
+            : Math.max(0, currentProdStock + (qty * multiplier));
 
-          // Update linked inventory table if connected
-          if (product.inventory_id) {
-            if (updatedVariants.length > 0) {
-              await supabase
-                .from('inventory')
-                .update({ 
-                  current_stock: totalStock,
-                  variants: updatedVariants
-                })
-                .eq('id', product.inventory_id);
-            } else {
-              // Direct increment/decrement if no variants
-              const { data: invItem } = await supabase
-                .from('inventory')
-                .select('current_stock')
-                .eq('id', product.inventory_id)
-                .single();
-              if (invItem) {
-                const change = item.quantity * multiplier;
-                const newStock = Math.max(0, (invItem.current_stock || 0) + change);
-                await supabase
-                  .from('inventory')
-                  .update({ current_stock: newStock })
-                  .eq('id', product.inventory_id);
-              }
-            }
+          const inStock = newProdStock > 0;
+
+          const updatedProductData = {
+            ...pData,
+            stock: newProdStock,
+            variants: updatedVariants,
+            in_stock: inStock
+          };
+
+          // 1. Update products & cb_products
+          await supabase.from('products').update({ data: updatedProductData }).eq('id', productRow.id);
+          try {
+            await supabase.from('cb_products').update({ data: updatedProductData }).eq('id', productRow.id);
+          } catch (_) {}
+
+          // 2. Update linked inventory table
+          let invId = pData.inventory_id;
+          let invRecord = null;
+          if (invId) {
+            const { data: inv } = await supabase.from('inventory').select('*').eq('id', invId).maybeSingle();
+            if (inv) invRecord = inv;
+          }
+          if (!invRecord && productRow.id) {
+            const { data: inv } = await supabase.from('inventory').select('*').eq('product_id', productRow.id).maybeSingle();
+            if (inv) invRecord = inv;
+          }
+          if (!invRecord && itemName) {
+            const { data: inv } = await supabase.from('inventory').select('*').ilike('name', itemName).maybeSingle();
+            if (inv) invRecord = inv;
+          }
+
+          if (invRecord) {
+            const currentInvStock = Number(invRecord.current_stock) || 0;
+            const newInvStock = totalVariantsStock !== null 
+              ? totalVariantsStock 
+              : Math.max(0, currentInvStock + (qty * multiplier));
+
+            await supabase.from('inventory').update({
+              current_stock: newInvStock,
+              variants: updatedVariants.length > 0 ? updatedVariants : invRecord.variants
+            }).eq('id', invRecord.id);
+
+            // 3. Log audit trail entry
+            await this.logInventoryTransaction({
+              inventory_id: invRecord.id,
+              order_id: orderId,
+              type: isRestoration ? 'order_restored' : 'order_re_deducted',
+              quantity: isRestoration ? qty : -qty,
+              note: `Order #${orderId} status changed from ${oldStatus} to ${newStatus} by ${userName} (${isRestoration ? 'Restored +' + qty : 'Deducted -' + qty})`,
+              created_by: userName
+            });
           }
         }
       }
+
     } catch (e) {
       console.error('Failed to adjust stock for order status change:', orderId, e);
     }

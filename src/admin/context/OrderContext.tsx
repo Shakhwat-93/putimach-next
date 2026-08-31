@@ -351,6 +351,7 @@ export const OrderProvider = ({ children }) => {
         console.warn('Non-fatal activity log write failed:', logErr);
       }
       scheduleStatsRefresh();
+      scheduleInventoryRefresh();
     } catch (err) {
       console.error('Failed to update status:', err);
       fetchOrders(page);
