@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { Badge } from '../components/ui/badge';
 import { User, Camera, Shield, Save, CheckCircle, AlertCircle, X, Loader2, FolderOpen } from 'lucide-react';
 import { MediaPickerModal } from '../components/media/MediaPickerModal';
 
