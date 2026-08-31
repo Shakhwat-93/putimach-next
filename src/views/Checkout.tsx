@@ -472,6 +472,16 @@ export default function Checkout() {
   const isSubmittingRef = useRef(false);
 
   useEffect(() => {
+    // Force viewport to top immediately on mount
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      requestAnimationFrame(() => window.scrollTo(0, 0));
+      const t1 = setTimeout(() => window.scrollTo(0, 0), 50);
+      const t2 = setTimeout(() => window.scrollTo(0, 0), 150);
+      setTimeout(() => clearTimeout(t1), 60);
+      setTimeout(() => clearTimeout(t2), 160);
+    }
+
     setMounted(true);
     const sid = getOrCreateCheckoutSessionId();
     setCheckoutSessionId(sid);

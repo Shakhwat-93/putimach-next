@@ -46,6 +46,9 @@ export function ProductCard({ product: rawProduct, index = 0 }: { product: any; 
     if (!inStock) return;
     addItem(product, product.sizes?.[0] || 'Free Size', product.colors?.[0] || 'Default', 1);
     trackAddToCart(product, 1, product.sizes?.[0] || 'Free Size');
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
     router.push('/checkout');
   };
 

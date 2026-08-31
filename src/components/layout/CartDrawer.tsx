@@ -429,7 +429,12 @@ export default function CartDrawer() {
                   <Link
                     href="/checkout"
                     id="cart-proceed-checkout-btn"
-                    onClick={() => closeCart()}
+                    onClick={() => {
+                      closeCart();
+                      if (typeof window !== 'undefined') {
+                        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                      }
+                    }}
                     prefetch={true}
                     className="w-full py-4 bg-[#1C1613] hover:bg-[#FF5533] text-white font-black text-xs uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md active:scale-98 group cursor-pointer text-center"
                   >

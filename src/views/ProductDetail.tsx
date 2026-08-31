@@ -467,6 +467,9 @@ export default function ProductDetailView() {
     };
     addItem(cartProduct, selectedSize || 'One Size', selectedColor || 'None', 1);
     trackAddToCart(cartProduct, 1, selectedSize || 'One Size');
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
     router.push('/checkout');
   };
 
