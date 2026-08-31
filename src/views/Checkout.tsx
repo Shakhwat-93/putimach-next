@@ -1085,7 +1085,7 @@ export default function Checkout() {
             .from('products')
             .select('id, data')
             .eq('id', item.product.id)
-            .single();
+            .maybeSingle();
 
           if (dbProductRow && dbProductRow.data) {
             const productData = dbProductRow.data;
@@ -1103,41 +1103,42 @@ export default function Checkout() {
               });
             }
 
-            const totalStock = updatedVariants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
-            const inStock = updatedVariants.length > 0 ? (totalStock > 0) : (productData.in_stock !== false);
+            const totalStock = updatedVariants.length > 0
+              ? updatedVariants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
+              : Math.max(0, (Number(productData.stock) || 0) - item.quantity);
+            const inStock = totalStock > 0;
+
+            const updatedProductPayload = {
+              ...productData,
+              stock: totalStock,
+              variants: updatedVariants,
+              in_stock: inStock
+            };
 
             await supabase
               .from('products')
-              .update({
-                data: {
-                  ...productData,
-                  variants: updatedVariants,
-                  in_stock: inStock
-                }
-              })
+              .update({ data: updatedProductPayload })
               .eq('id', dbProductRow.id);
 
+            try {
+              await supabase
+                .from('cb_products')
+                .update({ data: updatedProductPayload })
+                .eq('id', dbProductRow.id);
+            } catch (_) {}
+
+            // Deduct from inventory record
             const targetInventoryId = productData.inventory_id;
             if (targetInventoryId) {
-              if (updatedVariants.length > 0) {
-                await supabase
-                  .from('inventory')
-                  .update({ current_stock: totalStock })
-                  .eq('id', targetInventoryId);
-              } else {
-                const { data: invItem } = await supabase
-                  .from('inventory')
-                  .select('current_stock')
-                  .eq('id', targetInventoryId)
-                  .single();
-                if (invItem) {
-                  const newStock = Math.max(0, (invItem.current_stock || 0) - item.quantity);
-                  await supabase
-                    .from('inventory')
-                    .update({ current_stock: newStock })
-                    .eq('id', targetInventoryId);
-                }
-              }
+              await supabase
+                .from('inventory')
+                .update({ current_stock: totalStock })
+                .eq('id', targetInventoryId);
+            } else {
+              await supabase
+                .from('inventory')
+                .update({ current_stock: totalStock })
+                .eq('product_id', dbProductRow.id);
             }
           }
         } catch (e) {

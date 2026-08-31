@@ -7,7 +7,7 @@ import { Heart, ShoppingBag, Zap, Check } from 'lucide-react';
 import { useCartStore } from '../../store/cartStore';
 import { formatPrice } from '../../lib/utils';
 import { trackAddToCart } from '../../lib/tracking';
-import { normalizeProduct } from '../../lib/productMedia';
+import { normalizeProduct, isProductInStock } from '../../lib/productMedia';
 import { ProductImage } from './ProductImage';
 
 export function ProductCard({ product: rawProduct, index = 0 }: { product: any; index?: number }) {
@@ -25,10 +25,8 @@ export function ProductCard({ product: rawProduct, index = 0 }: { product: any; 
     ? Math.round(((Number(originalPrice) - Number(product.price)) / Number(originalPrice)) * 100)
     : null;
 
-  // Accurately determine if inStock (do not false-positive on unpopulated background inventory)
-  const inStock = product.in_stock !== false && 
-    (product.stock === undefined || product.stock > 0) &&
-    (!product.inventory || product.inventory.current_stock > 0);
+  // Single-source-of-truth stock availability
+  const inStock = isProductInStock(product);
 
   const handleQuickAdd = (e: React.MouseEvent) => {
     e.preventDefault();

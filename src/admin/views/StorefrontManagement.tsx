@@ -1265,25 +1265,65 @@ export const StorefrontManagement = () => {
         } catch (_) {}
       }
 
-      // Sync with inventory table if connected
-      if (payload.inventory_id) {
-        const totalVariantsStock = payload.variants?.length > 0
-          ? payload.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
-          : (Number(payload.stock) || 50);
-        const resolvedImg = payload.image || payload.images?.[0] || Object.values(payload.color_images || {})[0] || null;
+      // Sync with inventory table
+      const finalTargetId = editingProduct?.id || payload.slug || 'product-' + Date.now();
+      const totalVariantsStock = payload.variants?.length > 0
+        ? payload.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
+        : (Number(payload.stock) || 50);
+      const resolvedImg = payload.image || payload.images?.[0] || Object.values(payload.color_images || {})[0] || null;
 
+      if (payload.inventory_id) {
         await supabase
           .from('inventory')
           .update({
             current_stock: totalVariantsStock,
             image: resolvedImg,
             image_url: resolvedImg,
-            product_id: targetId,
+            product_id: finalTargetId,
             selling_price: Number(payload.price) || 0,
             unit_price: Number(payload.price) || 0,
             variants: payload.variants || []
           })
           .eq('id', payload.inventory_id);
+      } else {
+        const { data: matchedInv } = await supabase
+          .from('inventory')
+          .select('id')
+          .or(`product_id.eq.${finalTargetId},name.ilike.${payload.name}`)
+          .limit(1)
+          .maybeSingle();
+
+        if (matchedInv?.id) {
+          await supabase
+            .from('inventory')
+            .update({
+              current_stock: totalVariantsStock,
+              image: resolvedImg,
+              image_url: resolvedImg,
+              product_id: finalTargetId,
+              selling_price: Number(payload.price) || 0,
+              unit_price: Number(payload.price) || 0,
+              variants: payload.variants || []
+            })
+            .eq('id', matchedInv.id);
+        } else {
+          await supabase
+            .from('inventory')
+            .insert([{
+              name: payload.name,
+              sku: payload.sku || `SKU-${String(finalTargetId).toUpperCase().slice(0, 6)}`,
+              category: payload.category || 'Apparel',
+              current_stock: totalVariantsStock,
+              min_stock_level: 5,
+              selling_price: Number(payload.price) || 0,
+              unit_price: Number(payload.price) || 0,
+              making_cost: Number(payload.cost_per_item) || 0,
+              image: resolvedImg,
+              image_url: resolvedImg,
+              product_id: finalTargetId,
+              variants: payload.variants || []
+            }]);
+        }
       }
 
       setIsProductModalOpen(false);

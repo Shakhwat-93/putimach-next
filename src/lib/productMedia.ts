@@ -262,6 +262,23 @@ export function normalizeProduct(raw: any): any {
   const price = Number(base.price) || 0;
   const originalPrice = base.original_price || base.originalPrice ? Number(base.original_price || base.originalPrice) : null;
 
+  // Authoritative operational stock calculation
+  const variantsList = Array.isArray(base.variants) ? base.variants : [];
+  const hasVariants = variantsList.length > 0;
+  const variantStockTotal = hasVariants 
+    ? variantsList.reduce((sum: number, v: any) => sum + (Number(v?.stock) || 0), 0)
+    : null;
+
+  let rawStock = 50;
+  if (base.stock !== undefined && base.stock !== null) {
+    rawStock = Number(base.stock);
+  } else if (base.inventory?.current_stock !== undefined) {
+    rawStock = Number(base.inventory.current_stock);
+  }
+
+  const effectiveStock = variantStockTotal !== null ? variantStockTotal : rawStock;
+  const isAvailable = effectiveStock > 0 && base.status !== 'draft' && base.status !== 'archived';
+
   return {
     ...base,
     id: base.id,
@@ -281,6 +298,40 @@ export function normalizeProduct(raw: any): any {
     color_galleries: normalizedColorGalleries,
     sizes,
     colors,
-    in_stock: base.in_stock !== false && base.inStock !== false,
+    stock: effectiveStock,
+    in_stock: isAvailable,
+    inStock: isAvailable,
   };
+}
+
+/**
+ * Universal Single-Source-Of-Truth Stock Status Checker
+ */
+export function isProductInStock(product: any, selectedVariant?: any): boolean {
+  if (!product) return false;
+  if (product.status === 'draft' || product.status === 'archived') return false;
+
+  // 1. If a specific variant is selected
+  if (selectedVariant) {
+    return (Number(selectedVariant.stock) || 0) > 0;
+  }
+
+  // 2. If product has variants
+  if (Array.isArray(product.variants) && product.variants.length > 0) {
+    const hasAnyVariantStock = product.variants.some((v: any) => (Number(v?.stock) || 0) > 0);
+    if (hasAnyVariantStock) return true;
+  }
+
+  // 3. Check inventory if attached
+  if (product.inventory && product.inventory.current_stock !== undefined) {
+    return Number(product.inventory.current_stock) > 0;
+  }
+
+  // 4. Check product stock field
+  if (product.stock !== undefined && product.stock !== null) {
+    return Number(product.stock) > 0;
+  }
+
+  // 5. Fallback to boolean in_stock
+  return product.in_stock !== false && product.inStock !== false;
 }

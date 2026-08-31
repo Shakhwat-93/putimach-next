@@ -2476,7 +2476,51 @@ export const api = {
     }
 
     if (error) throw error;
+    if (data) await this.syncProductFromInventory(data);
     return data;
+  },
+
+  /**
+   * Helper to keep connected products & cb_products in sync with inventory stock
+   */
+  async syncProductFromInventory(invItem) {
+    if (!invItem) return;
+    try {
+      const prodId = invItem.product_id;
+      const invId = invItem.id;
+      const invStock = Number(invItem.current_stock) || 0;
+      const inStock = invStock > 0;
+
+      let targetProd = null;
+      if (prodId) {
+        const { data } = await supabase.from('products').select('id, data').eq('id', prodId).maybeSingle();
+        if (data) targetProd = data;
+      }
+      if (!targetProd && invItem.sku) {
+        const { data } = await supabase.from('products').select('id, data').eq('data->>sku', invItem.sku).maybeSingle();
+        if (data) targetProd = data;
+      }
+      if (!targetProd && invItem.name) {
+        const { data } = await supabase.from('products').select('id, data').ilike('data->>name', invItem.name).maybeSingle();
+        if (data) targetProd = data;
+      }
+
+      if (targetProd && targetProd.id) {
+        const pData = targetProd.data || {};
+        const updatedData = {
+          ...pData,
+          stock: invStock,
+          in_stock: inStock,
+          inventory_id: invId
+        };
+        await supabase.from('products').update({ data: updatedData }).eq('id', targetProd.id);
+        try {
+          await supabase.from('cb_products').update({ data: updatedData }).eq('id', targetProd.id);
+        } catch (_) {}
+      }
+    } catch (err) {
+      console.warn('syncProductFromInventory notice:', err);
+    }
   },
 
   /**
@@ -2504,6 +2548,7 @@ export const api = {
     }
 
     if (error) throw error;
+    if (data) await this.syncProductFromInventory(data);
     return data;
   },
 
@@ -2514,7 +2559,7 @@ export const api = {
     // Fetch current stock atomically
     const { data: item, error: fetchError } = await supabase
       .from('inventory')
-      .select('current_stock')
+      .select('current_stock, product_id, sku, name')
       .eq('id', id)
       .single();
 
@@ -2530,6 +2575,11 @@ export const api = {
       .single();
 
     if (error) throw error;
+
+    // Synchronize connected storefront product
+    if (data) {
+      await this.syncProductFromInventory(data);
+    }
 
     // Log the manual stock adjustment to the audit trail
     const txType = quantityChange >= 0 ? 'manual_add' : 'manual_deduct';
@@ -2578,7 +2628,7 @@ export const api = {
   async deductStockByInventoryId(inventoryId, quantity = 1, options = {}) {
     const { data: item, error: fetchError } = await supabase
       .from('inventory')
-      .select('id, current_stock')
+      .select('id, current_stock, product_id, sku, name')
       .eq('id', inventoryId)
       .single();
 
@@ -2595,6 +2645,10 @@ export const api = {
       .single();
 
     if (error) throw error;
+
+    if (data) {
+      await this.syncProductFromInventory(data);
+    }
 
     // Write audit trail entry
     await this.logInventoryTransaction({

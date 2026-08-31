@@ -115,45 +115,57 @@ export async function getProducts(options = {}) {
   }
 
   try {
-    const { data, error } = await supabase
-      .from('cb_products')
-      .select('id, data, created_at')
-      .order('created_at', { ascending: false })
-      .limit(200);
+    const [prodRes, invRes] = await Promise.all([
+      supabase.from('cb_products').select('id, data, created_at').order('created_at', { ascending: false }).limit(200),
+      supabase.from('inventory').select('*').limit(500)
+    ]);
 
-    if (error) {
-      console.warn('Supabase products query notice:', error.message || error);
-      return [];
-    }
+    const data = prodRes.data || [];
+    const inventoryList = invRes.data || [];
 
-    let list = (data || []).map(row => normalizeProduct({
-      id: row.id,
-      created_at: row.created_at,
-      slug: row.data?.slug || row.id,
-      ...(row.data || {})
-    })).filter(Boolean);
+    // Build inventory lookup helpers
+    const invByProdId = new Map();
+    const invById = new Map();
+    const invBySku = new Map();
+    const invByName = new Map();
+
+    inventoryList.forEach(item => {
+      if (item.product_id) invByProdId.set(String(item.product_id).trim().toLowerCase(), item);
+      if (item.id) invById.set(String(item.id).trim(), item);
+      if (item.sku) invBySku.set(String(item.sku).trim().toLowerCase(), item);
+      if (item.name) invByName.set(String(item.name).trim().toLowerCase(), item);
+    });
+
+    let list = data.map(row => {
+      const pData = row.data || {};
+      const prodId = String(row.id || '').trim().toLowerCase();
+      const prodSlug = String(pData.slug || row.id || '').trim().toLowerCase();
+      const prodSku = String(pData.sku || '').trim().toLowerCase();
+      const prodName = String(pData.name || '').trim().toLowerCase();
+      const pInvId = String(pData.inventory_id || '').trim();
+
+      // Find matching inventory
+      let matchedInv = null;
+      if (pInvId && invById.has(pInvId)) matchedInv = invById.get(pInvId);
+      else if (prodId && invByProdId.has(prodId)) matchedInv = invByProdId.get(prodId);
+      else if (prodSlug && invByProdId.has(prodSlug)) matchedInv = invByProdId.get(prodSlug);
+      else if (prodSku && invBySku.has(prodSku)) matchedInv = invBySku.get(prodSku);
+      else if (prodName && invByName.has(prodName)) matchedInv = invByName.get(prodName);
+
+      const raw = {
+        id: row.id,
+        created_at: row.created_at,
+        slug: row.data?.slug || row.id,
+        ...(row.data || {}),
+        inventory: matchedInv || null,
+        inventory_id: matchedInv?.id || pData.inventory_id || null,
+        stock: matchedInv !== null && matchedInv.current_stock !== undefined ? Number(matchedInv.current_stock) : pData.stock,
+      };
+
+      return normalizeProduct(raw);
+    }).filter(Boolean);
 
     productsCache = { data: list, time: Date.now() };
-
-    const inventoryIds = list.map(p => p.inventory_id).filter(Boolean);
-    if (inventoryIds.length > 0) {
-      supabase
-        .from('inventory')
-        .select('id, current_stock')
-        .in('id', inventoryIds)
-        .then(({ data: invData, error: invErr }) => {
-          if (!invErr && invData) {
-            const invMap = {};
-            invData.forEach(item => { invMap[item.id] = item; });
-            list.forEach(p => {
-              if (p.inventory_id && invMap[p.inventory_id]) {
-                p.inventory = invMap[p.inventory_id];
-              }
-            });
-          }
-        })
-        .catch(e => console.warn('Background inventory sync notice:', e));
-    }
 
     if (options.category && options.category !== 'all') {
       list = list.filter(p => p.category === options.category);
@@ -172,13 +184,6 @@ export async function getProducts(options = {}) {
 
 export async function getProductBySlug(slug) {
   if (!slug) return null;
-
-  if (productsCache.data) {
-    const cached = productsCache.data.find(
-      p => p.id === slug || p.slug === slug || String(p.id).toLowerCase() === String(slug).toLowerCase() || String(p.slug).toLowerCase() === String(slug).toLowerCase()
-    );
-    if (cached) return cached;
-  }
 
   try {
     let { data, error } = await supabase
@@ -203,21 +208,37 @@ export async function getProductBySlug(slug) {
       return fallback ? normalizeProduct(fallback) : null;
     }
 
-    const product = normalizeProduct({ id: data.id, created_at: data.created_at, slug: data.data?.slug || data.id, ...data.data });
+    const pData = data.data || {};
+    const prodId = String(data.id || '').trim();
+    const pInvId = String(pData.inventory_id || '').trim();
+    const prodSku = String(pData.sku || '').trim();
 
-    if (product?.inventory_id) {
-      supabase
-        .from('inventory')
-        .select('*')
-        .eq('id', product.inventory_id)
-        .maybeSingle()
-        .then(({ data: invData }) => {
-          if (invData) product.inventory = invData;
-        })
-        .catch(() => {});
+    // Fetch authoritative inventory record
+    let matchedInv = null;
+    if (pInvId) {
+      const { data: inv } = await supabase.from('inventory').select('*').eq('id', pInvId).maybeSingle();
+      if (inv) matchedInv = inv;
+    }
+    if (!matchedInv && prodId) {
+      const { data: inv } = await supabase.from('inventory').select('*').eq('product_id', prodId).maybeSingle();
+      if (inv) matchedInv = inv;
+    }
+    if (!matchedInv && prodSku) {
+      const { data: inv } = await supabase.from('inventory').select('*').ilike('sku', prodSku).maybeSingle();
+      if (inv) matchedInv = inv;
     }
 
-    return product;
+    const raw = {
+      id: data.id,
+      created_at: data.created_at,
+      slug: data.data?.slug || data.id,
+      ...pData,
+      inventory: matchedInv || null,
+      inventory_id: matchedInv?.id || pData.inventory_id || null,
+      stock: matchedInv !== null && matchedInv.current_stock !== undefined ? Number(matchedInv.current_stock) : pData.stock,
+    };
+
+    return normalizeProduct(raw);
   } catch (err) {
     console.warn('getProductBySlug notice, using fallback lookup:', err?.message || err);
     const fallback = (fallbackProducts || []).find(

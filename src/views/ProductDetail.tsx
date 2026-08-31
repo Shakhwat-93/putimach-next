@@ -15,7 +15,7 @@ import { trackViewContent, trackAddToCart } from '../lib/tracking';
 import { ProductCard } from '../components/shop/ProductCard';
 import ProductDetailSkeleton from '@/components/skeletons/storefront/ProductDetailSkeleton';
 import { supabase } from '../lib/supabase';
-import { extractProductImages, DEFAULT_PRODUCT_FALLBACK, cleanImageUrl } from '../lib/productMedia';
+import { extractProductImages, DEFAULT_PRODUCT_FALLBACK, cleanImageUrl, isProductInStock } from '../lib/productMedia';
 
 export default function ProductDetailView() {
   const { slug } = useParams();
@@ -418,12 +418,8 @@ export default function ProductDetailView() {
       })
     : null;
 
-  const currentStock = hasVariants
-    ? (selectedVariant ? selectedVariant.stock : (product.stock || 0))
-    : (product.stock ?? 999);
-
-  const inStock = currentStock > 0;
-  const isVariantOutOfStock = hasVariants && selectedSize && !inStock;
+  const inStock = isProductInStock(product, selectedVariant);
+  const isVariantOutOfStock = hasVariants && selectedSize ? !isProductInStock(product, selectedVariant) : !inStock;
   const discount = originalPrice && originalPrice > product.price 
     ? Math.round(((originalPrice - product.price) / originalPrice) * 100)
     : null;

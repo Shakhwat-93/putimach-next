@@ -84,8 +84,8 @@ export default function EditProductPage() {
           })
           .eq('id', payload.inventory_id);
       } else {
-        // Find existing inventory item by product_id or matching name to keep image & stock synchronized
-        const { data: matchedInv } = await supabase
+        // Find existing inventory item by product_id, sku, or matching name
+        let { data: matchedInv } = await supabase
           .from('inventory')
           .select('id')
           .or(`product_id.eq.${targetId},name.ilike.${payload.name}`)
@@ -105,6 +105,31 @@ export default function EditProductPage() {
               variants: payload.variants || []
             })
             .eq('id', matchedInv.id);
+        } else {
+          const { data: newInv } = await supabase
+            .from('inventory')
+            .insert([{
+              name: payload.name,
+              sku: payload.sku || `SKU-${String(targetId).toUpperCase().slice(0, 6)}`,
+              category: payload.category || 'Apparel',
+              current_stock: totalStock,
+              min_stock_level: 5,
+              unit_price: Number(payload.price) || 0,
+              selling_price: Number(payload.price) || 0,
+              making_cost: Number(payload.cost_per_item) || 0,
+              product_id: targetId,
+              image: primaryImg,
+              image_url: primaryImg,
+              variants: payload.variants || []
+            }])
+            .select('id')
+            .single();
+
+          if (newInv?.id) {
+            await supabase.from('products').update({
+              data: { ...payload, inventory_id: newInv.id }
+            }).eq('id', targetId);
+          }
         }
       }
 
