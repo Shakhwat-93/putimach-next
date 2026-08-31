@@ -22,7 +22,8 @@ import {
   Eye, 
   Sparkles,
   Upload,
-  Menu
+  Menu,
+  FolderOpen
 } from 'lucide-react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
@@ -43,9 +44,11 @@ import { Switch } from '../components/ui/switch';
 
 import { uploadImage } from '../lib/uploadHelper';
 import { ShopifyProductEditor } from '../components/product/ShopifyProductEditor';
+import { MediaPickerModal } from '../components/media/MediaPickerModal';
 
 const ImageUploadInput = ({ label, value, onChange, placeholder, required = false, local = false }) => {
   const [uploading, setUploading] = useState(false);
+  const [mediaModalOpen, setMediaModalOpen] = useState(false);
 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -64,6 +67,7 @@ const ImageUploadInput = ({ label, value, onChange, placeholder, required = fals
       alert('Failed to upload image: ' + err.message);
     } finally {
       setUploading(false);
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -73,34 +77,44 @@ const ImageUploadInput = ({ label, value, onChange, placeholder, required = fals
       <div className="flex flex-col sm:flex-row gap-2.5 sm:items-center w-full">
         <input
           type="text"
-          className="flex h-10 w-full min-w-0 flex-1 rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-10 w-full min-w-0 flex-1 rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50 font-mono text-xs"
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           required={required}
         />
-        <label 
-          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 cursor-pointer shrink-0 shadow-sm transition-all"
-        >
-          {uploading ? (
-            <>
-              <Loader2 size={14} className="animate-spin" />
-              <span>Uploading...</span>
-            </>
-          ) : (
-            <>
-              <Upload size={14} />
-              <span>Upload File</span>
-            </>
-          )}
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleUpload}
-            disabled={uploading}
-          />
-        </label>
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setMediaModalOpen(true)}
+            className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl text-xs font-bold bg-secondary hover:bg-secondary/80 text-foreground border border-border h-10 px-3.5 cursor-pointer shadow-2xs transition-all"
+          >
+            <FolderOpen size={14} className="text-primary" />
+            <span>From Media</span>
+          </button>
+          <label 
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 cursor-pointer shrink-0 shadow-sm transition-all"
+          >
+            {uploading ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                <span>Uploading...</span>
+              </>
+            ) : (
+              <>
+                <Upload size={14} />
+                <span>Upload File</span>
+              </>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleUpload}
+              disabled={uploading}
+            />
+          </label>
+        </div>
       </div>
       {value && (
         <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground overflow-hidden">
@@ -108,13 +122,24 @@ const ImageUploadInput = ({ label, value, onChange, placeholder, required = fals
           <a href={value} target="_blank" rel="noreferrer" className="underline truncate text-xs hover:text-foreground">{value}</a>
         </div>
       )}
+      <MediaPickerModal
+        isOpen={mediaModalOpen}
+        onClose={() => setMediaModalOpen(false)}
+        onSelect={(urls) => {
+          if (urls && urls[0]) onChange(urls[0]);
+        }}
+        multiple={false}
+        initialSelectedUrls={value ? [value] : []}
+        title={`Select ${label || 'Image'}`}
+      />
     </div>
   );
 };
 
-// Reusable Multiple Image Upload Input Component connected to Supabase Storage
+// Reusable Multiple Image Upload Input Component connected to Media Library & Upload
 const MultipleImageUploadInput = ({ label, value = [], onChange }) => {
   const [uploading, setUploading] = useState(false);
+  const [mediaModalOpen, setMediaModalOpen] = useState(false);
 
   const handleUpload = async (e) => {
     const files = e.target.files;
@@ -134,6 +159,7 @@ const MultipleImageUploadInput = ({ label, value = [], onChange }) => {
       alert('Failed to upload image(s): ' + err.message);
     } finally {
       setUploading(false);
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -154,30 +180,28 @@ const MultipleImageUploadInput = ({ label, value = [], onChange }) => {
 
   return (
     <div className="flex flex-col gap-2 md:col-span-2" style={{ gridColumn: '1 / -1' }}>
-      <label className="text-sm font-medium text-foreground" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <label className="text-sm font-medium text-foreground flex items-center justify-between">
         <span>{label}</span>
-        <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>{value.length} images uploaded</span>
+        <span className="text-xs text-muted-foreground">{value.length} images</span>
       </label>
       
       {/* Upload area */}
-      <div style={{ marginBottom: '16px' }}>
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        <button
+          type="button"
+          onClick={() => setMediaModalOpen(true)}
+          className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl text-xs font-bold bg-secondary hover:bg-secondary/80 text-foreground border border-border h-10 px-4 cursor-pointer shadow-2xs transition-all"
+        >
+          <FolderOpen size={14} className="text-primary" />
+          <span>Select from Media Library</span>
+        </button>
+
         <label 
-          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
-          style={{ 
-            display: 'inline-flex', 
-            alignItems: 'center', 
-            gap: '8px', 
-            cursor: 'pointer',
-            padding: '10px 20px',
-            borderRadius: '100px',
-            fontSize: '13px',
-            fontWeight: 700,
-            boxShadow: '0 4px 14px rgba(13, 148, 136, 0.3)',
-          }}
+          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 cursor-pointer shadow-sm transition-all"
         >
           {uploading ? (
             <>
-              <Loader2 size={14} className="spin" />
+              <Loader2 size={14} className="animate-spin" />
               <span>Uploading Multiple...</span>
             </>
           ) : (
@@ -190,7 +214,7 @@ const MultipleImageUploadInput = ({ label, value = [], onChange }) => {
             type="file"
             accept="image/*"
             multiple
-            style={{ display: 'none' }}
+            className="hidden"
             onChange={handleUpload}
             disabled={uploading}
           />
@@ -199,99 +223,38 @@ const MultipleImageUploadInput = ({ label, value = [], onChange }) => {
 
       {/* Preview Grid */}
       {value.length > 0 && (
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', 
-          gap: '12px',
-          background: 'rgba(255,255,255,0.02)',
-          border: '1px dashed rgba(255,255,255,0.1)',
-          borderRadius: '8px',
-          padding: '12px'
-        }}>
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 p-3 rounded-2xl border border-dashed border-border bg-card/40">
           {value.map((url, idx) => (
             <div 
               key={idx} 
-              style={{ 
-                position: 'relative', 
-                aspectRatio: '1', 
-                borderRadius: '6px', 
-                overflow: 'hidden',
-                border: '1px solid rgba(255,255,255,0.08)'
-              }}
-              className="mult-img-thumb"
+              className="group relative aspect-square rounded-xl overflow-hidden border border-border bg-muted/40"
             >
-              <img 
-                src={url} 
-                alt={`Product image ${idx + 1}`} 
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-              />
-              {/* Overlays for delete and move */}
-              <div 
-                style={{ 
-                  position: 'absolute', 
-                  inset: 0, 
-                  background: 'rgba(0,0,0,0.6)', 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  justifyContent: 'space-between',
-                  padding: '4px',
-                  opacity: 0,
-                  transition: 'opacity 0.2s',
-                }}
-                className="mult-img-overlay"
-              >
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button 
-                    type="button"
-                    onClick={() => removeImage(idx)}
-                    style={{ 
-                      background: 'rgba(239, 68, 68, 0.9)', 
-                      border: 'none', 
-                      color: 'white', 
-                      borderRadius: '4px', 
-                      padding: '4px', 
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <Trash2 size={12} />
-                  </button>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '4px' }}>
-                  <button 
+              <img src={url} alt={`Upload ${idx + 1}`} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-1 text-white">
+                <button
+                  type="button"
+                  onClick={() => removeImage(idx)}
+                  className="p-1 rounded bg-red-600/80 hover:bg-red-600 text-white ml-auto cursor-pointer"
+                >
+                  <Trash2 size={12} />
+                </button>
+                <div className="flex items-center justify-between bg-black/40 rounded px-1 py-0.5">
+                  <button
                     type="button"
                     disabled={idx === 0}
                     onClick={() => moveImage(idx, -1)}
-                    style={{ 
-                      background: 'rgba(255,255,255,0.2)', 
-                      border: 'none', 
-                      color: 'white', 
-                      borderRadius: '4px', 
-                      padding: '2px 6px', 
-                      cursor: idx === 0 ? 'not-allowed' : 'pointer',
-                      fontSize: '10px'
-                    }}
+                    className="hover:text-primary disabled:opacity-30 cursor-pointer text-xs"
                   >
-                    ◀
+                    ←
                   </button>
-                  <span style={{ fontSize: '10px', color: 'white', alignSelf: 'center', fontWeight: 'bold' }}>#{idx + 1}</span>
-                  <button 
+                  <span className="text-[9px] font-mono">#{idx + 1}</span>
+                  <button
                     type="button"
                     disabled={idx === value.length - 1}
                     onClick={() => moveImage(idx, 1)}
-                    style={{ 
-                      background: 'rgba(255,255,255,0.2)', 
-                      border: 'none', 
-                      color: 'white', 
-                      borderRadius: '4px', 
-                      padding: '2px 6px', 
-                      cursor: idx === value.length - 1 ? 'not-allowed' : 'pointer',
-                      fontSize: '10px'
-                    }}
+                    className="hover:text-primary disabled:opacity-30 cursor-pointer text-xs"
                   >
-                    ▶
+                    →
                   </button>
                 </div>
               </div>
@@ -299,6 +262,19 @@ const MultipleImageUploadInput = ({ label, value = [], onChange }) => {
           ))}
         </div>
       )}
+
+      <MediaPickerModal
+        isOpen={mediaModalOpen}
+        onClose={() => setMediaModalOpen(false)}
+        onSelect={(urls) => {
+          if (urls && urls.length > 0) {
+            onChange(Array.from(new Set([...value, ...urls])));
+          }
+        }}
+        multiple={true}
+        initialSelectedUrls={value}
+        title={`Select ${label || 'Images'}`}
+      />
     </div>
   );
 };
@@ -306,6 +282,7 @@ const MultipleImageUploadInput = ({ label, value = [], onChange }) => {
 // Reusable Color-Wise Image Manager Component with Direct Image Uploading and Color Tagging
 const ColorImagesEditor = ({ colors = '', colorImages = {}, onChange, onColorsChange, onRemoveColor }) => {
   const [uploadingColor, setUploadingColor] = useState(null);
+  const [activeMediaColor, setActiveMediaColor] = useState(null);
 
   const parsedColors = typeof colors === 'string'
     ? colors.split(',').map(c => c.trim()).filter(Boolean)
@@ -370,6 +347,7 @@ const ColorImagesEditor = ({ colors = '', colorImages = {}, onChange, onColorsCh
       alert('Upload failed: ' + (err.message || 'Error'));
     } finally {
       setUploadingColor(null);
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -381,7 +359,7 @@ const ColorImagesEditor = ({ colors = '', colorImages = {}, onChange, onColorsCh
             <span>🎨 Color-Wise Photos (Color Image Upload)</span>
           </label>
           <p className="text-xs text-muted-foreground">
-            Add colors (e.g. Black, Orange). Upload a specific photo for each color so clicking that color pill on the storefront loads its exact image!
+            Add colors (e.g. Black, Orange). Select from existing media or upload new photos for each color.
           </p>
         </div>
       </div>
@@ -408,7 +386,7 @@ const ColorImagesEditor = ({ colors = '', colorImages = {}, onChange, onColorsCh
       {/* Color Cards List */}
       {colorList.length === 0 ? (
         <div className="py-4 text-center border border-dashed border-border rounded-xl bg-background/50">
-          <p className="text-xs text-muted-foreground">No colors added yet. Type a color name above to upload color-wise photos.</p>
+          <p className="text-xs text-muted-foreground">No colors added yet. Type a color name above to map color-wise photos.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
@@ -448,7 +426,15 @@ const ColorImagesEditor = ({ colors = '', colorImages = {}, onChange, onColorsCh
                       onChange={(e) => handleImageUrlChange(color, e.target.value)}
                       className="flex h-7 w-full min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-[11px] font-mono"
                     />
-                    <label className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white h-7 px-2.5 cursor-pointer shrink-0 shadow-sm transition-all">
+                    <button
+                      type="button"
+                      onClick={() => setActiveMediaColor(color)}
+                      className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md text-[11px] font-bold bg-secondary hover:bg-secondary/80 text-foreground border border-border h-7 px-2 cursor-pointer shadow-2xs transition-all"
+                    >
+                      <FolderOpen size={11} className="text-primary" />
+                      <span>Media</span>
+                    </button>
+                    <label className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md text-[11px] font-bold bg-primary hover:bg-primary/90 text-primary-foreground h-7 px-2.5 cursor-pointer shrink-0 shadow-sm transition-all">
                       {isUploading ? (
                         <>
                           <Loader2 size={11} className="animate-spin" />
@@ -475,6 +461,20 @@ const ColorImagesEditor = ({ colors = '', colorImages = {}, onChange, onColorsCh
           })}
         </div>
       )}
+
+      <MediaPickerModal
+        isOpen={Boolean(activeMediaColor)}
+        onClose={() => setActiveMediaColor(null)}
+        onSelect={(urls) => {
+          if (activeMediaColor && urls && urls[0]) {
+            handleImageUrlChange(activeMediaColor, urls[0]);
+          }
+          setActiveMediaColor(null);
+        }}
+        multiple={false}
+        initialSelectedUrls={activeMediaColor && colorImages?.[activeMediaColor] ? [colorImages[activeMediaColor]] : []}
+        title={`Select Photo for ${activeMediaColor || 'Color'}`}
+      />
     </div>
   );
 };

@@ -6,12 +6,14 @@ import {
   Layers, Package, Globe, Tag, ChevronDown, ChevronRight, Sliders,
   HelpCircle, AlertTriangle, Loader2, CheckCircle2, RotateCcw,
   Store, Truck, ShieldCheck, Video, ExternalLink, Palette, Ruler, Info,
-  UploadCloud, Image as ImageIcon
+  UploadCloud, Image as ImageIcon, FolderOpen
 } from 'lucide-react';
 import { RichTextEditor } from './RichTextEditor';
+import { MainProductImageManager } from './MainProductImageManager';
 import { ColorGalleryManager } from './ColorGalleryManager';
 import { ProductMediaManager } from './ProductMediaManager';
 import { ProductSeoPreview } from './ProductSeoPreview';
+import { MediaPickerModal } from '../media/MediaPickerModal';
 import { Button } from '../Button';
 import { Card } from '../Card';
 import { Switch } from '../ui/switch';
@@ -85,11 +87,14 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
   const [stockQuantity, setStockQuantity] = useState<number | string>(50);
   const [sku, setSku] = useState('');
 
-  // 3. Multi-Color Product Galleries
+  // 3. Dedicated Main Product Image (Independent of color)
+  const [mainProductImage, setMainProductImage] = useState('');
+
+  // 4. Multi-Color Product Galleries
   const [colors, setColors] = useState<string[]>([]);
   const [colorGalleries, setColorGalleries] = useState<Record<string, string[]>>({});
 
-  // 4. General Media & Fallback
+  // 5. General Media & Fallback
   const [generalImages, setGeneralImages] = useState<string[]>([]);
   const [primaryImage, setPrimaryImage] = useState('');
 
@@ -99,6 +104,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
   const [sizeGuide, setSizeGuide] = useState(defaultSizeGuide);
   const [sizeChartImageUrl, setSizeChartImageUrl] = useState('');
   const [isUploadingSizeChart, setIsUploadingSizeChart] = useState(false);
+  const [sizeChartMediaModalOpen, setSizeChartMediaModalOpen] = useState(false);
   const sizeChartFileInputRef = useRef<HTMLInputElement | null>(null);
 
   // 6. Description & Story
@@ -132,9 +138,18 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
       .replace(/^-+|-+$/g, '');
   };
 
+  // Ref to prevent async re-renders from overwriting user edits
+  const initializedProductIdRef = useRef<string | null>(null);
+  const currentInitialId = initialProduct ? (initialProduct.id || initialProduct.slug || 'editing-product') : null;
+
   // Populate data in Edit Mode
   useEffect(() => {
-    if (initialProduct) {
+    if (initialProduct && currentInitialId) {
+      if (initializedProductIdRef.current === currentInitialId) {
+        return; // Already initialized for this product
+      }
+      initializedProductIdRef.current = currentInitialId;
+
       setTitle(initialProduct.name || initialProduct.title || '');
       setSlug(initialProduct.slug || initialProduct.id || '');
       setIsSlugAuto(false);
@@ -152,7 +167,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
       const rawColorImages = initialProduct.color_images || initialProduct.colorImages || initialProduct.color_galleries || {};
       const galleries: Record<string, string[]> = {};
       const loadedColors: string[] = Array.isArray(initialProduct.colors) 
-        ? initialProduct.colors.map(String) 
+        ? initialProduct.colors.map(String).map(s => s.trim()).filter(Boolean) 
         : (typeof initialProduct.colors === 'string' ? initialProduct.colors.split(',').map(s => s.trim()).filter(Boolean) : []);
 
       if (typeof rawColorImages === 'object' && rawColorImages !== null) {
@@ -173,19 +188,32 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
       setColors(loadedColors.length > 0 ? loadedColors : ['Black']);
       setColorGalleries(galleries);
 
-      // General Images
+      // Dedicated Main Product Image (Independent of color)
+      const rawMainImg = initialProduct.main_image || initialProduct.mainImage || initialProduct.primary_image || initialProduct.primaryImage || initialProduct.image || '';
       const allExtracted = extractProductImages(initialProduct);
-      setGeneralImages(Array.isArray(initialProduct.images) ? initialProduct.images : allExtracted);
-      setPrimaryImage(initialProduct.image || (allExtracted[0] || ''));
+      const resolvedInitialMain = cleanImageUrl(rawMainImg) || (allExtracted[0] || '');
+      setMainProductImage(resolvedInitialMain);
 
-      // Sizes
+      // General Images
+      setGeneralImages(Array.isArray(initialProduct.images) ? initialProduct.images : allExtracted);
+      setPrimaryImage(resolvedInitialMain);
+
+      // Sizes: Normalize and deduplicate
+      let loadedSizes: string[] = [];
       if (Array.isArray(initialProduct.sizes) && initialProduct.sizes.length > 0) {
-        setSizes(initialProduct.sizes.map(String));
+        loadedSizes = initialProduct.sizes.map(s => String(s).trim()).filter(Boolean);
       } else if (typeof initialProduct.sizes === 'string' && initialProduct.sizes.trim()) {
-        setSizes(initialProduct.sizes.split(',').map(s => s.trim()).filter(Boolean));
-      } else {
-        setSizes(['Free Size']);
+        loadedSizes = initialProduct.sizes.split(',').map(s => s.trim()).filter(Boolean);
       }
+      
+      const normalizedInitialSizes: string[] = [];
+      loadedSizes.forEach(s => {
+        if (!normalizedInitialSizes.some(existing => existing.toLowerCase() === s.toLowerCase())) {
+          normalizedInitialSizes.push(s);
+        }
+      });
+
+      setSizes(normalizedInitialSizes.length > 0 ? normalizedInitialSizes : ['Free Size']);
 
       setSizeGuide(initialProduct.size_guide || defaultSizeGuide);
       setSizeChartImageUrl(initialProduct.size_guide?.image_url || initialProduct.size_chart_image || '');
@@ -202,14 +230,16 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
       setProductType(initialProduct.product_type || 'Apparel');
       setTags(Array.isArray(initialProduct.tags) ? initialProduct.tags : []);
       setInstagramVideoUrl(initialProduct.instagram_video_url || '');
-    } else {
+    } else if (!initialProduct) {
       // Default Add Mode
+      initializedProductIdRef.current = null;
       setCategory(categories[0]?.slug || '');
+      setMainProductImage('');
       setColors(['Black']);
       setColorGalleries({ 'Black': [] });
       setSizes(['Free Size', 'M', 'L', 'XL']);
     }
-  }, [initialProduct, categories]);
+  }, [initialProduct, currentInitialId]);
 
   const handleTitleChange = (val: string) => {
     setTitle(val);
@@ -218,10 +248,23 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
     }
   };
 
+  // Helper: check if a size is selected (case-insensitive & whitespace normalized)
+  const isSizeSelected = (sizeName: string) => {
+    if (!sizeName) return false;
+    const clean = String(sizeName).trim().toLowerCase();
+    return sizes.some(s => String(s).trim().toLowerCase() === clean);
+  };
+
+  // Toggle selection of a size (add if missing, remove if present)
   const handleToggleSize = (sizeName: string) => {
-    if (sizes.includes(sizeName)) {
+    const cleanName = String(sizeName).trim();
+    if (!cleanName) return;
+
+    const exists = sizes.some(s => String(s).trim().toLowerCase() === cleanName.toLowerCase());
+
+    if (exists) {
       if (sizes.length > 1) {
-        setSizes(sizes.filter(s => s !== sizeName));
+        setSizes(prev => prev.filter(s => String(s).trim().toLowerCase() !== cleanName.toLowerCase()));
       } else {
         Swal.fire({
           toast: true,
@@ -233,18 +276,55 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
         });
       }
     } else {
-      setSizes([...sizes, sizeName]);
+      setSizes(prev => [...prev, cleanName]);
     }
   };
 
+  // Add custom size from text input
   const handleAddCustomSize = () => {
     const trimmed = customSizeInput.trim().toUpperCase();
     if (!trimmed) return;
-    if (!sizes.includes(trimmed)) {
-      setSizes([...sizes, trimmed]);
+
+    const exists = sizes.some(s => String(s).trim().toLowerCase() === trimmed.toLowerCase());
+
+    if (!exists) {
+      setSizes(prev => [...prev, trimmed]);
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Size "${trimmed}" added and selected.`,
+        showConfirmButton: false,
+        timer: 1800,
+      });
+    } else {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'info',
+        title: `Size "${trimmed}" is already selected.`,
+        showConfirmButton: false,
+        timer: 2000,
+      });
     }
     setCustomSizeInput('');
   };
+
+  // Combined list of all available size pills (common predefined sizes + all user-added sizes)
+  const allAvailablePillSizes = useMemo(() => {
+    const set = new Set<string>();
+    COMMON_SIZES.forEach(s => set.add(s));
+    sizes.forEach(s => {
+      if (s && String(s).trim()) {
+        const clean = String(s).trim();
+        const match = Array.from(set).find(existing => existing.toLowerCase() === clean.toLowerCase());
+        if (!match) {
+          set.add(clean);
+        }
+      }
+    });
+    return Array.from(set);
+  }, [sizes]);
 
   const handleSizeChartUpload = async (file: File) => {
     if (!file) return;
@@ -318,32 +398,40 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
     const finalSlug = slug.trim() || generateSlug(title) || 'product-' + Date.now();
     const finalStatus = overrideDraft ? 'draft' : status;
 
-    // Collect all image URLs across all colors + general images
-    const allGalleryUrls: string[] = [];
-    Object.values(colorGalleries).forEach(gallery => {
-      if (Array.isArray(gallery)) {
-        gallery.forEach(url => {
-          if (url && !allGalleryUrls.includes(url)) allGalleryUrls.push(url);
+    // Collect all image URLs across all colors in order
+    const allColorImagesList: string[] = [];
+    colors.forEach(col => {
+      const g = colorGalleries[col];
+      if (Array.isArray(g)) {
+        g.forEach(url => {
+          const cleaned = cleanImageUrl(url);
+          if (cleaned && !allColorImagesList.includes(cleaned)) {
+            allColorImagesList.push(cleaned);
+          }
         });
       }
     });
 
+    // Cleaned main product image
+    const cleanedMainProductImage = cleanImageUrl(mainProductImage);
+    const resolvedPrimaryImage = cleanedMainProductImage || allColorImagesList[0] || primaryImage || '';
+
+    // Complete ordered image list: Main Image FIRST, followed by color groups
     const combinedImages = Array.from(new Set([
-      ...allGalleryUrls,
-      ...(Array.isArray(generalImages) ? generalImages : []),
-      primaryImage
+      resolvedPrimaryImage,
+      ...allColorImagesList,
+      ...(Array.isArray(generalImages) ? generalImages.map(cleanImageUrl).filter(Boolean) : []),
     ].filter(Boolean)));
 
-    // Determine primary cover image
-    const firstColor = colors[0];
-    const firstColorPrimary = firstColor && colorGalleries[firstColor]?.[0];
-    const resolvedPrimaryImage = firstColorPrimary || primaryImage || combinedImages[0] || '';
+    // Clean and normalize final sizes
+    const normalizedFinalSizes = Array.from(new Set(sizes.map(s => String(s).trim()).filter(Boolean)));
+    const finalSizes = normalizedFinalSizes.length > 0 ? normalizedFinalSizes : ['Free Size'];
 
     // Generate comprehensive variant matrix
     const generatedVariants = [];
     colors.forEach(col => {
       const colPrimaryImg = colorGalleries[col]?.[0] || resolvedPrimaryImage;
-      sizes.forEach(sz => {
+      finalSizes.forEach(sz => {
         generatedVariants.push({
           id: `${finalSlug}-${col}-${sz}`,
           color: col,
@@ -351,7 +439,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
           sku: `${finalSlug.toUpperCase()}-${col.slice(0, 3).toUpperCase()}-${sz}`,
           price: Number(price) || 0,
           original_price: compareAtPrice ? Number(compareAtPrice) : null,
-          stock: Math.max(1, Math.floor((Number(stockQuantity) || 50) / Math.max(1, colors.length * sizes.length))),
+          stock: Math.max(1, Math.floor((Number(stockQuantity) || 50) / Math.max(1, colors.length * finalSizes.length))),
           image_url: colPrimaryImg,
           in_stock: true
         });
@@ -371,12 +459,15 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
       badge: badge || null,
 
       // Multi-Color & Gallery Core Fields
+      main_image: resolvedPrimaryImage,
+      mainImage: resolvedPrimaryImage,
+      primary_image: resolvedPrimaryImage,
       image: resolvedPrimaryImage,
-      images: combinedImages.length > 0 ? combinedImages : [resolvedPrimaryImage],
+      images: combinedImages.length > 0 ? combinedImages : [resolvedPrimaryImage].filter(Boolean),
       color_images: colorGalleries,
       color_galleries: colorGalleries,
       colors: colors.length > 0 ? colors : ['Black'],
-      sizes: sizes.length > 0 ? sizes : ['Free Size'],
+      sizes: finalSizes,
       variants: generatedVariants,
 
       // Details & Description
@@ -624,7 +715,15 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
             </div>
           </div>
 
-          {/* Card 3: Colors & Color-Specific Galleries (MAIN REQUIREMENT) */}
+          {/* Card 3: Dedicated Main Product Image (Independent of Color) */}
+          <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 shadow-xs space-y-3.5 sm:space-y-4">
+            <MainProductImageManager
+              mainImage={mainProductImage}
+              onMainImageChange={setMainProductImage}
+            />
+          </div>
+
+          {/* Card 4: Colors & Color-Wise Image Galleries */}
           <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 shadow-xs space-y-3.5 sm:space-y-4">
             <ColorGalleryManager
               colors={colors}
@@ -634,31 +733,31 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
             />
           </div>
 
-          {/* Card 4: Sizes */}
+          {/* Card 5: Sizes */}
           <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 shadow-xs space-y-3 sm:space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5 sm:gap-2">
                 <Ruler size={15} className="text-brand shrink-0" />
-                <span>4. Available Sizes</span>
+                <span>5. Available Sizes</span>
               </h2>
               <span className="text-[11px] sm:text-xs text-muted-foreground font-medium">
                 {sizes.length} selected
               </span>
             </div>
 
-            {/* Popular Size Pills */}
+            {/* Size Pills (Predefined + Custom Sizes) */}
             <div className="flex flex-wrap gap-1.5 sm:gap-2">
-              {COMMON_SIZES.map((sz) => {
-                const isSelected = sizes.includes(sz);
+              {allAvailablePillSizes.map((sz) => {
+                const isSelected = isSizeSelected(sz);
                 return (
                   <button
                     key={sz}
                     type="button"
                     onClick={() => handleToggleSize(sz)}
                     className={cn(
-                      "px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-xl font-bold text-[11px] sm:text-xs transition-all border cursor-pointer active:scale-95",
+                      "px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-xl font-bold text-[11px] sm:text-xs transition-all border cursor-pointer active:scale-95 select-none",
                       isSelected
-                        ? "border-[#1C1613] bg-[#1C1613] text-white shadow-xs"
+                        ? "border-[#1C1613] bg-[#1C1613] text-white shadow-xs scale-105"
                         : "border-border bg-background text-foreground hover:border-[#1C1613]/50"
                     )}
                   >
@@ -748,15 +847,23 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                     <p className="text-[11px] text-muted-foreground truncate max-w-md font-mono">
                       {sizeChartImageUrl}
                     </p>
-                    <div className="flex items-center gap-2 pt-0.5">
+                    <div className="flex items-center gap-2 pt-0.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => setSizeChartMediaModalOpen(true)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-background border border-border hover:bg-muted text-foreground transition-all cursor-pointer"
+                      >
+                        <FolderOpen size={12} className="text-primary" />
+                        <span>Select from Media</span>
+                      </button>
                       <button
                         type="button"
                         disabled={isUploadingSizeChart}
                         onClick={() => sizeChartFileInputRef.current?.click()}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-background border border-border hover:bg-muted text-foreground transition-all cursor-pointer disabled:opacity-50"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-all cursor-pointer disabled:opacity-50"
                       >
                         {isUploadingSizeChart ? <Loader2 size={12} className="animate-spin" /> : <UploadCloud size={12} />}
-                        <span>Replace Image</span>
+                        <span>Upload New</span>
                       </button>
                       <button
                         type="button"
@@ -770,10 +877,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                   </div>
                 </div>
               ) : (
-                <div
-                  onClick={() => sizeChartFileInputRef.current?.click()}
-                  className="py-5 px-3 text-center rounded-xl border-2 border-dashed border-border/80 hover:border-brand/60 bg-muted/20 hover:bg-brand/5 transition-all cursor-pointer group"
-                >
+                <div className="py-5 px-3 text-center rounded-xl border-2 border-dashed border-border/80 bg-muted/20 flex flex-col items-center justify-center gap-2">
                   {isUploadingSizeChart ? (
                     <div className="flex flex-col items-center justify-center gap-1.5 py-2">
                       <Loader2 className="w-6 h-6 text-brand animate-spin" />
@@ -781,17 +885,53 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                     </div>
                   ) : (
                     <>
-                      <UploadCloud className="w-6 h-6 text-muted-foreground/60 mx-auto mb-1.5 group-hover:scale-110 transition-transform" />
-                      <p className="text-xs font-bold text-foreground">
-                        Click to upload Size Chart Image
-                      </p>
-                      <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5">
-                        Supports PNG, JPG, WEBP measurement tables and diagrams
-                      </p>
+                      <UploadCloud className="w-6 h-6 text-muted-foreground/60 mx-auto mb-0.5" />
+                      <div>
+                        <p className="text-xs font-bold text-foreground">
+                          Add Size Chart / Measurement Guide Image
+                        </p>
+                        <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5">
+                          Select existing image from Media Library or upload a new diagram
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap justify-center">
+                        <button
+                          type="button"
+                          onClick={() => setSizeChartMediaModalOpen(true)}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-secondary hover:bg-secondary/80 text-foreground border border-border shadow-2xs transition-colors cursor-pointer"
+                        >
+                          <FolderOpen size={13} className="text-primary" />
+                          <span>Select from Media</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => sizeChartFileInputRef.current?.click()}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs transition-colors cursor-pointer"
+                        >
+                          <UploadCloud size={13} />
+                          <span>Upload New</span>
+                        </button>
+                      </div>
                     </>
                   )}
                 </div>
               )}
+
+              {/* Size Chart Media Picker Modal */}
+              <MediaPickerModal
+                isOpen={sizeChartMediaModalOpen}
+                onClose={() => setSizeChartMediaModalOpen(false)}
+                onSelect={(urls) => {
+                  if (urls && urls[0]) {
+                    const clean = cleanImageUrl(urls[0]);
+                    setSizeChartImageUrl(clean || urls[0]);
+                    setSizeGuide(prev => ({ ...(prev || defaultSizeGuide), image_url: clean || urls[0] }));
+                  }
+                }}
+                multiple={false}
+                initialSelectedUrls={sizeChartImageUrl ? [sizeChartImageUrl] : []}
+                title="Select Size Chart Image"
+              />
             </div>
           </div>
 

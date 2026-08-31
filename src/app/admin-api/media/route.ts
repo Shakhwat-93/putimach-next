@@ -193,13 +193,17 @@ export async function GET(request: Request) {
         const contentType = getContentTypeFromKey(key);
         const url = `/api/media/${key}`;
 
+        const isImage = contentType.startsWith('image/') || /\.(webp|jpg|jpeg|png|gif|svg|avif)$/i.test(key);
+
         return {
           key,
           name: filename,
           url,
           size,
           formattedSize: formatBytes(size),
+          sizeFormatted: formatBytes(size),
           contentType,
+          type: isImage ? 'image' : 'file',
           lastModified,
           etag: obj.ETag?.replace(/"/g, '') || '',
         };
@@ -238,6 +242,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       items: paginatedItems,
+      assets: paginatedItems,
       totalCount: items.length,
       bucketTotalCount: rawObjects.length,
       bucketTotalSize: totalSize,
@@ -250,7 +255,8 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: false,
       error: err?.message || 'Failed to list media from storage',
-      items: []
+      items: [],
+      assets: []
     }, { status: 500 });
   }
 }

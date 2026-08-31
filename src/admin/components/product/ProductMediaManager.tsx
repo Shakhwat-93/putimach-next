@@ -3,9 +3,11 @@
 import React, { useState, useRef } from 'react';
 import { 
   UploadCloud, Plus, Trash2, Star, ChevronLeft, ChevronRight, 
-  Loader2, Image as ImageIcon, CheckCircle, ExternalLink, AlertCircle
+  Loader2, Image as ImageIcon, CheckCircle, ExternalLink, AlertCircle, FolderOpen
 } from 'lucide-react';
 import { uploadImage } from '../../lib/uploadHelper';
+import { cleanImageUrl } from '@/lib/productMedia';
+import { MediaPickerModal } from '../media/MediaPickerModal';
 import { cn } from '../../lib/utils';
 
 interface ProductMediaManagerProps {
@@ -24,6 +26,7 @@ export const ProductMediaManager: React.FC<ProductMediaManagerProps> = ({
   const [uploadingFiles, setUploadingFiles] = useState<{ id: string; name: string; progress: boolean }[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [mediaModalOpen, setMediaModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Combine primary and extra images cleanly
@@ -106,6 +109,16 @@ export const ProductMediaManager: React.FC<ProductMediaManagerProps> = ({
     }
   };
 
+  const handleMediaPickerSelect = (selectedUrls: string[]) => {
+    if (!selectedUrls || selectedUrls.length === 0) return;
+    const cleanedList = selectedUrls.map(u => cleanImageUrl(u)).filter(Boolean) as string[];
+    const updatedList = Array.from(new Set([...allImages, ...cleanedList]));
+    onChange(updatedList);
+    if ((!primaryImage || !allImages.includes(primaryImage)) && updatedList.length > 0) {
+      onPrimaryChange?.(updatedList[0]);
+    }
+  };
+
   return (
     <div className="space-y-4 min-w-0 w-full">
       {/* Header Info */}
@@ -122,13 +135,25 @@ export const ProductMediaManager: React.FC<ProductMediaManagerProps> = ({
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs transition-all cursor-pointer shrink-0"
-        >
-          <Plus size={14} /> Add Media
-        </button>
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setMediaModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-secondary hover:bg-secondary/80 text-foreground border border-border transition-colors cursor-pointer"
+          >
+            <FolderOpen size={14} className="text-primary" />
+            <span>Select from Media</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs transition-all cursor-pointer"
+          >
+            <Plus size={14} />
+            <span>Upload New</span>
+          </button>
+        </div>
       </div>
 
       {errorMsg && (
@@ -167,16 +192,27 @@ export const ProductMediaManager: React.FC<ProductMediaManagerProps> = ({
               <UploadCloud size={24} />
             </div>
             <div>
-              <p className="text-sm font-bold text-foreground">Drag and drop images here, or browse</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Supports high-res JPG, PNG, WebP (auto-optimized)</p>
+              <p className="text-sm font-bold text-foreground">Drag and drop images here, or choose an option</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Select from existing Media Library or upload new images (auto-optimized WebP)</p>
             </div>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="px-4 py-2 rounded-xl text-xs font-bold bg-secondary hover:bg-secondary/80 text-foreground border border-border transition-colors cursor-pointer"
-            >
-              Select Files
-            </button>
+            <div className="flex items-center gap-2.5 flex-wrap justify-center pt-1">
+              <button
+                type="button"
+                onClick={() => setMediaModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-secondary hover:bg-secondary/80 text-foreground border border-border shadow-xs transition-colors cursor-pointer"
+              >
+                <FolderOpen size={14} className="text-primary" />
+                <span>Select from Media Library</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs transition-colors cursor-pointer"
+              >
+                <Plus size={14} />
+                <span>Upload New Files</span>
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
@@ -199,37 +235,35 @@ export const ProductMediaManager: React.FC<ProductMediaManagerProps> = ({
 
                   {/* Primary Badge */}
                   {isPrimary && (
-                    <div className="absolute top-2 left-2 z-10 flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-950/80 backdrop-blur-sm text-white text-[10px] font-bold shadow-xs">
-                      <Star size={10} className="fill-amber-400 text-amber-400" />
-                      <span>PRIMARY</span>
+                    <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1">
+                      <Star size={10} className="fill-current" /> Cover
                     </div>
                   )}
 
-                  {/* Hover Overlay Controls */}
-                  <div className="absolute inset-0 z-20 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
+                  {/* Quick Actions Hover Overlay */}
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2 text-white">
                     <div className="flex items-center justify-between">
                       {!isPrimary && (
                         <button
                           type="button"
                           onClick={() => setAsPrimary(url)}
-                          title="Set as Primary Cover"
-                          className="px-2 py-1 rounded bg-white/20 hover:bg-white/40 text-white text-[10px] font-bold backdrop-blur-sm transition-colors cursor-pointer"
+                          className="px-2 py-1 rounded bg-white/20 hover:bg-white/40 text-[10px] font-bold backdrop-blur-xs transition-colors cursor-pointer"
                         >
-                          Set Primary
+                          Make Cover
                         </button>
                       )}
                       <button
                         type="button"
                         onClick={() => removeImage(url)}
-                        title="Delete Image"
-                        className="ml-auto p-1.5 rounded-lg bg-rose-600/90 hover:bg-rose-700 text-white backdrop-blur-sm transition-colors cursor-pointer"
+                        className="p-1 rounded bg-red-600/80 hover:bg-red-600 text-white ml-auto transition-colors cursor-pointer"
+                        title="Remove from product"
                       >
                         <Trash2 size={12} />
                       </button>
                     </div>
 
-                    {/* Order buttons */}
-                    <div className="flex items-center justify-between bg-black/40 rounded-lg p-1 text-white">
+                    {/* Reorder Arrows */}
+                    <div className="flex items-center justify-between bg-black/40 backdrop-blur-xs rounded-lg px-2 py-1">
                       <button
                         type="button"
                         disabled={idx === 0}
@@ -268,17 +302,39 @@ export const ProductMediaManager: React.FC<ProductMediaManagerProps> = ({
             ))}
 
             {/* Add More Tile */}
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="aspect-square rounded-xl border border-dashed border-border hover:border-primary bg-background/50 hover:bg-primary/5 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
-            >
-              <Plus size={18} />
-              <span className="text-[11px] font-bold">Add More</span>
-            </button>
+            <div className="aspect-square rounded-xl border border-dashed border-border p-1.5 flex flex-col gap-1.5 justify-center bg-background/50">
+              <button
+                type="button"
+                onClick={() => setMediaModalOpen(true)}
+                className="flex-1 rounded-lg border border-border/80 hover:border-primary bg-secondary/40 hover:bg-primary/10 flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                title="Select from Media Library"
+              >
+                <FolderOpen size={14} className="text-primary" />
+                <span className="text-[10px] font-bold">From Media</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex-1 rounded-lg border border-border/80 hover:border-primary bg-secondary/40 hover:bg-primary/10 flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                title="Upload New Image"
+              >
+                <Plus size={14} />
+                <span className="text-[10px] font-bold">Upload New</span>
+              </button>
+            </div>
           </div>
         )}
       </div>
+
+      {/* Media Picker Modal */}
+      <MediaPickerModal
+        isOpen={mediaModalOpen}
+        onClose={() => setMediaModalOpen(false)}
+        onSelect={handleMediaPickerSelect}
+        multiple={true}
+        initialSelectedUrls={allImages}
+        title="Select Product Images"
+      />
     </div>
   );
 };

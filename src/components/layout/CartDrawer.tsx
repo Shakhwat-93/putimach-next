@@ -146,10 +146,6 @@ export default function CartDrawer() {
   const isFreeShippingUnlocked = discountResult?.free_shipping || false;
   const finalCalculatedTotal = Math.max(0, calculatedSubtotal - discountAmount);
 
-  const freeShippingThreshold = 3000;
-  const progressPercent = Math.min(100, Math.round((calculatedSubtotal / freeShippingThreshold) * 100));
-  const remainingForFreeShipping = Math.max(0, freeShippingThreshold - calculatedSubtotal);
-
   return (
     <AnimatePresence>
       {isOpen && (
@@ -199,35 +195,6 @@ export default function CartDrawer() {
                 <X size={18} />
               </button>
             </div>
-
-            {/* Free Shipping Progress Bar */}
-            {items.length > 0 && (
-              <div className="bg-[#F4EFE6] px-6 py-3 border-b border-[#E9E2D2] text-xs">
-                <div className="flex items-center justify-between mb-1.5 font-medium text-xs text-[#1C1613]">
-                  <span className="flex items-center gap-1.5 text-[11px] font-bold">
-                    <Truck size={14} className="text-[#C5A880]" />
-                    {isFreeShippingUnlocked ? (
-                      <span className="text-emerald-700 font-bold flex items-center gap-1">
-                        <Sparkles size={12} /> Promotion Unlocked: FREE Delivery!
-                      </span>
-                    ) : remainingForFreeShipping > 0 ? (
-                      <>Add <span className="font-black text-[#FF5533]">{formatPrice(remainingForFreeShipping)}</span> more for FREE Delivery!</>
-                    ) : (
-                      <span className="text-emerald-700 font-bold flex items-center gap-1">
-                        <Sparkles size={12} /> You unlocked FREE Express Delivery!
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-[10px] font-bold text-gray-500">{isFreeShippingUnlocked ? '100%' : `${progressPercent}%`}</span>
-                </div>
-                <div className="w-full h-1.5 bg-[#E9E2D2] rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-[#C5A880] to-[#FF5533] rounded-full transition-all duration-500" 
-                    style={{ width: isFreeShippingUnlocked ? '100%' : `${progressPercent}%` }}
-                  />
-                </div>
-              </div>
-            )}
 
             {/* Items List */}
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3.5 scrollbar-none">
@@ -433,7 +400,7 @@ export default function CartDrawer() {
                   <div className="flex items-center justify-between text-gray-500">
                     <span>Shipping</span>
                     <span className="text-emerald-700 font-bold">
-                      {isFreeShippingUnlocked || remainingForFreeShipping === 0 ? 'FREE' : 'Calculated at checkout'}
+                      {isFreeShippingUnlocked ? 'FREE' : 'Calculated at checkout'}
                     </span>
                   </div>
 

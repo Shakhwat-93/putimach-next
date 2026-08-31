@@ -3,10 +3,11 @@
 import React, { useState, useRef } from 'react';
 import { 
   Plus, Trash2, UploadCloud, Star, ChevronLeft, ChevronRight, 
-  Loader2, Image as ImageIcon, X, Check, Sparkles, Palette, AlertCircle
+  Loader2, Image as ImageIcon, X, Check, Sparkles, Palette, AlertCircle, FolderOpen
 } from 'lucide-react';
 import { uploadImage } from '../../lib/uploadHelper';
 import { cleanImageUrl } from '@/lib/productMedia';
+import { MediaPickerModal } from '../media/MediaPickerModal';
 import { cn } from '../../lib/utils';
 import Swal from 'sweetalert2';
 
@@ -32,11 +33,25 @@ export const ColorGalleryManager: React.FC<ColorGalleryManagerProps> = ({
   const [isAddingCustom, setIsAddingCustom] = useState(false);
   const [uploadingState, setUploadingState] = useState<Record<string, number>>({}); // color -> count of uploading files
   const [dragOverColor, setDragOverColor] = useState<string | null>(null);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   // Ensure unique colors
   const activeColors = Array.from(new Set(colors.map(c => c?.trim()).filter(Boolean)));
+
+  const [activeMediaPickerColor, setActiveMediaPickerColor] = useState<string | null>(null);
+
+  const handleMediaPickerSelect = (selectedUrls: string[]) => {
+    if (!activeMediaPickerColor || !selectedUrls || selectedUrls.length === 0) return;
+    const colorName = activeMediaPickerColor;
+    const cleaned = selectedUrls.map(u => cleanImageUrl(u)).filter(Boolean) as string[];
+    const currentList = Array.isArray(colorGalleries[colorName]) ? colorGalleries[colorName] : [];
+    const updatedList = Array.from(new Set([...currentList, ...cleaned]));
+    onGalleriesChange({
+      ...colorGalleries,
+      [colorName]: updatedList
+    });
+    setActiveMediaPickerColor(null);
+  };
 
   const handleAddColor = (colorName: string) => {
     const trimmed = colorName?.trim();
@@ -178,107 +193,86 @@ export const ColorGalleryManager: React.FC<ColorGalleryManagerProps> = ({
               <Palette className="w-4 h-4 text-brand shrink-0" />
               <span>Multi-Color Product Galleries</span>
             </h3>
-            <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 leading-relaxed">
-              Add colors and upload photos. On storefront, choosing a color displays its specific gallery.
+            <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">
+              Select existing photos from Media Library or upload new ones for each color variation.
             </p>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
-            {!isAddingCustom ? (
-              <button
-                type="button"
-                onClick={() => setIsAddingCustom(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#1C1613] text-white hover:bg-black transition-all shadow-xs cursor-pointer active:scale-95"
-              >
-                <Plus size={13} /> <span>Add Color</span>
-              </button>
-            ) : (
-              <div className="flex items-center gap-1.5 w-full sm:w-auto">
-                <input
-                  type="text"
-                  value={newColorInput}
-                  onChange={(e) => setNewColorInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddColor(newColorInput);
-                    }
-                  }}
-                  placeholder="e.g. Royal Blue"
-                  autoFocus
-                  className="px-2.5 py-1 text-xs rounded-xl border border-border bg-background focus:ring-2 focus:ring-brand focus:outline-none w-32 sm:w-40"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleAddColor(newColorInput)}
-                  className="px-2.5 py-1 rounded-xl text-xs font-bold bg-brand text-white hover:bg-brand/90 cursor-pointer"
-                >
-                  Add
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setIsAddingCustom(false); setNewColorInput(''); }}
-                  className="p-1 rounded-xl hover:bg-muted text-muted-foreground cursor-pointer"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Preset Color Quick-Pick Chips */}
-        <div className="mt-3 pt-2.5 border-t border-border/60">
-          <p className="text-[10px] font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">
-            Quick Add Colors:
-          </p>
-          <div className="flex flex-wrap gap-1 sm:gap-1.5">
-            {PRESET_COLORS.map((preset) => {
-              const isAdded = activeColors.some(c => c.toLowerCase() === preset.toLowerCase());
-              return (
-                <button
-                  key={preset}
-                  type="button"
-                  disabled={isAdded}
-                  onClick={() => handleAddColor(preset)}
-                  className={cn(
-                    "px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[11px] font-medium border transition-all cursor-pointer",
-                    isAdded 
-                      ? "bg-muted text-muted-foreground border-transparent opacity-50 cursor-not-allowed"
-                      : "bg-background/80 hover:bg-background border-border text-foreground hover:border-brand/60 active:scale-95"
-                  )}
-                >
-                  {isAdded ? `✓ ${preset}` : `+ ${preset}`}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* No Colors Empty State */}
-      {activeColors.length === 0 && (
-        <div className="text-center py-8 px-3 border-2 border-dashed border-border rounded-2xl bg-card/40">
-          <Palette className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
-          <h4 className="text-xs font-bold text-foreground">No colors added yet</h4>
-          <p className="text-[11px] text-muted-foreground mt-0.5 max-w-sm mx-auto">
-            Click "+ Add Color" above to create colors and upload photos.
-          </p>
           <button
             type="button"
             onClick={() => setIsAddingCustom(true)}
-            className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#1C1613] text-white hover:bg-black transition-all cursor-pointer"
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs font-bold bg-foreground text-background hover:bg-foreground/90 transition-all shadow-xs shrink-0 cursor-pointer"
           >
-            <Plus size={13} /> Add First Color
+            <Plus size={14} />
+            <span>Add Color</span>
           </button>
         </div>
-      )}
 
-      {/* Color Cards List */}
+        {/* Preset Colors Fast Pick */}
+        <div className="mt-3.5 pt-3 border-t border-border/40 flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground mr-1">Quick Presets:</span>
+          {PRESET_COLORS.map(preset => {
+            const isAdded = activeColors.some(c => c.toLowerCase() === preset.toLowerCase());
+            return (
+              <button
+                type="button"
+                key={preset}
+                disabled={isAdded}
+                onClick={() => handleAddColor(preset)}
+                className={cn(
+                  "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer",
+                  isAdded
+                    ? "bg-muted text-muted-foreground/50 cursor-not-allowed line-through"
+                    : "bg-background border border-border hover:border-brand hover:text-brand shadow-2xs active:scale-95"
+                )}
+              >
+                <Plus size={10} />
+                <span>{preset}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Custom Color Input Modal/Form */}
+        {isAddingCustom && (
+          <div className="mt-3 p-3 bg-background rounded-xl border border-border flex items-center gap-2 animate-in fade-in-50">
+            <input
+              type="text"
+              placeholder="e.g. Lavender Purple, Forest Camo..."
+              value={newColorInput}
+              onChange={(e) => setNewColorInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddColor(newColorInput);
+                }
+              }}
+              autoFocus
+              className="flex-1 h-9 px-3 rounded-lg bg-muted/40 border border-border text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+            />
+            <button
+              type="button"
+              onClick={() => handleAddColor(newColorInput)}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
+            >
+              Add
+            </button>
+            <button
+              type="button"
+              onClick={() => { setIsAddingCustom(false); setNewColorInput(''); }}
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Colors Galleries List */}
       <div className="space-y-4">
         {activeColors.map((colorName) => {
           const gallery = Array.isArray(colorGalleries[colorName]) ? colorGalleries[colorName] : [];
-          const isUploading = Boolean(uploadingState[colorName]);
+          const isUploading = (uploadingState[colorName] || 0) > 0;
           const isDragTarget = dragOverColor === colorName;
 
           return (
@@ -293,7 +287,7 @@ export const ColorGalleryManager: React.FC<ColorGalleryManagerProps> = ({
               )}
             >
               {/* Color Header Bar */}
-              <div className="px-3.5 py-2.5 sm:px-5 sm:py-3 bg-muted/40 border-b border-border flex items-center justify-between gap-2">
+              <div className="px-3.5 py-2.5 sm:px-5 sm:py-3 bg-muted/40 border-b border-border flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="w-3.5 h-3.5 rounded-full border border-border/80 shadow-xs shrink-0"
                     style={{
@@ -318,7 +312,7 @@ export const ColorGalleryManager: React.FC<ColorGalleryManagerProps> = ({
                   </span>
                 </div>
 
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
                   {/* Upload button for this color */}
                   <input
                     type="file"
@@ -333,6 +327,17 @@ export const ColorGalleryManager: React.FC<ColorGalleryManagerProps> = ({
                     }}
                     className="hidden"
                   />
+
+                  {/* Select from Media Library */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveMediaPickerColor(colorName)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold bg-secondary hover:bg-secondary/80 text-foreground border border-border transition-all shadow-2xs cursor-pointer"
+                  >
+                    <FolderOpen size={13} className="text-primary" />
+                    <span>From Media</span>
+                  </button>
+
                   <button
                     type="button"
                     disabled={isUploading}
@@ -347,8 +352,7 @@ export const ColorGalleryManager: React.FC<ColorGalleryManagerProps> = ({
                     ) : (
                       <>
                         <UploadCloud size={12} />
-                        <span className="hidden sm:inline">Upload Photos</span>
-                        <span className="sm:hidden">Upload</span>
+                        <span>Upload New</span>
                       </>
                     )}
                   </button>
@@ -383,17 +387,34 @@ export const ColorGalleryManager: React.FC<ColorGalleryManagerProps> = ({
               {/* Photos Grid Container */}
               <div className="p-3 sm:p-5">
                 {gallery.length === 0 ? (
-                  <div 
-                    onClick={() => fileInputRefs.current[colorName]?.click()}
-                    className="py-6 px-3 text-center rounded-xl border-2 border-dashed border-border/80 hover:border-brand/60 bg-muted/20 hover:bg-brand/5 transition-all cursor-pointer group"
-                  >
-                    <ImageIcon className="w-6 h-6 text-muted-foreground/50 mx-auto mb-1.5 group-hover:scale-110 transition-transform" />
-                    <p className="text-xs font-bold text-foreground">
-                      No photos uploaded for {colorName}
-                    </p>
-                    <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5">
-                      Tap here to upload photos. Multiple images supported.
-                    </p>
+                  <div className="py-6 px-3 text-center rounded-xl border-2 border-dashed border-border/80 bg-muted/20 flex flex-col items-center justify-center gap-2">
+                    <ImageIcon className="w-6 h-6 text-muted-foreground/50 mx-auto mb-1" />
+                    <div>
+                      <p className="text-xs font-bold text-foreground">
+                        No photos added for {colorName}
+                      </p>
+                      <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5">
+                        Choose from Media Library or upload new photos
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap justify-center">
+                      <button
+                        type="button"
+                        onClick={() => setActiveMediaPickerColor(colorName)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-secondary hover:bg-secondary/80 text-foreground border border-border shadow-2xs transition-colors cursor-pointer"
+                      >
+                        <FolderOpen size={13} className="text-primary" />
+                        <span>Select from Media</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRefs.current[colorName]?.click()}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs transition-colors cursor-pointer"
+                      >
+                        <Plus size={13} />
+                        <span>Upload New</span>
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3.5">
@@ -470,14 +491,26 @@ export const ColorGalleryManager: React.FC<ColorGalleryManagerProps> = ({
                     })}
 
                     {/* Quick Add more photos tile */}
-                    <button
-                      type="button"
-                      onClick={() => fileInputRefs.current[colorName]?.click()}
-                      className="aspect-[3/4] rounded-xl border-2 border-dashed border-border/80 hover:border-brand/60 bg-muted/20 hover:bg-brand/5 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground transition-all cursor-pointer active:scale-95 p-1"
-                    >
-                      <Plus size={16} />
-                      <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-center">Add Photo</span>
-                    </button>
+                    <div className="aspect-[3/4] rounded-xl border-2 border-dashed border-border/80 bg-muted/20 p-1 flex flex-col gap-1 justify-center">
+                      <button
+                        type="button"
+                        onClick={() => setActiveMediaPickerColor(colorName)}
+                        className="flex-1 rounded-lg border border-border/80 hover:border-brand bg-background/80 hover:bg-brand/10 flex flex-col items-center justify-center text-muted-foreground hover:text-foreground transition-all cursor-pointer p-0.5"
+                        title="Select from Media Library"
+                      >
+                        <FolderOpen size={13} className="text-primary" />
+                        <span className="text-[8px] sm:text-[9px] font-bold">Media</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRefs.current[colorName]?.click()}
+                        className="flex-1 rounded-lg border border-border/80 hover:border-brand bg-background/80 hover:bg-brand/10 flex flex-col items-center justify-center text-muted-foreground hover:text-foreground transition-all cursor-pointer p-0.5"
+                        title="Upload New Photo"
+                      >
+                        <Plus size={13} />
+                        <span className="text-[8px] sm:text-[9px] font-bold">Upload</span>
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -485,6 +518,16 @@ export const ColorGalleryManager: React.FC<ColorGalleryManagerProps> = ({
           );
         })}
       </div>
+
+      {/* Media Picker Modal */}
+      <MediaPickerModal
+        isOpen={Boolean(activeMediaPickerColor)}
+        onClose={() => setActiveMediaPickerColor(null)}
+        onSelect={handleMediaPickerSelect}
+        multiple={true}
+        initialSelectedUrls={activeMediaPickerColor ? colorGalleries[activeMediaPickerColor] || [] : []}
+        title={`Select Photos for ${activeMediaPickerColor || 'Color'}`}
+      />
     </div>
   );
 };

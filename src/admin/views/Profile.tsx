@@ -8,12 +8,13 @@ import { useAuth } from '../context/AuthContext';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Badge } from '../components/ui/badge';
-import { User, Camera, Shield, Save, CheckCircle, AlertCircle, X, Loader2 } from 'lucide-react';
+import { User, Camera, Shield, Save, CheckCircle, AlertCircle, X, Loader2, FolderOpen } from 'lucide-react';
+import { MediaPickerModal } from '../components/media/MediaPickerModal';
 
 export const Profile = () => {
   const { user, profile, updateProfile, updatePassword, uploadAvatar } = useAuth();
   const fileInputRef = useRef(null);
+  const [avatarMediaPickerOpen, setAvatarMediaPickerOpen] = useState(false);
 
   const [name, setName] = useState('');
   const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
@@ -169,16 +170,57 @@ export const Profile = () => {
               accept="image/*" 
               className="hidden" 
             />
-            <div className="text-center sm:text-left space-y-1">
+            <div className="text-center sm:text-left space-y-1.5 flex-1">
               <h3 className="text-lg font-bold font-display text-foreground">{profile?.name || 'User'}</h3>
               <p className="text-sm text-muted-foreground">{profile?.email}</p>
-              {profile?.status && (
-                <div className="pt-1">
+              <div className="flex items-center gap-2 pt-1 justify-center sm:justify-start flex-wrap">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setAvatarMediaPickerOpen(true)}
+                  className="h-7 text-xs font-bold"
+                >
+                  <FolderOpen size={12} className="mr-1 text-primary" />
+                  Select from Media
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAvatarClick}
+                  className="h-7 text-xs font-bold"
+                >
+                  <Camera size={12} className="mr-1" />
+                  Upload New
+                </Button>
+                {profile?.status && (
                   <Badge variant="primary">{profile.status}</Badge>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
+
+          <MediaPickerModal
+            isOpen={avatarMediaPickerOpen}
+            onClose={() => setAvatarMediaPickerOpen(false)}
+            onSelect={async (urls) => {
+              if (urls && urls[0]) {
+                setLoading(prev => ({ ...prev, avatar: true }));
+                try {
+                  await updateProfile(profile?.id || user?.id, { avatar_url: urls[0] });
+                  setMessage({ type: 'success', text: 'Avatar updated from Media Library!' });
+                } catch (err: any) {
+                  setMessage({ type: 'error', text: err.message || 'Failed to set avatar' });
+                } finally {
+                  setLoading(prev => ({ ...prev, avatar: false }));
+                }
+              }
+            }}
+            multiple={false}
+            initialSelectedUrls={profile?.avatar_url ? [profile.avatar_url] : []}
+            title="Select Profile Avatar"
+          />
 
           <form onSubmit={handleProfileUpdate} className="space-y-4">
             <div className="space-y-1.5">

@@ -129,8 +129,8 @@ function Collections({ settings, categories }) {
   if (!categories || categories.length === 0) return null;
 
   const list = categories.map(cat => ({
-    id: cat.slug,
-    label: cat.name,
+    id: cat.slug || cat.id,
+    label: (cat.name || '').trim(),
     image: cat.image_url || 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=650&q=70'
   }));
 

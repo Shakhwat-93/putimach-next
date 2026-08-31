@@ -48,5 +48,6 @@ migrate-*.js
 playwright-report/
 test-results/
 .agents/
+scratch/
 .claude/
 

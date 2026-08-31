@@ -72,7 +72,7 @@ export default function Footer({
 
   const shopLinks = [
     { label: 'All Products', to: '/shop' },
-    ...categories.map(c => ({ label: c.name, to: `/shop?cat=${c.slug}` }))
+    ...categories.map(c => ({ label: (c.name || '').trim(), to: `/shop?category=${encodeURIComponent(c.slug || c.id)}` }))
   ];
 
   const footerLinks = {

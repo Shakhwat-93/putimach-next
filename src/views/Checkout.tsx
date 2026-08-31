@@ -8,7 +8,7 @@ import Link from 'next/link';
 
 import {
   User, Phone, MapPin, MessageSquare, ShoppingBag,
-  CheckCircle, Loader2, ChevronRight, Tag, Truck, CreditCard,
+  CheckCircle, CheckCircle2, AlertCircle, Loader2, ChevronRight, Tag, Truck, CreditCard,
   ArrowLeft, Zap, Package, Mail, Trash2, Plus, Minus, X, Sparkles
 } from 'lucide-react';
 import useCartStore from '../store/cartStore';
@@ -213,7 +213,6 @@ function OrderSummary({
                 <Tag size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Promo Code (e.g. SAVE20)"
                   value={couponInput}
                   onChange={(e) => setCouponInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -225,7 +224,7 @@ function OrderSummary({
                       }
                     }
                   }}
-                  className="w-full h-9 pl-8 pr-2.5 rounded-xl border border-input bg-background text-xs font-mono font-semibold uppercase placeholder:normal-case placeholder:font-sans focus:outline-none focus:ring-1 focus:ring-brand"
+                  className="w-full h-9 pl-8 pr-2.5 rounded-xl border border-input bg-background text-xs font-mono font-semibold uppercase focus:outline-none focus:ring-1 focus:ring-brand"
                 />
               </div>
               <button
@@ -517,6 +516,38 @@ export default function Checkout() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
 
+  // Phone number validation state
+  const [phoneError, setPhoneError] = useState('');
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value;
+    // If user pasted with +88 or 88, strip it
+    val = val.replace(/^(\+880|880)/, '0');
+    // Only keep numeric digits
+    val = val.replace(/\D/g, '');
+    // Limit to 11 digits
+    if (val.length > 11) {
+      val = val.slice(0, 11);
+    }
+    setForm(prev => ({ ...prev, phone: val }));
+    if (phoneError) setPhoneError('');
+  };
+
+  const handlePhoneBlur = () => {
+    const clean = form.phone.trim();
+    if (clean.length > 0) {
+      if (!clean.startsWith('01')) {
+        setPhoneError('ফোন নম্বরটি অবশ্যই 01 দিয়ে শুরু হতে হবে');
+      } else if (clean.length !== 11) {
+        setPhoneError('ফোন নম্বরটি অবশ্যই ১১ ডিজিটের হতে হবে');
+      } else {
+        setPhoneError('');
+      }
+    } else {
+      setPhoneError('');
+    }
+  };
+
   // Sync Incomplete Checkout Helper
   const syncIncompleteCheckout = useCallback(() => {
     if (!mounted || !checkoutSessionId || !items || items.length === 0 || confirmedOrder) return;
@@ -768,6 +799,35 @@ export default function Checkout() {
     isSubmittingRef.current = true;
     setSubmitting(true);
     setError('');
+
+    // Phone validation: must start with 01 and be exactly 11 digits
+    const cleanPhone = form.phone.trim().replace(/\D/g, '');
+    if (!cleanPhone.startsWith('01')) {
+      setError('ফোন নম্বরটি অবশ্যই 01 দিয়ে শুরু হতে হবে। (Phone number must start with 01)');
+      setPhoneError('ফোন নম্বরটি অবশ্যই 01 দিয়ে শুরু হতে হবে');
+      setSubmitting(false);
+      isSubmittingRef.current = false;
+      return;
+    }
+    if (cleanPhone.length !== 11) {
+      setError('ফোন নম্বরটি অবশ্যই ১১ ডিজিটের হতে হবে। (Phone number must be exactly 11 digits)');
+      setPhoneError('ফোন নম্বরটি অবশ্যই ১১ ডিজিটের হতে হবে');
+      setSubmitting(false);
+      isSubmittingRef.current = false;
+      return;
+    }
+    if (!form.name.trim()) {
+      setError('আপনার নাম লিখুন। (Please enter your name)');
+      setSubmitting(false);
+      isSubmittingRef.current = false;
+      return;
+    }
+    if (!form.address.trim()) {
+      setError('আপনার সম্পূর্ণ ডেলিভারি ঠিকানা লিখুন। (Please enter your full address)');
+      setSubmitting(false);
+      isSubmittingRef.current = false;
+      return;
+    }
 
     const num = generateOrderNumber();
 
@@ -1195,7 +1255,6 @@ export default function Checkout() {
                 <input
                   required
                   type="text"
-                  placeholder="e.g. Arif Hossain"
                   value={form.name}
                   onChange={setField('name')}
                   className="input"
@@ -1203,22 +1262,44 @@ export default function Checkout() {
                 />
               </Field>
 
-              <Field label="Phone Number" icon={Phone} required hint="11-digit mobile number for delivery contact">
-                <input
-                  required
-                  type="tel"
-                  placeholder="e.g. 01712345678"
-                  value={form.phone}
-                  onChange={setField('phone')}
-                  className="input font-mono"
-                  id="checkout-phone"
-                />
+              <Field 
+                label="Phone Number" 
+                icon={Phone} 
+                required 
+                hint={phoneError ? undefined : "11-digit mobile number starting with 01"}
+              >
+                <div className="relative">
+                  <input
+                    required
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="^01[0-9]{9}$"
+                    maxLength={11}
+                    value={form.phone}
+                    onChange={handlePhoneChange}
+                    onBlur={handlePhoneBlur}
+                    className={`input font-mono ${
+                      phoneError ? '!border-red-500 !ring-2 !ring-red-500/20 bg-red-500/5' : ''
+                    }`}
+                    id="checkout-phone"
+                  />
+                  {form.phone.length === 11 && form.phone.startsWith('01') && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-600 dark:text-emerald-400 pointer-events-none">
+                      <CheckCircle2 size={16} />
+                    </div>
+                  )}
+                </div>
+                {phoneError && (
+                  <p className="text-[11px] font-bold text-red-500 mt-1 flex items-center gap-1">
+                    <AlertCircle size={12} className="shrink-0" />
+                    <span>{phoneError}</span>
+                  </p>
+                )}
               </Field>
 
               <Field label="Email Address" icon={Mail} hint="Optional — For order updates and confirmations">
                 <input
                   type="email"
-                  placeholder="e.g. arif@email.com"
                   value={form.email}
                   onChange={setField('email')}
                   className="input"
@@ -1265,29 +1346,10 @@ export default function Checkout() {
                 </div>
               </Field>
 
-              <Field label="City / District" icon={MapPin} required hint="Enter your specific district or city name">
-                <input
-                  required
-                  type="text"
-                  placeholder="e.g. Dhaka, Chittagong, Sylhet, Savar..."
-                  value={form.city}
-                  onChange={setField('city')}
-                  list="city-suggestions"
-                  className="input"
-                  id="checkout-city"
-                />
-                <datalist id="city-suggestions">
-                  {['Dhaka', 'Chittagong', 'Sylhet', 'Rajshahi', 'Khulna', 'Barisal', 'Comilla', 'Gazipur', 'Narayanganj', 'Savar'].map(c => (
-                    <option key={c} value={c} />
-                  ))}
-                </datalist>
-              </Field>
-
               <Field label="Full Address" icon={MapPin} required hint="House/flat no., road, area">
                 <textarea
                   required
                   rows={2}
-                  placeholder="House 12, Road 5, Mirpur-10..."
                   value={form.address}
                   onChange={setField('address')}
                   className="input resize-none"
@@ -1298,7 +1360,6 @@ export default function Checkout() {
               <Field label="Order Note" icon={MessageSquare}>
                 <textarea
                   rows={2}
-                  placeholder="Any special instructions? (optional)"
                   value={form.note}
                   onChange={setField('note')}
                   className="input resize-none"

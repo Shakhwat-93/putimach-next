@@ -133,22 +133,59 @@ export default function ProductDetailView() {
     return map;
   }, [product]);
 
-  // Derive the active image gallery based on currently selected color
+  // Guaranteed complete gallery: Main Image ALWAYS FIRST + ALL Color Images (No filtering)
   const images = useMemo(() => {
     if (!product) return [];
 
-    if (selectedColor) {
-      const cleanSelected = String(selectedColor).trim().toLowerCase();
-      const colorSpecific = colorGalleriesMap[cleanSelected];
-      if (Array.isArray(colorSpecific) && colorSpecific.length > 0) {
-        return colorSpecific;
-      }
+    const list: string[] = [];
+
+    // 1. Dedicated Main Product Image (ALWAYS FIRST)
+    const rawMain = product.main_image || product.mainImage || product.primary_image || product.primaryImage || product.image;
+    const cleanMain = cleanImageUrl(rawMain);
+    if (cleanMain) {
+      list.push(cleanMain);
     }
 
-    // Fallback to general product images
-    const candidateList = extractProductImages(product);
-    return candidateList.length > 0 ? candidateList : [DEFAULT_PRODUCT_FALLBACK];
-  }, [product, selectedColor, colorGalleriesMap]);
+    // 2. Color-specific images in the exact order of product.colors
+    const colorOrder = Array.isArray(product.colors) ? product.colors : Object.keys(colorGalleriesMap);
+    colorOrder.forEach((colorName) => {
+      const cleanKey = String(colorName).trim().toLowerCase();
+      const colImgs = colorGalleriesMap[cleanKey];
+      if (Array.isArray(colImgs)) {
+        colImgs.forEach((img) => {
+          const cl = cleanImageUrl(img);
+          if (cl && !list.includes(cl)) {
+            list.push(cl);
+          }
+        });
+      }
+    });
+
+    // 3. Fallback: Any other color galleries not listed in product.colors
+    Object.values(colorGalleriesMap).forEach((colImgs) => {
+      if (Array.isArray(colImgs)) {
+        colImgs.forEach((img) => {
+          const cl = cleanImageUrl(img);
+          if (cl && !list.includes(cl)) {
+            list.push(cl);
+          }
+        });
+      }
+    });
+
+    // 4. Any general images from product.images
+    if (Array.isArray(product.images)) {
+      product.images.forEach((img) => {
+        const cl = cleanImageUrl(img);
+        if (cl && !list.includes(cl)) {
+          list.push(cl);
+        }
+      });
+    }
+
+    const unique = Array.from(new Set(list.filter(Boolean)));
+    return unique.length > 0 ? unique : [DEFAULT_PRODUCT_FALLBACK];
+  }, [product, colorGalleriesMap]);
 
   const sliderRef = useRef(null);
   const thumbnailRowRef = useRef(null);
@@ -267,18 +304,20 @@ export default function ProductDetailView() {
     goToSlide(next, true);
   };
 
-  // Instant, race-condition-free color switching
+  // Color Selection: Switches main view to first image of selected color without filtering gallery
   const handleSelectColor = (color) => {
     if (!color) return;
     setSelectedColor(color);
-    setActiveImg(0);
+    handleUserInteraction();
 
-    // Reset slider and thumbnail row scroll immediately
-    if (sliderRef.current) {
-      sliderRef.current.scrollTo({ left: 0, behavior: 'instant' });
-    }
-    if (thumbnailRowRef.current) {
-      thumbnailRowRef.current.scrollTo({ left: 0, behavior: 'instant' });
+    const cleanKey = String(color).trim().toLowerCase();
+    const colorImgs = colorGalleriesMap[cleanKey];
+    if (Array.isArray(colorImgs) && colorImgs.length > 0) {
+      const firstColorImg = colorImgs[0];
+      const targetIdx = images.findIndex((img) => img === firstColorImg);
+      if (targetIdx !== -1) {
+        goToSlide(targetIdx, true);
+      }
     }
   };
 
@@ -401,10 +440,10 @@ export default function ProductDetailView() {
       return;
     }
     setAdding(true);
-    const primaryColorImage = images[0] || product.image;
+    const itemImage = (selectedColor && colorGalleriesMap[selectedColor.toLowerCase()]?.[0]) || images[activeImg] || images[0] || product.image;
     const cartProduct = {
       ...product,
-      image: primaryColorImage,
+      image: itemImage,
     };
     addItem(cartProduct, selectedSize || 'One Size', selectedColor || 'None', 1, e);
     trackAddToCart(cartProduct, 1, selectedSize || 'One Size');
@@ -425,10 +464,10 @@ export default function ProductDetailView() {
       setTimeout(() => setSizeError(false), 2000);
       return;
     }
-    const primaryColorImage = images[0] || product.image;
+    const itemImage = (selectedColor && colorGalleriesMap[selectedColor.toLowerCase()]?.[0]) || images[activeImg] || images[0] || product.image;
     const cartProduct = {
       ...product,
-      image: primaryColorImage,
+      image: itemImage,
     };
     addItem(cartProduct, selectedSize || 'One Size', selectedColor || 'None', 1);
     trackAddToCart(cartProduct, 1, selectedSize || 'One Size');
@@ -937,7 +976,7 @@ export default function ProductDetailView() {
                 <p className="text-xs font-bold text-[#C5A880] uppercase tracking-widest font-serif mb-1">Recommended For You</p>
                 <h2 className="font-serif font-black text-2xl sm:text-3xl text-[#1C1613]">Related Products</h2>
               </div>
-              <Link href={`/shop?cat=${product.category}`} className="text-xs font-bold text-[#1C1613] hover:text-[#C5A880] transition-colors flex items-center gap-1">
+              <Link href={`/shop?category=${encodeURIComponent(product.category)}`} className="text-xs font-bold text-[#1C1613] hover:text-[#C5A880] transition-colors flex items-center gap-1">
                 View All <ArrowRight size={14} />
               </Link>
             </div>

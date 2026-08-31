@@ -6,11 +6,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Megaphone, ChevronDown, Check, Trash2,
   DollarSign, ShoppingBag, Eye, FileText, Upload, Plus,
-  TrendingUp, TrendingDown, BarChart2, Package
+  TrendingUp, TrendingDown, BarChart2, Package, FolderOpen
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { uploadImage } from '../lib/uploadHelper';
 import { useOrders } from '../context/OrderContext';
+import { MediaPickerModal } from './media/MediaPickerModal';
 import './CampaignEntryModal.css';
 
 export const PLATFORMS = ['Facebook', 'Instagram', 'Google', 'TikTok', 'YouTube', 'Twitter', 'LinkedIn', 'Other'];
@@ -85,6 +86,7 @@ export const CampaignEntryModal = ({ isOpen, onClose, onSave, initialData = null
   const [saving, setSaving]              = useState(false);
   const [errors, setErrors]              = useState({});
   const [dragging, setDragging]          = useState(false);
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const fileInputRef                     = useRef(null);
 
   /* ── Inventory product lookup ──────────────────────────── */
@@ -682,8 +684,16 @@ export const CampaignEntryModal = ({ isOpen, onClose, onSave, initialData = null
           {/* ── Section 4: Image Attachments ── */}
           {!disabled && (
             <div className="cem-section">
-              <div className="cem-section-label">
+              <div className="cem-section-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span className="cem-kicker">Report Attachments</span>
+                <button
+                  type="button"
+                  onClick={() => setMediaPickerOpen(true)}
+                  className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0"
+                >
+                  <FolderOpen size={13} />
+                  <span>Select from Media</span>
+                </button>
               </div>
 
               <div
@@ -727,12 +737,30 @@ export const CampaignEntryModal = ({ isOpen, onClose, onSave, initialData = null
                       </button>
                     </motion.div>
                   ))}
-                  <div className="cem-image-add-more" onClick={() => fileInputRef.current?.click()}>
-                    <Plus size={20} />
-                    <span>Add more</span>
+                  <div className="cem-image-add-more" onClick={() => setMediaPickerOpen(true)} title="Select from Media">
+                    <FolderOpen size={16} />
+                    <span>Media</span>
+                  </div>
+                  <div className="cem-image-add-more" onClick={() => fileInputRef.current?.click()} title="Upload file">
+                    <Plus size={16} />
+                    <span>Upload</span>
                   </div>
                 </div>
               )}
+
+              <MediaPickerModal
+                isOpen={mediaPickerOpen}
+                onClose={() => setMediaPickerOpen(false)}
+                onSelect={(urls) => {
+                  if (urls && urls.length > 0) {
+                    const newItems = urls.map(url => ({ file: null, preview: url, url }));
+                    setImages(prev => [...prev, ...newItems]);
+                  }
+                }}
+                multiple={true}
+                initialSelectedUrls={images.map(i => i.url).filter(Boolean)}
+                title="Select Report Attachments"
+              />
             </div>
           )}
         </div>

@@ -76,11 +76,14 @@ export default function Navbar({
     let list = Array.isArray(navMenu) ? [...navMenu] : [];
 
     if (categories.length > 0) {
-      const activeCatSlugs = new Set(categories.map((c) => String(c.slug || '').trim().toLowerCase()));
+      const activeCatSlugs = new Set(categories.map((c) => String(c.slug || c.id || '').trim().toLowerCase()));
       list = list.filter((item) => {
-        if (!item.url || !item.url.startsWith('/shop?cat=')) return true;
-        const catSlug = item.url.replace('/shop?cat=', '').trim().toLowerCase();
-        return activeCatSlugs.has(catSlug);
+        if (!item.url) return true;
+        if (item.url.startsWith('/shop?category=') || item.url.startsWith('/shop?cat=')) {
+          const catSlug = item.url.replace(/^\/shop\?(category|cat)=/, '').trim().toLowerCase();
+          return activeCatSlugs.has(catSlug) || activeCatSlugs.has(catSlug.replace(/-[a-z0-9]{4,6}$/i, ''));
+        }
+        return true;
       });
     }
 
@@ -91,11 +94,11 @@ export default function Navbar({
       ];
       categories.forEach((cat) => {
         defaultNav.push({
-          label: cat.name.toUpperCase(),
-          url: `/shop?cat=${cat.slug || cat.name.toLowerCase()}`,
+          label: (cat.name || '').trim().toUpperCase(),
+          url: `/shop?category=${encodeURIComponent(cat.slug || cat.id)}`,
         });
       });
-      defaultNav.push({ label: 'TRACK ORDER', url: '/track-order' });
+      defaultNav.push({ label: 'TRACK ORDER', url: '/track' });
       return defaultNav;
     }
 

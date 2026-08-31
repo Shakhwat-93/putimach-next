@@ -114,10 +114,12 @@ export function extractProductImages(product: any): string[] {
     }
   };
 
-  // 1. Primary explicit image fields
-  addCandidate(product.image);
+  // 1. Primary explicit image fields (Main image always top priority)
+  addCandidate(product.main_image);
+  addCandidate(product.mainImage);
   addCandidate(product.primary_image);
   addCandidate(product.primaryImage);
+  addCandidate(product.image);
   addCandidate(product.thumbnail);
   addCandidate(product.thumbnailUrl);
   addCandidate(product.featured_image);
@@ -129,10 +131,13 @@ export function extractProductImages(product: any): string[] {
 
   // 3. Nested data object (for raw Supabase rows)
   if (product.data && typeof product.data === 'object') {
+    addCandidate(product.data.main_image);
+    addCandidate(product.data.mainImage);
     addCandidate(product.data.image);
     addCandidate(product.data.images);
     addCandidate(product.data.gallery);
     addCandidate(product.data.primary_image);
+    addCandidate(product.data.primaryImage);
   }
 
   // 4. Color image map & galleries
@@ -265,6 +270,9 @@ export function normalizeProduct(raw: any): any {
     price,
     original_price: originalPrice,
     originalPrice,
+    main_image: primaryImage,
+    mainImage: primaryImage,
+    primary_image: primaryImage,
     image: primaryImage,
     images: guaranteedImages,
     color_images: normalizedColorGalleries,

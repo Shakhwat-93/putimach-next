@@ -1,6 +1,6 @@
 'use client';
 // @ts-nocheck
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -27,6 +27,98 @@ const priceRanges = [
   { val: '3000-5000', label: '৳3,000 – ৳5,000' },
   { val: '5000+', label: 'Above ৳5,000' },
 ];
+
+/* ─── Robust Category Matching Helpers ───────────────────────────────── */
+function normalizeCategorySlug(str) {
+  if (!str) return '';
+  return String(str)
+    .toLowerCase()
+    .trim()
+    .replace(/^[/-]+|[/-]+$/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function getBaseSlug(slugOrId) {
+  const normalized = normalizeCategorySlug(slugOrId);
+  return normalized.replace(/-[a-z0-9]{4,6}$/i, '');
+}
+
+function findMatchingCategory(param, categoriesList) {
+  if (!param || param === 'all' || !Array.isArray(categoriesList)) return null;
+  const normParam = normalizeCategorySlug(param);
+  const baseParam = getBaseSlug(param);
+
+  // 1. Exact match on slug, id, or normalized name
+  for (const cat of categoriesList) {
+    const catSlug = normalizeCategorySlug(cat.slug || cat.id || '');
+    const catId = normalizeCategorySlug(cat.id || '');
+    const catNameSlug = normalizeCategorySlug(cat.name || '');
+    if (catSlug === normParam || catId === normParam || catNameSlug === normParam) {
+      return cat;
+    }
+  }
+
+  // 2. Base slug match (e.g. 'shirt' matches 'shirt-f1r9o', or 'pant' matches 'pant-d8duj')
+  for (const cat of categoriesList) {
+    const catBaseSlug = getBaseSlug(cat.slug || cat.id || '');
+    const catNameBaseSlug = getBaseSlug(cat.name || '');
+    if (catBaseSlug === baseParam || catBaseSlug === normParam || catNameBaseSlug === baseParam || catNameBaseSlug === normParam) {
+      return cat;
+    }
+  }
+
+  // 3. Plural / singular loose match (e.g. 'pants' <-> 'pant', 'sweatpant' <-> 'sweatpants', 'trousers' <-> 'trouser')
+  for (const cat of categoriesList) {
+    const catBase = getBaseSlug(cat.slug || cat.id || '');
+    const paramBase = baseParam;
+    if (
+      catBase.replace(/s$/, '') === paramBase.replace(/s$/, '') ||
+      normalizeCategorySlug(cat.name).replace(/s$/, '') === paramBase.replace(/s$/, '')
+    ) {
+      return cat;
+    }
+  }
+
+  return null;
+}
+
+function productMatchesCategory(p, activeCatObj, rawParam) {
+  if (!rawParam || rawParam === 'all') return true;
+  if (!p) return false;
+
+  const pCat = String(p.category || '').trim();
+  if (!pCat) return false;
+
+  const normPCat = normalizeCategorySlug(pCat);
+  const basePCat = getBaseSlug(pCat);
+
+  if (activeCatObj) {
+    const catId = normalizeCategorySlug(activeCatObj.id || '');
+    const catSlug = normalizeCategorySlug(activeCatObj.slug || '');
+    const catName = normalizeCategorySlug(activeCatObj.name || '');
+    const catBaseSlug = getBaseSlug(activeCatObj.slug || activeCatObj.id || '');
+
+    if (
+      normPCat === catId ||
+      normPCat === catSlug ||
+      normPCat === catName ||
+      basePCat === catBaseSlug ||
+      normPCat.replace(/s$/, '') === catBaseSlug.replace(/s$/, '')
+    ) {
+      return true;
+    }
+  }
+
+  const normParam = normalizeCategorySlug(rawParam);
+  const baseParam = getBaseSlug(rawParam);
+
+  return (
+    normPCat === normParam ||
+    basePCat === baseParam ||
+    normPCat.replace(/s$/, '') === baseParam.replace(/s$/, '')
+  );
+}
 
 /* ─── Shop Banner Slider ─────────────────────────────────────────────── */
 function ShopBannerSlider({ slides }) {
@@ -145,10 +237,32 @@ export default function Shop() {
   const [grid, setGrid] = useState('3');
   const sortDropdownRef = useRef(null);
 
-  const activeCategory = searchParams.get('cat') || 'all';
+  const rawCategoryParam = searchParams.get('category') || searchParams.get('cat') || 'all';
   const activePrice = searchParams.get('price') || 'all';
   const activeSort = searchParams.get('sort') || 'featured';
   const searchQuery = searchParams.get('q') || '';
+
+  // Resolve matching category object from list
+  const matchedCategory = useMemo(() => {
+    return findMatchingCategory(rawCategoryParam, categories);
+  }, [rawCategoryParam, categories]);
+
+  const isCategoryActive = rawCategoryParam !== 'all' && Boolean(rawCategoryParam);
+
+  // Helper to test if a category pill/button is selected
+  const isCatSelected = useCallback((catId) => {
+    if (catId === 'all') {
+      return !isCategoryActive || rawCategoryParam === 'all';
+    }
+    if (matchedCategory) {
+      return catId === matchedCategory.slug || catId === matchedCategory.id;
+    }
+    return (
+      catId === rawCategoryParam ||
+      normalizeCategorySlug(catId) === normalizeCategorySlug(rawCategoryParam) ||
+      getBaseSlug(catId) === getBaseSlug(rawCategoryParam)
+    );
+  }, [isCategoryActive, rawCategoryParam, matchedCategory]);
 
   // Close sort dropdown when clicking outside
   useEffect(() => {
@@ -219,10 +333,18 @@ export default function Shop() {
   // Robust URL Search Params Updater
   const updateParam = (key, val) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (!val || val === 'all' || val === 'featured') {
-      params.delete(key);
+    if (key === 'category' || key === 'cat') {
+      params.delete('cat');
+      params.delete('category');
+      if (val && val !== 'all') {
+        params.set('category', val);
+      }
     } else {
-      params.set(key, val);
+      if (!val || val === 'all' || val === 'featured') {
+        params.delete(key);
+      } else {
+        params.set(key, val);
+      }
     }
     const qs = params.toString();
     router.push(qs ? `?${qs}` : '/shop', { scroll: false });
@@ -230,6 +352,7 @@ export default function Shop() {
 
   const clearAllFilters = () => {
     const params = new URLSearchParams(searchParams.toString());
+    params.delete('category');
     params.delete('cat');
     params.delete('price');
     params.delete('q');
@@ -240,38 +363,34 @@ export default function Shop() {
 
   const computedCategories = useMemo(() => {
     const allCount = products.length;
-    const catCounts = { all: allCount };
-
-    categories.forEach((c) => {
-      const slug = c.slug || c.id;
-      catCounts[slug] = products.filter((p) => p.category === slug || p.category === c.name).length;
-    });
-
     return [
       { id: 'all', label: 'All Items', count: allCount },
-      ...categories.map((c) => ({
-        id: c.slug || c.id,
-        label: c.name,
-        count: catCounts[c.slug || c.id] || 0,
-      })),
+      ...categories.map((c) => {
+        const count = products.filter((p) => productMatchesCategory(p, c, c.slug || c.id)).length;
+        return {
+          id: c.slug || c.id,
+          label: (c.name || '').trim(),
+          count,
+        };
+      }),
     ];
   }, [products, categories]);
 
   const filteredProducts = useMemo(() => {
     let result = [...products];
 
-    // Category
-    if (activeCategory !== 'all') {
-      result = result.filter((p) => p.category === activeCategory);
+    // Category Filter
+    if (isCategoryActive) {
+      result = result.filter((p) => productMatchesCategory(p, matchedCategory, rawCategoryParam));
     }
 
-    // Price
+    // Price Filter
     if (activePrice !== 'all') {
       const [min, max] = activePrice === '5000+' ? [5000, Infinity] : activePrice.split('-').map(Number);
       result = result.filter((p) => p.price >= min && p.price <= max);
     }
 
-    // Search
+    // Search Query
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -290,17 +409,19 @@ export default function Shop() {
     if (activeSort === 'rating') result.sort((a, b) => (b.rating || 5) - (a.rating || 5));
 
     return result;
-  }, [products, activeCategory, activePrice, activeSort, searchQuery]);
+  }, [products, isCategoryActive, matchedCategory, rawCategoryParam, activePrice, activeSort, searchQuery]);
 
   const activeFiltersCount = [
-    activeCategory !== 'all',
+    isCategoryActive,
     activePrice !== 'all',
     searchQuery !== '',
     activeSort !== 'featured',
   ].filter(Boolean).length;
 
   const currentSortLabel = sortOptions.find((o) => o.val === activeSort)?.label || 'Featured';
-  const currentCategoryLabel = computedCategories.find((c) => c.id === activeCategory)?.label || activeCategory;
+  const currentCategoryLabel = matchedCategory
+    ? (matchedCategory.name || '').trim()
+    : computedCategories.find((c) => isCatSelected(c.id))?.label || rawCategoryParam;
   const currentPriceLabel = priceRanges.find((p) => p.val === activePrice)?.label || activePrice;
 
   return (
@@ -318,7 +439,7 @@ export default function Shop() {
             {shopSettings.title}
           </h1>
           <p className="text-sm text-[#1C1613]/60">
-            {loading ? 'Curating catalog...' : `${filteredProducts.length} ${filteredProducts.length === 1 ? 'masterpiece' : 'masterpieces'} available`}
+            {loading ? 'Curating catalog...' : `${filteredProducts.length} ${filteredProducts.length === 1 ? 'piece' : 'pieces'} available`}
           </p>
         </motion.div>
       </div>
@@ -335,12 +456,12 @@ export default function Shop() {
         <div className="mb-6 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
           <div className="flex items-center gap-2 min-w-max">
             {computedCategories.map((c) => {
-              const isSelected = activeCategory === c.id;
+              const isSelected = isCatSelected(c.id);
               return (
                 <button
                   type="button"
                   key={c.id}
-                  onClick={() => updateParam('cat', c.id)}
+                  onClick={() => updateParam('category', c.id)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer select-none active:scale-95 border ${
                     isSelected
                       ? 'bg-[#1C1613] text-[#C5A880] border-[#1C1613] shadow-md ring-2 ring-[#C5A880]/20'
@@ -489,10 +610,10 @@ export default function Shop() {
           <div className="flex flex-wrap items-center gap-2 mb-6 p-3 bg-white rounded-xl border border-[#E9E2D2] shadow-xs">
             <span className="text-[11px] font-bold uppercase tracking-wider text-[#1C1613]/50 mr-1">Active:</span>
 
-            {activeCategory !== 'all' && (
+            {isCategoryActive && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#1C1613] text-[#C5A880] text-xs font-medium shadow-xs">
                 Category: {currentCategoryLabel}
-                <button type="button" onClick={() => updateParam('cat', 'all')} className="hover:text-white cursor-pointer">
+                <button type="button" onClick={() => updateParam('category', 'all')} className="hover:text-white cursor-pointer" title="Remove Category filter">
                   <X size={12} />
                 </button>
               </span>
@@ -501,7 +622,7 @@ export default function Shop() {
             {activePrice !== 'all' && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#1C1613] text-[#C5A880] text-xs font-medium shadow-xs">
                 Price: {currentPriceLabel}
-                <button type="button" onClick={() => updateParam('price', 'all')} className="hover:text-white cursor-pointer">
+                <button type="button" onClick={() => updateParam('price', 'all')} className="hover:text-white cursor-pointer" title="Remove Price filter">
                   <X size={12} />
                 </button>
               </span>
@@ -510,7 +631,7 @@ export default function Shop() {
             {searchQuery && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#1C1613] text-[#C5A880] text-xs font-medium shadow-xs">
                 &ldquo;{searchQuery}&rdquo;
-                <button type="button" onClick={() => updateParam('q', '')} className="hover:text-white cursor-pointer">
+                <button type="button" onClick={() => updateParam('q', '')} className="hover:text-white cursor-pointer" title="Clear Search">
                   <X size={12} />
                 </button>
               </span>
@@ -519,7 +640,7 @@ export default function Shop() {
             {activeSort !== 'featured' && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#1C1613] text-[#C5A880] text-xs font-medium shadow-xs">
                 Sort: {currentSortLabel}
-                <button type="button" onClick={() => updateParam('sort', 'featured')} className="hover:text-white cursor-pointer">
+                <button type="button" onClick={() => updateParam('sort', 'featured')} className="hover:text-white cursor-pointer" title="Reset Sort">
                   <X size={12} />
                 </button>
               </span>
@@ -556,12 +677,12 @@ export default function Shop() {
                     </h3>
                     <div className="space-y-1">
                       {computedCategories.map((c) => {
-                        const isSelected = activeCategory === c.id;
+                        const isSelected = isCatSelected(c.id);
                         return (
                           <button
                             type="button"
                             key={c.id}
-                            onClick={() => updateParam('cat', c.id)}
+                            onClick={() => updateParam('category', c.id)}
                             className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 cursor-pointer ${
                               isSelected
                                 ? 'bg-[#1C1613] text-[#C5A880] font-bold shadow-xs'
@@ -632,9 +753,15 @@ export default function Shop() {
                 <div className="w-16 h-16 rounded-full bg-[#F7F4EE] border border-[#E9E2D2] flex items-center justify-center mx-auto mb-4 text-[#C5A880]">
                   <SlidersHorizontal size={24} />
                 </div>
-                <h3 className="text-xl font-serif font-black text-[#1C1613] mb-2">No matching pieces found</h3>
+                <h3 className="text-xl font-serif font-black text-[#1C1613] mb-2">
+                  {isCategoryActive 
+                    ? `No products found in ${currentCategoryLabel}`
+                    : 'No matching pieces found'}
+                </h3>
                 <p className="text-[#1C1613]/60 text-xs mb-6 max-w-sm mx-auto">
-                  Try adjusting your price range or exploring different categories to discover our latest drop.
+                  {isCategoryActive
+                    ? `We are currently curating new archival drops for ${currentCategoryLabel}. Explore our other sections or reset filters.`
+                    : 'Try adjusting your price range or exploring different categories to discover our latest drop.'}
                 </p>
                 <button
                   type="button"
@@ -698,12 +825,12 @@ export default function Shop() {
                   <p className="text-[11px] font-black uppercase tracking-widest text-[#C5A880] font-serif mb-3">Categories</p>
                   <div className="space-y-1.5">
                     {computedCategories.map((c) => {
-                      const isSelected = activeCategory === c.id;
+                      const isSelected = isCatSelected(c.id);
                       return (
                         <button
                           type="button"
                           key={c.id}
-                          onClick={() => updateParam('cat', c.id)}
+                          onClick={() => updateParam('category', c.id)}
                           className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
                             isSelected
                               ? 'bg-[#1C1613] text-[#C5A880] font-bold shadow-xs'

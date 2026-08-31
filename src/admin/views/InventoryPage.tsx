@@ -9,7 +9,7 @@ import {
   Search, Plus, Package, AlertTriangle, ArrowUpRight, ArrowDownRight,
   Edit2, Trash2, Tag, Bot, Loader2, CheckCircle2, CircleAlert, ChevronDown, Sparkles,
   TrendingUp, TrendingDown, DollarSign, BarChart2, UploadCloud, Image as ImageIcon,
-  ExternalLink, X, Check, RefreshCw
+  ExternalLink, X, Check, RefreshCw, FolderOpen
 } from 'lucide-react';
 import { PremiumSearch } from '../components/PremiumSearch';
 import { usePersistentState } from '../utils/persistentState';
@@ -18,6 +18,7 @@ import { supabase } from '../lib/supabase';
 import { useConfirmDialog } from '../hooks/useConfirmDialog';
 import { uploadImage } from '../lib/uploadHelper';
 import { cleanImageUrl } from '@/lib/productMedia';
+import { MediaPickerModal } from '../components/media/MediaPickerModal';
 
 // Tailwind / shadcn utils and components
 import { cn } from '../lib/utils';
@@ -109,6 +110,9 @@ export const InventoryPage = () => {
 
   const [isUploadingMainImage, setIsUploadingMainImage] = useState(false);
   const [uploadingColorKey, setUploadingColorKey] = useState<string | null>(null);
+  const [mainImageMediaModalOpen, setMainImageMediaModalOpen] = useState(false);
+  const [colorMediaModalTarget, setColorMediaModalTarget] = useState<string | null>(null);
+  const [galleryMediaModalOpen, setGalleryMediaModalOpen] = useState(false);
   const mainImageFileInputRef = useRef<HTMLInputElement | null>(null);
   const colorFileInputRef = useRef<HTMLInputElement | null>(null);
   const activeColorForUploadRef = useRef<string | null>(null);
@@ -1007,7 +1011,17 @@ export const InventoryPage = () => {
                     <p className="text-[11px] text-muted-foreground truncate max-w-sm font-mono">
                       {formData.image || formData.image_url}
                     </p>
-                    <div className="flex items-center gap-2 pt-1">
+                    <div className="flex items-center gap-2 pt-1 flex-wrap">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setMainImageMediaModalOpen(true)}
+                        className="h-7 text-xs font-bold"
+                      >
+                        <FolderOpen size={12} className="mr-1 text-primary" />
+                        From Media
+                      </Button>
                       <Button
                         type="button"
                         variant="secondary"
@@ -1017,7 +1031,7 @@ export const InventoryPage = () => {
                         className="h-7 text-xs font-bold"
                       >
                         {isUploadingMainImage ? <Loader2 size={12} className="animate-spin mr-1" /> : <UploadCloud size={12} className="mr-1" />}
-                        Replace Image
+                        Upload New
                       </Button>
                       <Button
                         type="button"
@@ -1033,10 +1047,7 @@ export const InventoryPage = () => {
                   </div>
                 </div>
               ) : (
-                <div
-                  onClick={() => mainImageFileInputRef.current?.click()}
-                  className="py-6 px-4 text-center rounded-xl border-2 border-dashed border-border/80 hover:border-primary/60 bg-muted/20 hover:bg-primary/5 transition-all cursor-pointer group"
-                >
+                <div className="py-6 px-4 text-center rounded-xl border-2 border-dashed border-border/80 bg-muted/20 flex flex-col items-center justify-center gap-2">
                   {isUploadingMainImage ? (
                     <div className="flex flex-col items-center justify-center gap-1.5 py-2">
                       <Loader2 className="w-6 h-6 text-primary animate-spin" />
@@ -1044,13 +1055,37 @@ export const InventoryPage = () => {
                     </div>
                   ) : (
                     <>
-                      <UploadCloud className="w-6 h-6 text-muted-foreground/60 mx-auto mb-1.5 group-hover:scale-110 transition-transform" />
-                      <p className="text-xs font-bold text-foreground">
-                        Click to upload Product Image, or drag and drop
-                      </p>
-                      <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5">
-                        Supports PNG, JPG, WEBP (Auto-optimized to WebP)
-                      </p>
+                      <UploadCloud className="w-6 h-6 text-muted-foreground/60 mx-auto mb-0.5" />
+                      <div>
+                        <p className="text-xs font-bold text-foreground">
+                          Add Primary Product Image
+                        </p>
+                        <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5">
+                          Select from existing Media Library or upload a new image
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap justify-center">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setMainImageMediaModalOpen(true)}
+                          className="h-8 text-xs font-bold shadow-2xs"
+                        >
+                          <FolderOpen size={13} className="mr-1.5 text-primary" />
+                          Select from Media
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="default"
+                          size="sm"
+                          onClick={() => mainImageFileInputRef.current?.click()}
+                          className="h-8 text-xs font-bold shadow-2xs"
+                        >
+                          <UploadCloud size={13} className="mr-1.5" />
+                          Upload New File
+                        </Button>
+                      </div>
                     </>
                   )}
                 </div>
@@ -1069,7 +1104,17 @@ export const InventoryPage = () => {
 
             {/* Additional Gallery Image URLs */}
             <div className="space-y-1.5 pt-1">
-              <label className="text-xs font-semibold text-foreground">Additional Gallery Images (Comma or Newline separated)</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-foreground">Additional Gallery Images</label>
+                <button
+                  type="button"
+                  onClick={() => setGalleryMediaModalOpen(true)}
+                  className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <FolderOpen size={12} />
+                  <span>Select from Media</span>
+                </button>
+              </div>
               <textarea
                 rows={2}
                 value={Array.isArray(formData.images) ? formData.images.join('\n') : (formData.images || '')}
@@ -1126,7 +1171,14 @@ export const InventoryPage = () => {
                           <div className="flex-1 min-w-0 space-y-1">
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-bold text-foreground truncate">{color}</span>
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setColorMediaModalTarget(color)}
+                                  className="text-[10px] font-bold text-primary hover:underline flex items-center gap-0.5 cursor-pointer"
+                                >
+                                  <FolderOpen size={11} /> Media
+                                </button>
                                 <button
                                   type="button"
                                   disabled={isColorUploading}
@@ -1134,7 +1186,7 @@ export const InventoryPage = () => {
                                     activeColorForUploadRef.current = color;
                                     colorFileInputRef.current?.click();
                                   }}
-                                  className="text-[10px] font-bold text-primary hover:underline flex items-center gap-0.5 cursor-pointer disabled:opacity-50"
+                                  className="text-[10px] font-bold text-muted-foreground hover:text-foreground flex items-center gap-0.5 cursor-pointer disabled:opacity-50"
                                 >
                                   <UploadCloud size={11} /> Upload
                                 </button>
@@ -1176,11 +1228,11 @@ export const InventoryPage = () => {
                                   }
                                   return v;
                                 });
-                                setFormData(prev => ({
-                                  ...prev,
+                                setFormData({
+                                  ...formData,
                                   color_images: updatedColorImages,
                                   variants: updatedVariants
-                                }));
+                                });
                               }}
                             />
                           </div>
@@ -1191,6 +1243,73 @@ export const InventoryPage = () => {
                 );
               })()}
             </div>
+
+            {/* Media Picker Modals for Inventory Modal */}
+            <MediaPickerModal
+              isOpen={mainImageMediaModalOpen}
+              onClose={() => setMainImageMediaModalOpen(false)}
+              onSelect={(urls) => {
+                if (urls && urls[0]) {
+                  const clean = cleanImageUrl(urls[0]);
+                  setFormData(prev => ({
+                    ...prev,
+                    image: clean || urls[0],
+                    image_url: clean || urls[0],
+                    images: prev.images?.length > 0 ? [clean || urls[0], ...prev.images.filter(img => img !== (clean || urls[0]))] : [clean || urls[0]]
+                  }));
+                }
+              }}
+              multiple={false}
+              initialSelectedUrls={formData.image || formData.image_url ? [formData.image || formData.image_url] : []}
+              title="Select Primary Product Image"
+            />
+
+            <MediaPickerModal
+              isOpen={Boolean(colorMediaModalTarget)}
+              onClose={() => setColorMediaModalTarget(null)}
+              onSelect={(urls) => {
+                if (colorMediaModalTarget && urls && urls[0]) {
+                  const clean = cleanImageUrl(urls[0]);
+                  const color = colorMediaModalTarget;
+                  setFormData(prev => {
+                    const updatedColorImages = { ...(prev.color_images || {}), [color]: clean || urls[0] };
+                    const updatedVariants = (prev.variants || []).map(v => {
+                      if (v.color?.toLowerCase() === color.toLowerCase()) {
+                        return { ...v, image_url: clean || urls[0] };
+                      }
+                      return v;
+                    });
+                    return {
+                      ...prev,
+                      color_images: updatedColorImages,
+                      variants: updatedVariants
+                    };
+                  });
+                }
+                setColorMediaModalTarget(null);
+              }}
+              multiple={false}
+              initialSelectedUrls={colorMediaModalTarget && formData.color_images?.[colorMediaModalTarget] ? [formData.color_images[colorMediaModalTarget]] : []}
+              title={`Select Photo for ${colorMediaModalTarget || 'Color'}`}
+            />
+
+            <MediaPickerModal
+              isOpen={galleryMediaModalOpen}
+              onClose={() => setGalleryMediaModalOpen(false)}
+              onSelect={(urls) => {
+                if (urls && urls.length > 0) {
+                  const cleaned = urls.map(u => cleanImageUrl(u)).filter(Boolean) as string[];
+                  const existing = Array.isArray(formData.images) ? formData.images : [];
+                  setFormData(prev => ({
+                    ...prev,
+                    images: Array.from(new Set([...existing, ...cleaned]))
+                  }));
+                }
+              }}
+              multiple={true}
+              initialSelectedUrls={Array.isArray(formData.images) ? formData.images : []}
+              title="Select Additional Gallery Images"
+            />
           </div>
 
           <div className="space-y-4 pt-2">
