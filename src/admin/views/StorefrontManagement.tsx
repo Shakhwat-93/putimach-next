@@ -1269,47 +1269,63 @@ export const StorefrontManagement = () => {
       const finalTargetId = editingProduct?.id || payload.slug || 'product-' + Date.now();
       const totalVariantsStock = payload.variants?.length > 0
         ? payload.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
-        : (Number(payload.stock) || 50);
+        : (payload.stock !== undefined && payload.stock !== null && payload.stock !== '' ? Number(payload.stock) : 0);
       const resolvedImg = payload.image || payload.images?.[0] || Object.values(payload.color_images || {})[0] || null;
 
-      if (payload.inventory_id) {
+      let finalInventoryId = payload.inventory_id;
+
+      if (finalInventoryId) {
         await supabase
           .from('inventory')
           .update({
+            name: payload.name,
+            sku: payload.sku || `SKU-${String(finalTargetId).toUpperCase().slice(0, 6)}`,
+            category: payload.category || 'Apparel',
             current_stock: totalVariantsStock,
             image: resolvedImg,
             image_url: resolvedImg,
             product_id: finalTargetId,
             selling_price: Number(payload.price) || 0,
             unit_price: Number(payload.price) || 0,
+            making_cost: Number(payload.cost_per_item) || 0,
             variants: payload.variants || []
           })
-          .eq('id', payload.inventory_id);
+          .eq('id', finalInventoryId);
       } else {
         const { data: matchedInv } = await supabase
           .from('inventory')
           .select('id')
-          .or(`product_id.eq.${finalTargetId},name.ilike.${payload.name}`)
+          .or(`product_id.eq.${finalTargetId},sku.eq.${payload.sku},name.ilike.${payload.name}`)
           .limit(1)
           .maybeSingle();
 
         if (matchedInv?.id) {
+          finalInventoryId = matchedInv.id;
           await supabase
             .from('inventory')
             .update({
+              name: payload.name,
+              sku: payload.sku || `SKU-${String(finalTargetId).toUpperCase().slice(0, 6)}`,
+              category: payload.category || 'Apparel',
               current_stock: totalVariantsStock,
               image: resolvedImg,
               image_url: resolvedImg,
               product_id: finalTargetId,
               selling_price: Number(payload.price) || 0,
               unit_price: Number(payload.price) || 0,
+              making_cost: Number(payload.cost_per_item) || 0,
               variants: payload.variants || []
             })
-            .eq('id', matchedInv.id);
+            .eq('id', finalInventoryId);
         } else {
+          finalInventoryId = (typeof crypto !== 'undefined' && crypto.randomUUID) 
+            ? crypto.randomUUID() 
+            : 'inv-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
+
           await supabase
             .from('inventory')
             .insert([{
+              id: finalInventoryId,
               name: payload.name,
               sku: payload.sku || `SKU-${String(finalTargetId).toUpperCase().slice(0, 6)}`,
               category: payload.category || 'Apparel',
@@ -1324,6 +1340,15 @@ export const StorefrontManagement = () => {
               variants: payload.variants || []
             }]);
         }
+      }
+
+      if (finalInventoryId && payload.inventory_id !== finalInventoryId) {
+        payload.inventory_id = finalInventoryId;
+        payload.stock = totalVariantsStock;
+        await supabase.from('products').update({ data: payload }).eq('id', finalTargetId);
+        try {
+          await supabase.from('cb_products').update({ data: payload }).eq('id', finalTargetId);
+        } catch (_) {}
       }
 
       setIsProductModalOpen(false);

@@ -968,6 +968,69 @@ export default function Checkout() {
         : `[${extraDetails.join(' | ')}]`;
     }
 
+    // ─── REAL-TIME STOCK PRE-VALIDATION ───
+    for (const item of items) {
+      const prodId = item.product?.id || item.id;
+      const targetSize = item.size;
+      const targetColor = item.color;
+      const orderQty = item.quantity || 1;
+
+      let productRow = null;
+      if (prodId) {
+        const { data: pById } = await supabase
+          .from('products')
+          .select('id, data')
+          .eq('id', prodId)
+          .maybeSingle();
+        if (pById) productRow = pById;
+      }
+      if (!productRow && item.product?.slug) {
+        const { data: pBySlug } = await supabase
+          .from('products')
+          .select('id, data')
+          .eq('data->>slug', item.product.slug)
+          .maybeSingle();
+        if (pBySlug) productRow = pBySlug;
+      }
+
+      if (productRow && productRow.data) {
+        const pData = productRow.data;
+        const variants = Array.isArray(pData.variants) ? pData.variants : [];
+
+        if (variants.length > 0 && targetSize) {
+          const matchedVariant = variants.find(v => {
+            const sMatch = !v.size || String(v.size).trim().toLowerCase() === String(targetSize).trim().toLowerCase();
+            const cMatch = !targetColor || targetColor === 'None' || !v.color || String(v.color).trim().toLowerCase() === String(targetColor).trim().toLowerCase();
+            return sMatch && cMatch;
+          });
+
+          if (matchedVariant && (Number(matchedVariant.stock) || 0) < orderQty) {
+            setError(`Sorry, "${item.product?.name || 'Product'}" (${targetSize}) does not have enough stock available.`);
+            setSubmitting(false);
+            isSubmittingRef.current = false;
+            return;
+          }
+        } else {
+          let invStock = pData.stock;
+          let invId = pData.inventory_id;
+          if (invId) {
+            const { data: inv } = await supabase.from('inventory').select('current_stock').eq('id', invId).maybeSingle();
+            if (inv) invStock = inv.current_stock;
+          } else {
+            const { data: inv } = await supabase.from('inventory').select('current_stock').eq('product_id', productRow.id).maybeSingle();
+            if (inv) invStock = inv.current_stock;
+          }
+
+          if (invStock !== undefined && invStock !== null && Number(invStock) < orderQty) {
+            setError(`Sorry, "${item.product?.name || 'Product'}" is out of stock or does not have enough quantity.`);
+            setSubmitting(false);
+            isSubmittingRef.current = false;
+            return;
+          }
+        }
+      }
+    }
+
     const orderPayload: any = {
       id: num,
       customer_name: form.name.trim(),
@@ -984,7 +1047,6 @@ export default function Checkout() {
       source: 'Website',
       status: 'New',
       payment_status: 'Unpaid',
-      inventory_deducted: true,
       ip_address: ipAddress || null,
       traffic_source: trafficSource || null,
       ordered_items: items.map(i => ({
@@ -1140,16 +1202,38 @@ export default function Checkout() {
 
             // Deduct from inventory record
             const targetInventoryId = productData.inventory_id;
+            let matchedInvId = targetInventoryId;
             if (targetInventoryId) {
               await supabase
                 .from('inventory')
-                .update({ current_stock: totalStock })
+                .update({ current_stock: totalStock, variants: updatedVariants.length > 0 ? updatedVariants : undefined })
                 .eq('id', targetInventoryId);
             } else {
-              await supabase
+              const { data: invRow } = await supabase
                 .from('inventory')
-                .update({ current_stock: totalStock })
-                .eq('product_id', dbProductRow.id);
+                .select('id')
+                .eq('product_id', dbProductRow.id)
+                .maybeSingle();
+              if (invRow) {
+                matchedInvId = invRow.id;
+                await supabase
+                  .from('inventory')
+                  .update({ current_stock: totalStock, variants: updatedVariants.length > 0 ? updatedVariants : undefined })
+                  .eq('id', invRow.id);
+              }
+            }
+
+            if (matchedInvId) {
+              try {
+                await supabase.from('inventory_transactions').insert([{
+                  inventory_id: matchedInvId,
+                  order_id: confirmedOrderNumber,
+                  type: 'order_confirmed',
+                  quantity: -item.quantity,
+                  note: `Order #${confirmedOrderNumber} placed — deducted ${item.quantity} unit(s)`,
+                  created_by: form.name.trim() || 'Customer'
+                }]);
+              } catch (_) {}
             }
           }
         } catch (e) {

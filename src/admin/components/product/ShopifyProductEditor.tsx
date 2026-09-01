@@ -453,7 +453,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
       price: Number(price) || 0,
       original_price: compareAtPrice ? Number(compareAtPrice) : null,
       cost_per_item: costPerItem ? Number(costPerItem) : null,
-      stock: Number(stockQuantity) || 50,
+      stock: stockQuantity !== '' && stockQuantity !== null && stockQuantity !== undefined ? Number(stockQuantity) : 0,
       sku: sku || `PM-${finalSlug.toUpperCase().slice(0, 8)}`,
       barcode: barcode || null,
       badge: badge || null,
@@ -482,7 +482,11 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
       size_chart_image: sizeChartImageUrl || null,
 
       // Status & Settings
-      in_stock: finalStatus === 'active' && (Number(stockQuantity) || 50) > 0,
+      in_stock: finalStatus === 'active' && (
+        generatedVariants.length > 0
+          ? generatedVariants.some(v => (Number(v.stock) || 0) > 0)
+          : (stockQuantity !== '' && stockQuantity !== null && stockQuantity !== undefined ? Number(stockQuantity) > 0 : false)
+      ),
       status: finalStatus,
       vendor: vendor || 'PutiMach',
       product_type: productType || 'Apparel',
