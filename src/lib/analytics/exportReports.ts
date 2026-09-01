@@ -88,10 +88,10 @@ export function exportSalesToCSV(params: {
           item.unit_price || 0,
           item.subtotal || (item.unit_price * (item.quantity || 1)),
           order.discount || 0,
-          order.total || order.subtotal || 0,
+          order.amount ?? order.total ?? order.subtotal ?? 0,
           order.status || 'Pending',
           order.payment_method || 'Cash on Delivery',
-          [order.city, order.area].filter(Boolean).join(', ') || ''
+          [order.city, order.area, order.address].filter(Boolean).join(', ') || ''
         ]);
       });
     } else {
@@ -105,13 +105,13 @@ export function exportSalesToCSV(params: {
         '',
         order.size || 'Standard',
         order.quantity || 1,
-        order.subtotal || order.total || 0,
-        order.subtotal || order.total || 0,
+        order.amount ?? order.subtotal ?? order.total ?? 0,
+        order.amount ?? order.subtotal ?? order.total ?? 0,
         order.discount || 0,
-        order.total || order.subtotal || 0,
+        order.amount ?? order.total ?? order.subtotal ?? 0,
         order.status || 'Pending',
         order.payment_method || 'Cash on Delivery',
-        [order.city, order.area].filter(Boolean).join(', ') || ''
+        [order.city, order.area, order.address].filter(Boolean).join(', ') || ''
       ]);
     }
   });
@@ -223,10 +223,10 @@ export function exportSalesToXLSX(params: {
           item.unit_price || 0,
           item.subtotal || ((item.unit_price || 0) * (item.quantity || 1)),
           order.discount || 0,
-          order.total || order.subtotal || 0,
+          order.amount ?? order.total ?? order.subtotal ?? 0,
           order.status || 'Pending',
           order.payment_method || 'Cash on Delivery',
-          order.city || ''
+          [order.city, order.area, order.address].filter(Boolean).join(', ') || ''
         ]);
       });
     } else {
@@ -239,13 +239,13 @@ export function exportSalesToXLSX(params: {
         order.product_name || 'Order',
         order.size || 'Standard',
         order.quantity || 1,
-        order.subtotal || order.total || 0,
-        order.subtotal || order.total || 0,
+        order.amount ?? order.subtotal ?? order.total ?? 0,
+        order.amount ?? order.subtotal ?? order.total ?? 0,
         order.discount || 0,
-        order.total || order.subtotal || 0,
+        order.amount ?? order.total ?? order.subtotal ?? 0,
         order.status || 'Pending',
         order.payment_method || 'Cash on Delivery',
-        order.city || ''
+        [order.city, order.area, order.address].filter(Boolean).join(', ') || ''
       ]);
     }
   });

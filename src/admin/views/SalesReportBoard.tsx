@@ -26,7 +26,8 @@ import {
   getTopVariantsByQuantity, 
   getCategoryPerformance, 
   getOrderStatusBreakdown, 
-  getCustomerPerformance 
+  getCustomerPerformance,
+  extractOrderItemsFromOrders
 } from '@/lib/analytics/salesEngine';
 import { exportSalesToCSV, exportSalesToXLSX } from '@/lib/analytics/exportReports';
 import Swal from 'sweetalert2';
@@ -73,10 +74,12 @@ export default function SalesReportBoard() {
   const [productsMap, setProductsMap] = useState<Map<string, any>>(new Map());
   const [categoriesList, setCategoriesList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // ── 2. Data Fetching ──
   const fetchAllData = async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       // 1. Fetch Orders (Primary source of truth)
       const { data: ordersData, error: ordersErr } = await supabase
@@ -86,12 +89,10 @@ export default function SalesReportBoard() {
 
       if (ordersErr) throw ordersErr;
 
-      // 2. Fetch Order Items
-      const { data: itemsData, error: itemsErr } = await supabase
-        .from('order_items')
-        .select('*');
+      const safeOrders = ordersData || [];
 
-      if (itemsErr) throw itemsErr;
+      // 2. Extract and normalize order items directly from orders
+      const itemsData = extractOrderItemsFromOrders(safeOrders);
 
       // 3. Fetch Products for metadata
       const { data: prodsData } = await supabase
@@ -100,7 +101,10 @@ export default function SalesReportBoard() {
 
       const pMap = new Map();
       if (Array.isArray(prodsData)) {
-        prodsData.forEach(p => pMap.set(String(p.id), p));
+        prodsData.forEach(p => {
+          if (p.id) pMap.set(String(p.id), p);
+          if (p.name) pMap.set(String(p.name), p);
+        });
       }
 
       // 4. Fetch Categories
@@ -108,12 +112,13 @@ export default function SalesReportBoard() {
         .from('categories')
         .select('id, name, slug');
 
-      setRawOrders(ordersData || []);
-      setRawOrderItems(itemsData || []);
+      setRawOrders(safeOrders);
+      setRawOrderItems(itemsData);
       setProductsMap(pMap);
       setCategoriesList(catsData || []);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load sales report data:', err);
+      setFetchError(err?.message || 'Failed to fetch sales data from database.');
       Swal.fire({
         title: 'Error Loading Report',
         text: err?.message || 'Failed to fetch sales data from database.',
@@ -325,6 +330,23 @@ export default function SalesReportBoard() {
           </button>
         </div>
       </div>
+
+      {/* ── Error Banner if any ── */}
+      {fetchError && (
+        <div className="p-4 rounded-2xl bg-destructive/10 border border-destructive/20 text-destructive flex items-center justify-between gap-3 text-xs font-semibold">
+          <div className="flex items-center gap-2">
+            <AlertCircle size={16} className="shrink-0" />
+            <span>{fetchError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={fetchAllData}
+            className="px-3 py-1 bg-destructive text-white rounded-lg hover:bg-destructive/90 transition-colors font-bold shrink-0"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* ── Preset Date Range Selector Bar ── */}
       <div className="p-3.5 sm:p-4 rounded-2xl border border-border bg-card shadow-2xs space-y-3 print:hidden">
