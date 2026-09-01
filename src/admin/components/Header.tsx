@@ -173,30 +173,30 @@ export const Header = ({ onMenuToggle }) => {
   };
 
   return (
-    <header className="relative z-40 flex h-14 shrink-0 items-center justify-between gap-3 sm:gap-6 border-b border-border/60 bg-card/85 backdrop-blur-md px-4 sm:px-6 w-full">
-      <div className="flex items-center gap-2.5 flex-1 min-w-0">
+    <header className="relative z-40 flex h-13 sm:h-14 shrink-0 items-center justify-between gap-1.5 xs:gap-2 sm:gap-4 md:gap-6 border-b border-border/60 bg-card/90 backdrop-blur-md px-2.5 xs:px-3.5 sm:px-6 w-full max-w-full overflow-hidden">
+      <div className="flex items-center gap-1.5 xs:gap-2 flex-1 min-w-0 mr-1 sm:mr-0">
         {/* Hamburger — mobile only */}
         <button
           onClick={onMenuToggle}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors md:hidden active:scale-95 cursor-pointer"
+          className="flex h-8 w-8 min-w-8 items-center justify-center rounded-xl text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors md:hidden active:scale-95 cursor-pointer shrink-0"
           aria-label="Toggle menu"
         >
-          <Menu size={17} />
+          <Menu size={16} />
         </button>
 
         {/* Search */}
-        <div ref={searchRef} className="relative flex-1 max-w-[200px] xs:max-w-xs sm:max-w-sm md:max-w-md">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 pointer-events-none" />
+        <div ref={searchRef} className="relative flex-1 min-w-0 max-w-[140px] xs:max-w-[180px] sm:max-w-xs md:max-w-md">
+          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/60 pointer-events-none shrink-0" />
           <input
             type="text"
             placeholder="Search..."
             value={searchQuery}
             onChange={e => { setSearchQuery(e.target.value); setIsSearchDropdownOpen(true); }}
             onFocus={() => setIsSearchDropdownOpen(true)}
-            className="h-9 w-full rounded-xl border border-border/70 bg-secondary/35 hover:bg-secondary/60 focus:bg-background pl-9 pr-9 text-xs font-medium text-foreground placeholder:text-muted-foreground/60 focus:border-border focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all"
+            className="h-8.5 sm:h-9 w-full rounded-xl border border-border/70 bg-secondary/35 hover:bg-secondary/60 focus:bg-background pl-8 sm:pl-9 pr-2.5 sm:pr-8 text-xs font-medium text-foreground placeholder:text-muted-foreground/60 focus:border-border focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all truncate"
           />
           {isSearching ? (
-            <Loader2 size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground/60" />
+            <Loader2 size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground/60" />
           ) : (
             <kbd className="hidden sm:inline-flex absolute right-2.5 top-1/2 -translate-y-1/2 items-center px-1.5 py-0.5 text-[9px] font-mono text-muted-foreground/50 bg-background/60 border border-border/50 rounded-md">
               ⌘K
@@ -326,7 +326,7 @@ export const Header = ({ onMenuToggle }) => {
       )}
 
       {/* Right controls: Live, Presence, Notifications, Profile */}
-      <div className="flex items-center gap-3 sm:gap-3.5 shrink-0">
+      <div className="flex items-center gap-1.5 xs:gap-2 sm:gap-3 shrink-0">
         <LiveVisitorCounter compact />
         <PresenceStack />
 
@@ -335,13 +335,13 @@ export const Header = ({ onMenuToggle }) => {
           <button
             type="button"
             onClick={() => setIsNotifOpen(!isNotifOpen)}
-            className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-secondary/35 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all active:scale-95 cursor-pointer shadow-2xs shrink-0"
-            style={{ width: '36px', height: '36px', minWidth: '36px', minHeight: '36px' }}
+            className="relative flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl border border-border/70 bg-secondary/35 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all active:scale-95 cursor-pointer shadow-2xs shrink-0"
+            style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}
             aria-label="Notifications"
           >
-            <Bell size={16} />
+            <Bell size={15} />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-indigo-600 text-white font-mono text-[9px] font-black shadow-2xs ring-2 ring-card">
+              <span className="absolute -top-1 -right-1 flex h-3.5 min-w-3.5 px-0.5 items-center justify-center rounded-full bg-indigo-600 text-white font-mono text-[8.5px] font-black shadow-2xs ring-1.5 ring-card">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
@@ -435,11 +435,11 @@ export const Header = ({ onMenuToggle }) => {
         <button
           type="button"
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full p-[1.5px] bg-gradient-to-tr from-amber-500 via-rose-500 to-indigo-500 hover:scale-105 transition-transform active:scale-95 cursor-pointer shrink-0 shadow-2xs"
-          style={{ width: '36px', height: '36px', minWidth: '36px', minHeight: '36px', maxWidth: '36px', maxHeight: '36px' }}
+          className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center overflow-hidden rounded-full p-[1.5px] bg-gradient-to-tr from-amber-500 via-rose-500 to-indigo-500 hover:scale-105 transition-transform active:scale-95 cursor-pointer shrink-0 shadow-2xs"
+          style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px', maxWidth: '32px', maxHeight: '32px' }}
           aria-label="User profile"
         >
-          <div className="h-full w-full rounded-full overflow-hidden bg-background flex items-center justify-center text-xs font-bold text-foreground">
+          <div className="h-full w-full rounded-full overflow-hidden bg-background flex items-center justify-center text-[11px] sm:text-xs font-bold text-foreground">
             {profile?.avatar_url
               ? <img src={profile.avatar_url} alt="Profile" className="h-full w-full object-cover rounded-full" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : (profile?.name?.substring(0, 2)?.toUpperCase() || 'RA')

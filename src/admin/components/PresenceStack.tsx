@@ -2,7 +2,6 @@
 // @ts-nocheck
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, Shield, PhoneCall, User } from 'lucide-react';
 import './PresenceStack.css';
 
 export const PresenceStack = () => {
@@ -25,20 +24,20 @@ export const PresenceStack = () => {
   const extraCount = Math.max(0, sortedUsers.length - displayUsers.length);
 
   return (
-    <div className="flex items-center gap-2 select-none">
+    <div className="flex items-center gap-1 sm:gap-1.5 select-none shrink-0">
       {displayUsers.length > 0 ? (
-        <div className="flex items-center -space-x-2 overflow-hidden py-0.5">
+        <div className="hidden sm:flex items-center -space-x-1.5 overflow-hidden py-0.5">
           {displayUsers.map((u) => (
             <div
               key={u.id}
-              className="relative inline-block h-6 w-6 rounded-full ring-2 ring-background overflow-hidden bg-secondary shrink-0 shadow-2xs"
-              style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px', maxWidth: '24px', maxHeight: '24px' }}
+              className="relative inline-block rounded-full ring-1.5 ring-background overflow-hidden bg-secondary shrink-0 shadow-2xs"
+              style={{ width: '20px', height: '20px', minWidth: '20px', minHeight: '20px', maxWidth: '20px', maxHeight: '20px' }}
               title={`${u.name || 'User'} (${u.roles?.join(', ') || 'Staff'}) • ${u.context?.page || 'Online'}`}
             >
               {u.avatar_url ? (
                 <img src={u.avatar_url} alt={u.name || 'User'} className="h-full w-full object-cover rounded-full" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-[9px] font-black text-muted-foreground bg-muted">
+                <div className="flex h-full w-full items-center justify-center text-[8px] font-black text-muted-foreground bg-muted">
                   {(u.name || u.email || '?').charAt(0).toUpperCase()}
                 </div>
               )}
@@ -46,8 +45,8 @@ export const PresenceStack = () => {
           ))}
           {extraCount > 0 && (
             <div 
-              className="relative inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted ring-2 ring-background text-[9px] font-bold text-muted-foreground shrink-0 shadow-2xs"
-              style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px' }}
+              className="relative inline-flex items-center justify-center rounded-full bg-muted ring-1.5 ring-background text-[8px] font-bold text-muted-foreground shrink-0 shadow-2xs"
+              style={{ width: '20px', height: '20px', minWidth: '20px', minHeight: '20px' }}
             >
               +{extraCount}
             </div>
@@ -55,7 +54,7 @@ export const PresenceStack = () => {
         </div>
       ) : null}
       
-      <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">
+      <span className="text-[11px] sm:text-xs font-semibold text-muted-foreground whitespace-nowrap">
         {isSyncing ? 'Syncing...' : `${onlineUsers.length} Online`}
       </span>
     </div>
