@@ -1815,16 +1815,7 @@ export const StorefrontManagement = () => {
 
                       <div className="p-4 flex flex-col flex-1">
                         <div className="flex justify-between items-center text-xs mb-2">
-                          <span className="text-brand font-semibold">{p.category}</span>
-                          {p.inventory_id ? (
-                            <span className={p.inventory?.current_stock > 0 ? "text-green-500 font-bold animate-pulse" : "text-red-500 font-bold"}>
-                              Stock: {p.inventory?.current_stock ?? 0}
-                            </span>
-                          ) : (
-                            <span className={p.in_stock ? "text-green-500 font-bold" : "text-red-500 font-bold"}>
-                              {p.in_stock ? "In Stock" : "Out of Stock"}
-                            </span>
-                          )}
+                          <span className="text-brand font-semibold capitalize">{p.category}</span>
                         </div>
                         <h3 className="font-bold text-base text-foreground mb-1 line-clamp-1">{p.name}</h3>
                         <p className="text-xs text-surface-muted truncate">/{p.slug}</p>
