@@ -47,14 +47,14 @@ export function LiveVisitorCounter({ compact = false }: { compact?: boolean }) {
         <button
           type="button"
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-1.5 h-6.5 sm:h-7 px-2 sm:px-2.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 transition-all cursor-pointer select-none active:scale-95 shrink-0 shadow-2xs"
+          className="inline-flex items-center gap-1.5 px-1 py-0.5 text-emerald-600 dark:text-emerald-400 hover:opacity-80 transition-opacity cursor-pointer select-none active:scale-95 shrink-0"
           title="Click to view live visitor details"
         >
           <span className="relative flex h-2 w-2 shrink-0">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
           </span>
-          <span className="font-mono font-bold text-xs leading-none text-emerald-700 dark:text-emerald-300">
+          <span className="font-mono font-bold text-xs leading-none text-emerald-600 dark:text-emerald-400">
             {visitorCount}
           </span>
         </button>
