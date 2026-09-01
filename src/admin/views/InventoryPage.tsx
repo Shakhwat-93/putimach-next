@@ -855,11 +855,13 @@ export const InventoryPage = () => {
       <Modal
         isOpen={isProductModalOpen}
         onClose={() => setIsProductModalOpen(false)}
+        size="3xl"
+        className="max-w-5xl lg:max-w-6xl w-full"
         title={editingProduct ? 'Edit Product Details' : 'Register New Product'}
         subtitle={editingProduct ? 'Refine inventory details, stock thresholds, and price without breaking flow.' : 'Create a clean product record with pricing and stock logic.'}
       >
         <form onSubmit={handleSaveProduct} className="space-y-6">
-          <div className="flex gap-3 p-3 rounded-xl bg-secondary/40 border border-border text-xs">
+          <div className="flex gap-3 p-3.5 rounded-xl bg-secondary/40 border border-border text-xs">
             <div className="p-2 bg-primary/10 text-primary rounded-lg shrink-0 h-fit">
               <Package size={18} />
             </div>
@@ -877,7 +879,7 @@ export const InventoryPage = () => {
                 <label className="text-sm font-medium text-foreground">Product Name</label>
                 <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required placeholder="Enter full product name" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-foreground">SKU / Identifier</label>
                   <Input value={formData.sku} onChange={(e) => setFormData({ ...formData, sku: e.target.value })} placeholder="SKU-XXX" />
@@ -901,7 +903,7 @@ export const InventoryPage = () => {
 
           <div className="space-y-4">
             <h4 className="text-xs font-bold uppercase tracking-wider border-b border-border pb-1.5 text-muted-foreground font-sans">Stock & Pricing</h4>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">Initial Inventory</label>
                 <Input
@@ -914,14 +916,12 @@ export const InventoryPage = () => {
                   required
                   disabled={formData.variants?.length > 0}
                 />
-                {formData.variants?.length > 0 && <p className="text-xs text-muted-foreground">Calculated from variants stock below</p>}
+                {formData.variants?.length > 0 && <p className="text-[11px] text-muted-foreground">Calculated from variants</p>}
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">Min Alert Level</label>
                 <Input type="number" value={formData.min_stock_level} onChange={(e) => setFormData({ ...formData, min_stock_level: parseInt(e.target.value) || 0 })} required />
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground flex items-center gap-1">Selling Price <CurrencyIcon size={12} /></label>
                 <Input
@@ -929,7 +929,7 @@ export const InventoryPage = () => {
                   value={formData.selling_price}
                   onChange={(e) => setFormData({ ...formData, selling_price: parseFloat(e.target.value) || 0 })}
                   required
-                  placeholder="Customer-facing price"
+                  placeholder="Customer price"
                 />
               </div>
               <div className="space-y-1.5">
@@ -938,7 +938,7 @@ export const InventoryPage = () => {
                   type="number"
                   value={formData.making_cost}
                   onChange={(e) => setFormData({ ...formData, making_cost: parseFloat(e.target.value) || 0 })}
-                  placeholder="Your cost to produce"
+                  placeholder="Production cost"
                 />
               </div>
             </div>
@@ -995,7 +995,7 @@ export const InventoryPage = () => {
               </label>
 
               {(formData.image || formData.image_url) ? (
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 rounded-xl border border-emerald-500/30 bg-emerald-50/10 dark:bg-emerald-950/10">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-50/10 dark:bg-emerald-950/10">
                   <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden border border-border bg-muted/40 shrink-0">
                     <img
                       src={formData.image || formData.image_url}
@@ -1128,7 +1128,7 @@ export const InventoryPage = () => {
             </div>
 
             {/* Color-Specific Photos Mapping */}
-            <div className="p-3.5 rounded-xl bg-secondary/30 border border-border space-y-3">
+            <div className="p-3.5 sm:p-4 rounded-xl bg-secondary/30 border border-border space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
                   🎨 Color-Wise Specific Photos
@@ -1153,88 +1153,93 @@ export const InventoryPage = () => {
                 }
 
                 return (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                     {uniqueColors.map((color) => {
                       const currentUrl = formData.color_images?.[color] || '';
                       const isColorUploading = uploadingColorKey === color;
                       return (
-                        <div key={color} className="p-2.5 rounded-lg border border-border bg-background flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-md border border-border overflow-hidden bg-secondary/30 shrink-0 flex items-center justify-center relative">
-                            {isColorUploading ? (
-                              <Loader2 size={16} className="animate-spin text-primary" />
-                            ) : currentUrl ? (
-                              <img src={currentUrl} alt={color} className="w-full h-full object-cover" />
-                            ) : (
-                              <span className="text-[9px] font-bold text-muted-foreground text-center px-1">No Pic</span>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0 space-y-1">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold text-foreground truncate">{color}</span>
-                              <div className="flex items-center gap-1.5">
+                        <div key={color} className="p-3 rounded-xl border border-border bg-card shadow-2xs space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-foreground uppercase tracking-wide px-2 py-0.5 rounded-md bg-secondary/60 border border-border">
+                              {color}
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setColorMediaModalTarget(color)}
+                                className="text-[10px] font-bold text-primary hover:underline flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-primary/5 cursor-pointer"
+                              >
+                                <FolderOpen size={11} /> Media
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isColorUploading}
+                                onClick={() => {
+                                  activeColorForUploadRef.current = color;
+                                  colorFileInputRef.current?.click();
+                                }}
+                                className="text-[10px] font-bold text-muted-foreground hover:text-foreground flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-secondary cursor-pointer disabled:opacity-50"
+                              >
+                                <UploadCloud size={11} /> Upload
+                              </button>
+                              {currentUrl && (
                                 <button
                                   type="button"
-                                  onClick={() => setColorMediaModalTarget(color)}
-                                  className="text-[10px] font-bold text-primary hover:underline flex items-center gap-0.5 cursor-pointer"
-                                >
-                                  <FolderOpen size={11} /> Media
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={isColorUploading}
                                   onClick={() => {
-                                    activeColorForUploadRef.current = color;
-                                    colorFileInputRef.current?.click();
+                                    setFormData(prev => {
+                                      const updatedColorImages = { ...(prev.color_images || {}) };
+                                      delete updatedColorImages[color];
+                                      const updatedVariants = (prev.variants || []).filter(
+                                        v => v.color?.toLowerCase() !== color.toLowerCase()
+                                      );
+                                      return {
+                                        ...prev,
+                                        color_images: updatedColorImages,
+                                        variants: updatedVariants
+                                      };
+                                    });
                                   }}
-                                  className="text-[10px] font-bold text-muted-foreground hover:text-foreground flex items-center gap-0.5 cursor-pointer disabled:opacity-50"
+                                  className="text-muted-foreground hover:text-destructive text-[11px] p-1 transition-colors cursor-pointer"
+                                  title="Remove this color photo"
                                 >
-                                  <UploadCloud size={11} /> Upload
+                                  <Trash2 size={12} />
                                 </button>
-                                {currentUrl && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setFormData(prev => {
-                                        const updatedColorImages = { ...(prev.color_images || {}) };
-                                        delete updatedColorImages[color];
-                                        const updatedVariants = (prev.variants || []).filter(
-                                          v => v.color?.toLowerCase() !== color.toLowerCase()
-                                        );
-                                        return {
-                                          ...prev,
-                                          color_images: updatedColorImages,
-                                          variants: updatedVariants
-                                        };
-                                      });
-                                    }}
-                                    className="text-muted-foreground hover:text-destructive text-[11px] p-0.5 transition-colors cursor-pointer"
-                                    title="Remove this color photo"
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
-                                )}
-                              </div>
+                              )}
                             </div>
-                            <Input
-                              className="h-7 text-[11px] px-2 font-mono"
-                              placeholder={`Photo URL for ${color}`}
-                              value={currentUrl}
-                              onChange={(e) => {
-                                const newUrl = e.target.value;
-                                const updatedColorImages = { ...(formData.color_images || {}), [color]: newUrl };
-                                const updatedVariants = (formData.variants || []).map(v => {
-                                  if (v.color?.toLowerCase() === color.toLowerCase()) {
-                                    return { ...v, image_url: newUrl };
-                                  }
-                                  return v;
-                                });
-                                setFormData({
-                                  ...formData,
-                                  color_images: updatedColorImages,
-                                  variants: updatedVariants
-                                });
-                              }}
-                            />
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <div className="w-14 h-14 rounded-xl border border-border overflow-hidden bg-secondary/30 shrink-0 flex items-center justify-center relative shadow-2xs">
+                              {isColorUploading ? (
+                                <Loader2 size={16} className="animate-spin text-primary" />
+                              ) : currentUrl ? (
+                                <img src={currentUrl} alt={color} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-[9px] font-bold text-muted-foreground text-center px-1">No Pic</span>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <Input
+                                className="h-8 text-xs px-2.5 font-mono w-full"
+                                placeholder={`Photo URL for ${color}`}
+                                value={currentUrl}
+                                onChange={(e) => {
+                                  const newUrl = e.target.value;
+                                  const updatedColorImages = { ...(formData.color_images || {}), [color]: newUrl };
+                                  const updatedVariants = (formData.variants || []).map(v => {
+                                    if (v.color?.toLowerCase() === color.toLowerCase()) {
+                                      return { ...v, image_url: newUrl };
+                                    }
+                                    return v;
+                                  });
+                                  setFormData({
+                                    ...formData,
+                                    color_images: updatedColorImages,
+                                    variants: updatedVariants
+                                  });
+                                }}
+                              />
+                            </div>
                           </div>
                         </div>
                       );
@@ -1312,12 +1317,13 @@ export const InventoryPage = () => {
             />
           </div>
 
+          {/* Section: Product Variations */}
           <div className="space-y-4 pt-2">
             <h4 className="text-xs font-bold uppercase tracking-wider border-b border-border pb-1.5 text-muted-foreground font-sans">Product Variations</h4>
             
             <div className="p-4 rounded-xl bg-secondary/30 border border-border">
               <span className="text-[10px] font-black uppercase tracking-widest text-primary block mb-3">Bulk Variation Generator</span>
-              <div className="grid grid-cols-2 gap-3 mb-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                 <div className="space-y-1">
                   <label className="text-[10px] font-medium text-muted-foreground uppercase">Sizes (comma separated)</label>
                   <Input
@@ -1345,50 +1351,104 @@ export const InventoryPage = () => {
             </div>
 
             {(!formData.variants || formData.variants.length === 0) ? (
-              <div className="py-6 text-center border border-dashed border-border rounded-xl bg-background/50">
+              <div className="py-8 text-center border border-dashed border-border rounded-2xl bg-background/50">
                 <p className="text-xs text-muted-foreground">No variations added yet. Click Generate or Add Row to start.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-xl border border-border bg-secondary/10">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-secondary/50 text-muted-foreground">
-                    <tr>
-                      <th className="p-2 font-medium">Size</th>
-                      <th className="p-2 font-medium">Color</th>
-                      <th className="p-2 font-medium min-w-[160px]">Color Image URL</th>
-                      <th className="p-2 font-medium">SKU</th>
-                      <th className="p-2 font-medium w-20">Stock</th>
-                      <th className="p-2 font-medium text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {formData.variants.map((v, idx) => (
-                      <tr key={idx} className="bg-background">
-                        <td className="p-2">
-                          <Input className="h-7 text-xs px-2" placeholder="S" value={v.size || ''} onChange={(e) => handleVariantChange(idx, 'size', e.target.value)} />
-                        </td>
-                        <td className="p-2">
-                          <Input className="h-7 text-xs px-2" placeholder="Black" value={v.color || ''} onChange={(e) => handleVariantChange(idx, 'color', e.target.value)} />
-                        </td>
-                        <td className="p-2">
-                          <Input className="h-7 text-xs px-2" placeholder="https://... photo URL" value={v.image_url || v.image || ''} onChange={(e) => handleVariantChange(idx, 'image_url', e.target.value)} />
-                        </td>
-                        <td className="p-2">
-                          <Input className="h-7 text-xs px-2 font-mono" placeholder="SKU" value={v.sku || ''} onChange={(e) => handleVariantChange(idx, 'sku', e.target.value)} />
-                        </td>
-                        <td className="p-2">
-                          <Input type="number" className="h-7 text-xs px-2" placeholder="0" value={v.stock} onChange={(e) => handleVariantChange(idx, 'stock', Number(e.target.value) || 0)} />
-                        </td>
-                        <td className="p-2 text-right">
-                          <Button type="button" variant="ghost" size="sm" onClick={() => removeVariantRow(idx)} className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10">
-                            Delete
-                          </Button>
-                        </td>
+              <>
+                {/* 1. Desktop & Tablet Responsive Data Table */}
+                <div className="hidden sm:block overflow-x-auto rounded-xl border border-border bg-card shadow-2xs">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-muted/60 text-muted-foreground uppercase text-[10px] tracking-wider border-b border-border">
+                      <tr>
+                        <th className="py-2.5 px-3 font-bold w-24 min-w-[80px]">Size</th>
+                        <th className="py-2.5 px-3 font-bold w-32 min-w-[110px]">Color</th>
+                        <th className="py-2.5 px-3 font-bold min-w-[220px]">Color Image URL</th>
+                        <th className="py-2.5 px-3 font-bold w-36 min-w-[130px]">SKU</th>
+                        <th className="py-2.5 px-3 font-bold w-24 min-w-[85px] text-center">Stock</th>
+                        <th className="py-2.5 px-3 font-bold w-20 min-w-[70px] text-right">Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {formData.variants.map((v, idx) => (
+                        <tr key={idx} className="hover:bg-muted/20 transition-colors">
+                          <td className="p-2.5">
+                            <Input className="h-8 text-xs px-2 font-bold" placeholder="S" value={v.size || ''} onChange={(e) => handleVariantChange(idx, 'size', e.target.value)} />
+                          </td>
+                          <td className="p-2.5">
+                            <Input className="h-8 text-xs px-2 font-medium" placeholder="Black" value={v.color || ''} onChange={(e) => handleVariantChange(idx, 'color', e.target.value)} />
+                          </td>
+                          <td className="p-2.5">
+                            <Input className="h-8 text-xs px-2 font-mono text-muted-foreground focus:text-foreground" placeholder="https://... photo URL" value={v.image_url || v.image || ''} onChange={(e) => handleVariantChange(idx, 'image_url', e.target.value)} />
+                          </td>
+                          <td className="p-2.5">
+                            <Input className="h-8 text-xs px-2 font-mono" placeholder="SKU" value={v.sku || ''} onChange={(e) => handleVariantChange(idx, 'sku', e.target.value)} />
+                          </td>
+                          <td className="p-2.5">
+                            <Input type="number" className="h-8 text-xs px-2 font-mono font-bold text-center" placeholder="0" value={v.stock} onChange={(e) => handleVariantChange(idx, 'stock', Number(e.target.value) || 0)} />
+                          </td>
+                          <td className="p-2.5 text-right">
+                            <Button type="button" variant="ghost" size="sm" onClick={() => removeVariantRow(idx)} className="h-8 px-2.5 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg font-bold text-xs">
+                              Delete
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* 2. Mobile Responsive Variation Cards (< 640px) */}
+                <div className="sm:hidden space-y-3">
+                  {formData.variants.map((v, idx) => (
+                    <div key={idx} className="p-3.5 rounded-xl border border-border bg-card shadow-2xs space-y-3">
+                      <div className="flex items-center justify-between pb-2 border-b border-border/60">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-black text-primary uppercase font-mono px-2 py-0.5 rounded-md bg-primary/10">
+                            #{idx + 1}
+                          </span>
+                          <span className="text-xs font-bold text-foreground">
+                            {v.size || 'Size'} / {v.color || 'Color'}
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeVariantRow(idx)}
+                          className="h-7 px-2 text-destructive hover:bg-destructive/10 text-xs font-bold"
+                        >
+                          <Trash2 size={12} className="mr-1" /> Delete
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase">Size</label>
+                          <Input className="h-8 text-xs px-2 font-bold" placeholder="e.g. M" value={v.size || ''} onChange={(e) => handleVariantChange(idx, 'size', e.target.value)} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase">Color</label>
+                          <Input className="h-8 text-xs px-2" placeholder="e.g. Black" value={v.color || ''} onChange={(e) => handleVariantChange(idx, 'color', e.target.value)} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase">SKU</label>
+                          <Input className="h-8 text-xs px-2 font-mono" placeholder="SKU" value={v.sku || ''} onChange={(e) => handleVariantChange(idx, 'sku', e.target.value)} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase">Stock (pcs)</label>
+                          <Input type="number" className="h-8 text-xs px-2 font-mono font-bold" placeholder="0" value={v.stock} onChange={(e) => handleVariantChange(idx, 'stock', Number(e.target.value) || 0)} />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase">Photo URL</label>
+                        <Input className="h-8 text-xs px-2 font-mono" placeholder="https://..." value={v.image_url || v.image || ''} onChange={(e) => handleVariantChange(idx, 'image_url', e.target.value)} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
             
             <div>
@@ -1413,7 +1473,7 @@ export const InventoryPage = () => {
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-border mt-6">
             <Button variant="ghost" type="button" onClick={() => setIsProductModalOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={isSavingProduct} className="gap-2">
+            <Button type="submit" disabled={isSavingProduct} className="gap-2 bg-primary text-primary-foreground font-bold">
               {isSavingProduct && <Loader2 size={16} className="animate-spin" />}
               {isSavingProduct ? 'Saving...' : (editingProduct ? 'Update Product' : 'Save Product')}
             </Button>
@@ -1503,7 +1563,7 @@ export const InventoryPage = () => {
         </form>
       </Modal>
 
-      <Modal isOpen={isInvoiceModalOpen} onClose={() => setIsInvoiceModalOpen(false)} title="AI Invoice → Inventory Stock Sync">
+      <Modal isOpen={isInvoiceModalOpen} onClose={() => setIsInvoiceModalOpen(false)} size="xl" title="AI Invoice → Inventory Stock Sync">
         <div className="space-y-6">
           <div className="flex gap-4 p-4 rounded-xl bg-primary/5 border border-primary/10">
             <div className="mt-1 p-2 bg-primary/10 text-primary rounded-lg shrink-0 h-fit">
@@ -1624,7 +1684,7 @@ export const InventoryPage = () => {
         </div>
       </Modal>
 
-      <Modal isOpen={isReviewModalOpen} onClose={() => setIsReviewModalOpen(false)} title="Review Pending Inventory Changes">
+      <Modal isOpen={isReviewModalOpen} onClose={() => setIsReviewModalOpen(false)} size="xl" title="Review Pending Inventory Changes">
         <div className="space-y-6">
           <p className="text-sm text-muted-foreground">
             This is a review-only step. Press final <b className="text-foreground">Confirm</b> to apply; cancel/close/ESC/outside click will apply nothing.

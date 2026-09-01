@@ -63,8 +63,11 @@ const DialogContent = ({ className, children, title, subtitle, onClose, size = '
     default: 'max-w-lg',
     lg: 'max-w-2xl',
     xl: 'max-w-4xl',
+    '2xl': 'max-w-5xl',
+    '3xl': 'max-w-6xl',
+    '4xl': 'max-w-7xl',
     full: 'max-w-[95vw]',
-  }[size] || 'max-w-lg'
+  }[size] || (typeof size === 'string' && size.startsWith('max-w-') ? size : 'max-w-lg');
 
   const content = (
     <AnimatePresence>
@@ -89,7 +92,7 @@ const DialogContent = ({ className, children, title, subtitle, onClose, size = '
               exit={{ opacity: 0, scale: 0.95, y: 8 }}
               transition={{ duration: 0.22, ease: "easeOut" }}
               className={cn(
-                "relative z-10 w-full max-w-[calc(100vw-24px)] max-h-[85vh] max-h-[85dvh] flex flex-col overflow-hidden rounded-2xl sm:rounded-3xl border border-border/80 bg-card p-4 sm:p-6 shadow-2xl my-auto",
+                "relative z-10 w-full max-w-[calc(100vw-24px)] max-h-[90vh] max-h-[90dvh] flex flex-col overflow-hidden rounded-2xl sm:rounded-3xl border border-border/80 bg-card p-4 sm:p-6 shadow-2xl my-auto",
                 sizeClass,
                 className
               )}
