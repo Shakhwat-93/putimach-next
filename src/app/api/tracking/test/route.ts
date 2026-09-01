@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getTrackingSettings } from '@/lib/trackingSettingsDb';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
-    const { data: settingsRow } = await supabase
-      .from('tracking_settings')
-      .select('*')
-      .eq('id', 'default')
-      .maybeSingle();
-
-    const cfg = settingsRow || {};
+    const cfg = await getTrackingSettings(supabase);
     const report: Record<string, any> = {};
 
     // 1. Validate GTM

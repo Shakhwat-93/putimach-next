@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getTrackingSettings } from '@/lib/trackingSettingsDb';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -32,13 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 1. Fetch server-side tracking settings
-    const { data: settingsRow } = await supabase
-      .from('tracking_settings')
-      .select('*')
-      .eq('id', 'default')
-      .maybeSingle();
-
-    const cfg = settingsRow || {};
+    const cfg = await getTrackingSettings(supabase);
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || '';
     const userAgent = req.headers.get('user-agent') || '';
 

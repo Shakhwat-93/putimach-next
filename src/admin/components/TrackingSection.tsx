@@ -161,18 +161,43 @@ export default function TrackingSection({ supabase }) {
   const [testing, setTesting] = useState(false);
   const [testResults, setTestResults] = useState(null);
 
-  // Load from Supabase tracking_settings
+  // Load tracking configuration
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // 1. Try site_settings
+      const { data: ssData } = await supabase
+        .from('site_settings')
+        .select('data')
+        .eq('id', 'tracking_config')
+        .maybeSingle();
+
+      if (ssData?.data) {
+        setCfg({ ...EMPTY_SETTINGS, ...ssData.data });
+        return;
+      }
+
+      // 2. Try cb_settings
+      const { data: cbData } = await supabase
+        .from('cb_settings')
+        .select('data')
+        .eq('id', 'tracking_config')
+        .maybeSingle();
+
+      if (cbData?.data) {
+        setCfg({ ...EMPTY_SETTINGS, ...cbData.data });
+        return;
+      }
+
+      // 3. Fallback: try tracking_settings
+      const { data: tsData } = await supabase
         .from('tracking_settings')
         .select('*')
         .eq('id', SETTINGS_ID)
         .maybeSingle();
 
-      if (data) {
-        setCfg({ ...EMPTY_SETTINGS, ...data });
+      if (tsData) {
+        setCfg({ ...EMPTY_SETTINGS, ...tsData });
       }
     } catch (e) {
       console.error('Failed to load tracking settings:', e);
@@ -183,26 +208,51 @@ export default function TrackingSection({ supabase }) {
 
   useEffect(() => { load(); }, [load]);
 
-  // Save to Supabase tracking_settings
+  // Save to Supabase
   const save = async () => {
     setSaving(true);
     try {
       const payload = {
-        id: SETTINGS_ID,
         ...cfg,
         updated_at: new Date().toISOString()
       };
 
-      const { error } = await supabase
-        .from('tracking_settings')
-        .upsert(payload, { onConflict: 'id' });
+      let saveSuccess = false;
+      let lastErr = null;
 
-      if (error) throw error;
+      // 1. Save to site_settings (Standard system settings table)
+      const { error: ssErr } = await supabase
+        .from('site_settings')
+        .upsert({ id: 'tracking_config', data: payload, created_at: new Date().toISOString() }, { onConflict: 'id' });
+
+      if (!ssErr) {
+        saveSuccess = true;
+      } else {
+        lastErr = ssErr;
+      }
+
+      // 2. Sync to cb_settings
+      try {
+        await supabase
+          .from('cb_settings')
+          .upsert({ id: 'tracking_config', data: payload, created_at: new Date().toISOString() }, { onConflict: 'id' });
+        saveSuccess = true;
+      } catch (_) {}
+
+      // 3. Sync to tracking_settings if exists
+      try {
+        await supabase
+          .from('tracking_settings')
+          .upsert({ id: SETTINGS_ID, ...payload }, { onConflict: 'id' });
+        saveSuccess = true;
+      } catch (_) {}
+
+      if (!saveSuccess && lastErr) throw lastErr;
 
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
       Swal.fire({
-        title: 'Settings Saved',
+        title: 'Settings Saved ✓',
         text: 'Marketing & Analytics tracking configuration has been updated.',
         icon: 'success',
         timer: 2000,

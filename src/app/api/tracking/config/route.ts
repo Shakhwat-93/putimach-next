@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getTrackingSettings } from '@/lib/trackingSettingsDb';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -10,18 +11,7 @@ export const revalidate = 0;
  */
 export async function GET() {
   try {
-    const { data, error } = await supabase
-      .from('tracking_settings')
-      .select('*')
-      .eq('id', 'default')
-      .maybeSingle();
-
-    if (error) {
-      console.warn('[Tracking Config API Error]:', error.message);
-      return NextResponse.json({ success: false, config: {} }, { status: 200 });
-    }
-
-    const raw = data || {};
+    const raw = await getTrackingSettings(supabase);
 
     // Build strictly sanitized public payload
     const publicConfig = {
