@@ -331,13 +331,15 @@ export const Header = ({ onMenuToggle }) => {
         <PresenceStack />
 
         {/* Notification bell */}
-        <div ref={notifRef} className="relative">
+        <div ref={notifRef} className="relative shrink-0 flex items-center">
           <button
+            type="button"
             onClick={() => setIsNotifOpen(!isNotifOpen)}
-            className="relative flex h-8.5 w-8.5 items-center justify-center rounded-xl border border-border/70 bg-secondary/35 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all active:scale-95 cursor-pointer shadow-2xs"
+            className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-secondary/35 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all active:scale-95 cursor-pointer shadow-2xs shrink-0"
+            style={{ width: '36px', height: '36px', minWidth: '36px', minHeight: '36px' }}
             aria-label="Notifications"
           >
-            <Bell size={15} />
+            <Bell size={16} />
             {unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-indigo-600 text-white font-mono text-[9px] font-black shadow-2xs ring-2 ring-card">
                 {unreadCount > 9 ? '9+' : unreadCount}
@@ -429,15 +431,17 @@ export const Header = ({ onMenuToggle }) => {
       </div>
 
       {/* User dropdown */}
-      <div ref={dropdownRef} className="relative">
+      <div ref={dropdownRef} className="relative shrink-0 flex items-center">
         <button
+          type="button"
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          className="flex h-8.5 w-8.5 items-center justify-center overflow-hidden rounded-full p-[1.5px] bg-gradient-to-tr from-amber-500 via-rose-500 to-indigo-500 hover:scale-105 transition-transform active:scale-95 cursor-pointer shrink-0 shadow-2xs"
+          className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full p-[1.5px] bg-gradient-to-tr from-amber-500 via-rose-500 to-indigo-500 hover:scale-105 transition-transform active:scale-95 cursor-pointer shrink-0 shadow-2xs"
+          style={{ width: '36px', height: '36px', minWidth: '36px', minHeight: '36px', maxWidth: '36px', maxHeight: '36px' }}
           aria-label="User profile"
         >
           <div className="h-full w-full rounded-full overflow-hidden bg-background flex items-center justify-center text-xs font-bold text-foreground">
             {profile?.avatar_url
-              ? <img src={profile.avatar_url} alt="Profile" className="h-full w-full object-cover" />
+              ? <img src={profile.avatar_url} alt="Profile" className="h-full w-full object-cover rounded-full" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : (profile?.name?.substring(0, 2)?.toUpperCase() || 'RA')
             }
           </div>

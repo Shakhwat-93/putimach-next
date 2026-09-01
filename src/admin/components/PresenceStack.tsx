@@ -32,10 +32,11 @@ export const PresenceStack = () => {
             <div
               key={u.id}
               className="relative inline-block h-6 w-6 rounded-full ring-2 ring-background overflow-hidden bg-secondary shrink-0 shadow-2xs"
+              style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px', maxWidth: '24px', maxHeight: '24px' }}
               title={`${u.name || 'User'} (${u.roles?.join(', ') || 'Staff'}) • ${u.context?.page || 'Online'}`}
             >
               {u.avatar_url ? (
-                <img src={u.avatar_url} alt={u.name || 'User'} className="h-full w-full object-cover" />
+                <img src={u.avatar_url} alt={u.name || 'User'} className="h-full w-full object-cover rounded-full" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-[9px] font-black text-muted-foreground bg-muted">
                   {(u.name || u.email || '?').charAt(0).toUpperCase()}
@@ -44,7 +45,10 @@ export const PresenceStack = () => {
             </div>
           ))}
           {extraCount > 0 && (
-            <div className="relative inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted ring-2 ring-background text-[9px] font-bold text-muted-foreground shrink-0 shadow-2xs">
+            <div 
+              className="relative inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted ring-2 ring-background text-[9px] font-bold text-muted-foreground shrink-0 shadow-2xs"
+              style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px' }}
+            >
               +{extraCount}
             </div>
           )}
