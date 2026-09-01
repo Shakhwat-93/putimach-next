@@ -173,7 +173,7 @@ export const Header = ({ onMenuToggle }) => {
   };
 
   return (
-    <header className="relative z-40 flex h-13 sm:h-14 shrink-0 items-center justify-between gap-1.5 xs:gap-2 sm:gap-4 md:gap-6 border-b border-border/60 bg-card/90 backdrop-blur-md px-2.5 xs:px-3.5 sm:px-6 w-full max-w-full overflow-hidden">
+    <header className="relative z-50 flex h-13 sm:h-14 shrink-0 items-center justify-between gap-1.5 xs:gap-2 sm:gap-4 md:gap-6 border-b border-border/60 bg-card/90 backdrop-blur-md px-2.5 xs:px-3.5 sm:px-6 w-full max-w-full overflow-visible">
       <div className="flex items-center gap-1.5 xs:gap-2 flex-1 min-w-0 mr-1 sm:mr-0">
         {/* Hamburger — mobile only */}
         <button
@@ -205,7 +205,7 @@ export const Header = ({ onMenuToggle }) => {
 
           {/* Search dropdown */}
           {isSearchDropdownOpen && searchQuery.trim() && (
-            <div className="absolute top-full left-0 mt-2 w-full min-w-[260px] sm:min-w-[320px] max-w-[calc(100vw-24px)] rounded-2xl border border-border bg-card shadow-xl z-50 overflow-hidden animate-slide-up">
+            <div className="absolute top-full left-0 mt-2 w-full min-w-[280px] sm:min-w-[340px] max-w-[calc(100vw-24px)] rounded-2xl border border-border bg-card shadow-2xl z-[100] overflow-hidden animate-slide-up">
               {searchResults.orders.length > 0 && (
                 <div>
                   <div className="flex items-center gap-1.5 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground border-b border-border/50">

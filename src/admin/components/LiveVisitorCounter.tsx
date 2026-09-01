@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Activity, Users, Smartphone, Monitor, Globe, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Activity, Smartphone, Monitor, Globe, X } from 'lucide-react';
 
 export function LiveVisitorCounter({ compact = false }: { compact?: boolean }) {
   const [visitorCount, setVisitorCount] = useState<number>(0);
@@ -9,6 +10,11 @@ export function LiveVisitorCounter({ compact = false }: { compact?: boolean }) {
   const [pagesMap, setPagesMap] = useState<Record<string, number>>({});
   const [deviceStats, setDeviceStats] = useState<{ mobile: number; desktop: number }>({ mobile: 0, desktop: 0 });
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -41,13 +47,89 @@ export function LiveVisitorCounter({ compact = false }: { compact?: boolean }) {
     };
   }, []);
 
+  const modalContent = isModalOpen && (
+    <div
+      className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-150"
+      onClick={() => setIsModalOpen(false)}
+    >
+      <div
+        className="relative w-full max-w-md bg-card border border-border rounded-3xl shadow-2xl overflow-hidden my-auto max-h-[85vh] flex flex-col animate-in zoom-in-95 duration-150"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-secondary/30 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
+              <Activity size={18} className="animate-pulse" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-foreground">Real-Time Visitors</h3>
+              <p className="text-xs text-muted-foreground">Live storefront traffic on putimach.com</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(false)}
+            className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Scrollable Body */}
+        <div className="p-5 space-y-4 overflow-y-auto">
+          {/* Stat Box */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex flex-col items-center justify-center">
+              <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">{visitorCount}</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-0.5">Online Now</span>
+            </div>
+            <div className="p-3 rounded-xl bg-secondary border border-border flex flex-col items-center justify-center">
+              <div className="flex items-center gap-1 text-sm font-bold text-foreground font-mono">
+                <Smartphone size={14} className="text-blue-500" /> {deviceStats.mobile}
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-0.5">Mobile</span>
+            </div>
+            <div className="p-3 rounded-xl bg-secondary border border-border flex flex-col items-center justify-center">
+              <div className="flex items-center gap-1 text-sm font-bold text-foreground font-mono">
+                <Monitor size={14} className="text-purple-500" /> {deviceStats.desktop}
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-0.5">Desktop</span>
+            </div>
+          </div>
+
+          {/* Active Pages Breakdown */}
+          <div>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+              <Globe size={13} /> Active Pages
+            </h4>
+            {Object.keys(pagesMap).length > 0 ? (
+              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                {Object.entries(pagesMap).map(([page, cnt]) => (
+                  <div key={page} className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/50 text-xs">
+                    <span className="font-mono font-medium text-foreground truncate max-w-[240px]">{page}</span>
+                    <span className="font-bold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 font-mono">
+                      {cnt} {cnt === 1 ? 'user' : 'users'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground italic py-2">No active storefront visitors right now.</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   if (compact) {
     return (
       <>
         <button
           type="button"
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-1.5 px-1 py-0.5 text-emerald-600 dark:text-emerald-400 hover:opacity-80 transition-opacity cursor-pointer select-none active:scale-95 shrink-0"
+          className="inline-flex items-center gap-1.5 px-1.5 py-1 text-emerald-600 dark:text-emerald-400 hover:opacity-80 transition-opacity cursor-pointer select-none active:scale-95 shrink-0"
           title="Click to view live visitor details"
         >
           <span className="relative flex h-2 w-2 shrink-0">
@@ -59,76 +141,7 @@ export function LiveVisitorCounter({ compact = false }: { compact?: boolean }) {
           </span>
         </button>
 
-        {/* Detailed Modal */}
-        {isModalOpen && (
-          <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 overflow-y-auto">
-            <div className="relative w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden my-auto max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
-              {/* Header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-secondary/30 shrink-0">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
-                    <Activity size={18} className="animate-pulse" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-sm text-foreground">Real-Time Visitors</h3>
-                    <p className="text-xs text-muted-foreground">Live storefront traffic on putimach.com</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-
-              {/* Scrollable Body */}
-              <div className="p-5 space-y-4 overflow-y-auto">
-                {/* Stat Box */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex flex-col items-center justify-center">
-                    <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">{visitorCount}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-0.5">Online Now</span>
-                  </div>
-                  <div className="p-3 rounded-xl bg-secondary border border-border flex flex-col items-center justify-center">
-                    <div className="flex items-center gap-1 text-sm font-bold text-foreground font-mono">
-                      <Smartphone size={14} className="text-blue-500" /> {deviceStats.mobile}
-                    </div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-0.5">Mobile</span>
-                  </div>
-                  <div className="p-3 rounded-xl bg-secondary border border-border flex flex-col items-center justify-center">
-                    <div className="flex items-center gap-1 text-sm font-bold text-foreground font-mono">
-                      <Monitor size={14} className="text-purple-500" /> {deviceStats.desktop}
-                    </div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-0.5">Desktop</span>
-                  </div>
-                </div>
-
-                {/* Active Pages Breakdown */}
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
-                    <Globe size={13} /> Active Pages
-                  </h4>
-                  {Object.keys(pagesMap).length > 0 ? (
-                    <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                      {Object.entries(pagesMap).map(([page, cnt]) => (
-                        <div key={page} className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/50 text-xs">
-                          <span className="font-mono font-medium text-foreground truncate max-w-[240px]">{page}</span>
-                          <span className="font-bold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 font-mono">
-                            {cnt} {cnt === 1 ? 'user' : 'users'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground italic py-2">No active storefront visitors right now.</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {mounted && isModalOpen && typeof document !== 'undefined' && createPortal(modalContent, document.body)}
       </>
     );
   }
@@ -196,4 +209,3 @@ export function LiveVisitorCounter({ compact = false }: { compact?: boolean }) {
     </div>
   );
 }
-
