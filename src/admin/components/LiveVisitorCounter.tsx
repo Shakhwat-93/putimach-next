@@ -47,15 +47,16 @@ export function LiveVisitorCounter({ compact = false }: { compact?: boolean }) {
         <button
           type="button"
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-1 h-6.5 sm:h-7 px-1.5 xs:px-2 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-mono text-[11px] sm:text-xs font-semibold transition-all cursor-pointer select-none active:scale-95 shrink-0"
-          title="Click to view detailed live visitor analytics"
+          className="inline-flex items-center gap-1.5 h-6.5 sm:h-7 px-2 sm:px-2.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 transition-all cursor-pointer select-none active:scale-95 shrink-0 shadow-2xs"
+          title="Click to view live visitor details"
         >
-          <span className="relative flex h-1.5 w-1.5 shrink-0">
+          <span className="relative flex h-2 w-2 shrink-0">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
           </span>
-          <span className="font-bold text-[11px] sm:text-xs">{visitorCount}</span>
-          <span className="text-[9px] uppercase font-bold tracking-wider text-emerald-700 dark:text-emerald-300 font-sans">LIVE</span>
+          <span className="font-mono font-bold text-xs leading-none text-emerald-700 dark:text-emerald-300">
+            {visitorCount}
+          </span>
         </button>
 
         {/* Detailed Modal */}
