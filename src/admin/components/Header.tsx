@@ -173,7 +173,7 @@ export const Header = ({ onMenuToggle }) => {
   };
 
   return (
-    <header className="relative z-40 flex h-13 shrink-0 items-center justify-between gap-2.5 sm:gap-4 border-b border-border/50 bg-card/80 backdrop-blur-xl px-3.5 sm:px-6">
+    <header className="relative z-40 flex h-14 shrink-0 items-center justify-between gap-3 sm:gap-6 border-b border-border/60 bg-card/85 backdrop-blur-md px-4 sm:px-6 w-full">
       <div className="flex items-center gap-2.5 flex-1 min-w-0">
         {/* Hamburger — mobile only */}
         <button
@@ -185,20 +185,20 @@ export const Header = ({ onMenuToggle }) => {
         </button>
 
         {/* Search */}
-        <div ref={searchRef} className="relative flex-1 max-w-[200px] xs:max-w-xs sm:max-w-sm">
+        <div ref={searchRef} className="relative flex-1 max-w-[200px] xs:max-w-xs sm:max-w-sm md:max-w-md">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 pointer-events-none" />
           <input
             type="text"
-            placeholder="Search... (Ctrl+K)"
+            placeholder="Search..."
             value={searchQuery}
             onChange={e => { setSearchQuery(e.target.value); setIsSearchDropdownOpen(true); }}
             onFocus={() => setIsSearchDropdownOpen(true)}
-            className="h-8.5 w-full rounded-xl border border-border/60 bg-muted/30 hover:bg-muted/50 focus:bg-background pl-8.5 pr-8 text-xs font-medium text-foreground placeholder:text-muted-foreground/50 focus:border-border focus:outline-none focus:ring-1 focus:ring-foreground/10 transition-all"
+            className="h-9 w-full rounded-xl border border-border/70 bg-secondary/35 hover:bg-secondary/60 focus:bg-background pl-9 pr-9 text-xs font-medium text-foreground placeholder:text-muted-foreground/60 focus:border-border focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all"
           />
           {isSearching ? (
             <Loader2 size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground/60" />
           ) : (
-            <kbd className="hidden sm:inline-flex absolute right-2 top-1/2 -translate-y-1/2 items-center px-1.5 py-0.5 text-[9px] font-mono text-muted-foreground/50 bg-background/60 border border-border/50 rounded-md">
+            <kbd className="hidden sm:inline-flex absolute right-2.5 top-1/2 -translate-y-1/2 items-center px-1.5 py-0.5 text-[9px] font-mono text-muted-foreground/50 bg-background/60 border border-border/50 rounded-md">
               ⌘K
             </kbd>
           )}
@@ -258,13 +258,6 @@ export const Header = ({ onMenuToggle }) => {
               </div>
             </div>
           )}
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-        <LiveVisitorCounter compact />
-        <div className={isOverviewPage ? 'block' : 'hidden md:block'}>
-          <PresenceStack />
         </div>
       </div>
 
@@ -332,18 +325,25 @@ export const Header = ({ onMenuToggle }) => {
         </div>
       )}
 
-      {/* Notification bell */}
-      <div ref={notifRef} className="relative">
-        <button
-          onClick={() => setIsNotifOpen(!isNotifOpen)}
-          className="relative flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors active:scale-95 cursor-pointer"
-          aria-label="Notifications"
-        >
-          <Bell size={16} />
-          {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 flex h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-card" />
-          )}
-        </button>
+      {/* Right controls: Live, Presence, Notifications, Profile */}
+      <div className="flex items-center gap-3 sm:gap-3.5 shrink-0">
+        <LiveVisitorCounter compact />
+        <PresenceStack />
+
+        {/* Notification bell */}
+        <div ref={notifRef} className="relative">
+          <button
+            onClick={() => setIsNotifOpen(!isNotifOpen)}
+            className="relative flex h-8.5 w-8.5 items-center justify-center rounded-xl border border-border/70 bg-secondary/35 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all active:scale-95 cursor-pointer shadow-2xs"
+            aria-label="Notifications"
+          >
+            <Bell size={15} />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-indigo-600 text-white font-mono text-[9px] font-black shadow-2xs ring-2 ring-card">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
 
         {isNotifOpen && (
           <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-24px)] rounded-2xl border border-border bg-card shadow-2xl z-50 overflow-hidden animate-slide-up">
@@ -430,12 +430,17 @@ export const Header = ({ onMenuToggle }) => {
 
       {/* User dropdown */}
       <div ref={dropdownRef} className="relative">
-        <button onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-border/70 bg-muted/60 hover:bg-muted text-xs font-bold text-foreground transition-all hover:border-border active:scale-95 cursor-pointer">
-          {profile?.avatar_url
-            ? <img src={profile.avatar_url} alt="Profile" className="h-full w-full object-cover" />
-            : (profile?.name?.substring(0, 2)?.toUpperCase() || 'RA')
-          }
+        <button
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          className="flex h-8.5 w-8.5 items-center justify-center overflow-hidden rounded-full p-[1.5px] bg-gradient-to-tr from-amber-500 via-rose-500 to-indigo-500 hover:scale-105 transition-transform active:scale-95 cursor-pointer shrink-0 shadow-2xs"
+          aria-label="User profile"
+        >
+          <div className="h-full w-full rounded-full overflow-hidden bg-background flex items-center justify-center text-xs font-bold text-foreground">
+            {profile?.avatar_url
+              ? <img src={profile.avatar_url} alt="Profile" className="h-full w-full object-cover" />
+              : (profile?.name?.substring(0, 2)?.toUpperCase() || 'RA')
+            }
+          </div>
         </button>
 
         {isDropdownOpen && (
@@ -473,7 +478,8 @@ export const Header = ({ onMenuToggle }) => {
           </div>
         )}
       </div>
-    </header>
+    </div>
+  </header>
   );
 };
 

@@ -47,7 +47,7 @@ export function LiveVisitorCounter({ compact = false }: { compact?: boolean }) {
         <button
           type="button"
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/8 hover:bg-emerald-500/15 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-mono text-xs font-medium transition-all cursor-pointer select-none active:scale-95"
+          className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-mono text-xs font-semibold transition-all cursor-pointer select-none active:scale-95 shrink-0"
           title="Click to view detailed live visitor analytics"
         >
           <span className="relative flex h-1.5 w-1.5">
@@ -55,7 +55,7 @@ export function LiveVisitorCounter({ compact = false }: { compact?: boolean }) {
             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
           </span>
           <span className="font-bold text-xs">{visitorCount}</span>
-          <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-sans font-medium">Live</span>
+          <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-700 dark:text-emerald-300 font-sans">LIVE</span>
         </button>
 
         {/* Detailed Modal */}

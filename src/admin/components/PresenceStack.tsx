@@ -7,72 +7,53 @@ import './PresenceStack.css';
 
 export const PresenceStack = () => {
   const { onlineUsers, user } = useAuth();
-  
   const [isSyncing, setIsSyncing] = React.useState(true);
   
   React.useEffect(() => {
-    // Give presence a moment to connect before showing count
     const timer = setTimeout(() => setIsSyncing(false), 2000);
     return () => clearTimeout(timer);
   }, []);
 
-  // Filter out current user if you want, or keep it. Let's keep all for now.
-  // Sort: Admin first, then by name
-  const sortedUsers = [...onlineUsers].sort((a, b) => {
+  const sortedUsers = [...(onlineUsers || [])].sort((a, b) => {
     const aIsAdmin = a.roles?.includes('Admin');
     const bIsAdmin = b.roles?.includes('Admin');
     if (aIsAdmin !== bIsAdmin) return aIsAdmin ? -1 : 1;
     return (a.name || '').localeCompare(b.name || '');
   });
 
-  const displayUsers = sortedUsers.slice(0, 4);
-  const extraCount = sortedUsers.length - displayUsers.length;
-
-  const getRoleIcon = (roles = []) => {
-    if (roles.includes('Admin')) return <ShieldCheck size={10} className="text-rose-500" />;
-    if (roles.includes('Moderator')) return <Shield size={10} className="text-amber-500" />;
-    if (roles.includes('Call Team')) return <PhoneCall size={10} className="text-sky-500" />;
-    return <User size={10} className="text-slate-400" />;
-  };
-
-  const getRoleClass = (roles = []) => {
-    if (roles.includes('Admin')) return 'role-admin';
-    if (roles.includes('Moderator')) return 'role-moderator';
-    if (roles.includes('Call Team')) return 'role-call';
-    return 'role-user';
-  };
+  const displayUsers = sortedUsers.slice(0, 3);
+  const extraCount = Math.max(0, sortedUsers.length - displayUsers.length);
 
   return (
-    <div className="presence-stack">
-      <div className="avatar-group">
-        {displayUsers.map((u) => (
-          <div key={u.id} className={`stack-avatar-wrapper ${getRoleClass(u.roles)}`} title={`${u.name || 'User'} • ${u.context?.page || 'Active'}`}>
-            {u.avatar_url ? (
-              <img src={u.avatar_url} alt={u.name} className="stack-avatar" />
-            ) : (
-              <div className="stack-avatar-placeholder">
-                {(u.name || u.email || '?').charAt(0).toUpperCase()}
-              </div>
-            )}
-            <div className="stack-role-badge">
-              {getRoleIcon(u.roles)}
+    <div className="flex items-center gap-2 select-none">
+      {displayUsers.length > 0 ? (
+        <div className="flex items-center -space-x-2 overflow-hidden py-0.5">
+          {displayUsers.map((u) => (
+            <div
+              key={u.id}
+              className="relative inline-block h-6 w-6 rounded-full ring-2 ring-background overflow-hidden bg-secondary shrink-0 shadow-2xs"
+              title={`${u.name || 'User'} (${u.roles?.join(', ') || 'Staff'}) • ${u.context?.page || 'Online'}`}
+            >
+              {u.avatar_url ? (
+                <img src={u.avatar_url} alt={u.name || 'User'} className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-[9px] font-black text-muted-foreground bg-muted">
+                  {(u.name || u.email || '?').charAt(0).toUpperCase()}
+                </div>
+              )}
             </div>
-            {/* Tooltip detail only visible on hover via CSS */}
-            <div className="presence-tooltip">
-              <span className="user-name">{u.name || 'User'}</span>
-              <span className="user-context">{u.context?.page || 'Idle'}</span>
+          ))}
+          {extraCount > 0 && (
+            <div className="relative inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted ring-2 ring-background text-[9px] font-bold text-muted-foreground shrink-0 shadow-2xs">
+              +{extraCount}
             </div>
-          </div>
-        ))}
-        {extraCount > 0 && (
-          <div className="avatar-extra">
-            +{extraCount}
-          </div>
-        )}
-      </div>
-      <div className="presence-label desktop-only-flex">
+          )}
+        </div>
+      ) : null}
+      
+      <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">
         {isSyncing ? 'Syncing...' : `${onlineUsers.length} Online`}
-      </div>
+      </span>
     </div>
   );
 };
