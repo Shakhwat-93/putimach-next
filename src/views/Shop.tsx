@@ -11,6 +11,7 @@ import { getProducts, getCategories } from '../lib/api';
 import ProductCard from '../components/shop/ProductCard';
 import ProductGridSkeleton from '@/components/skeletons/storefront/ProductGridSkeleton';
 import { trackSearch } from '../lib/tracking';
+import { subscribeToProductUpdates } from '../lib/productSync';
 
 const sortOptions = [
   { val: 'featured', label: 'Featured' },
@@ -319,6 +320,18 @@ export default function Shop() {
       }
     }
     loadData();
+
+    const unsubscribe = subscribeToProductUpdates(() => {
+      getProducts({ forceRefresh: true }).then((freshList) => {
+        if (Array.isArray(freshList)) {
+          setProducts(freshList);
+        }
+      }).catch(() => {});
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   // Fire Search tracking event when user searches

@@ -186,16 +186,14 @@ export function normalizeProduct(raw: any): any {
     ...raw,
   };
 
-  const allImages = extractProductImages(base);
-  const primaryImage = allImages.length > 0 ? allImages[0] : DEFAULT_PRODUCT_FALLBACK;
-  const guaranteedImages = allImages.length > 0 ? allImages : [primaryImage];
-
   // Normalize color_images into multi-image arrays: Record<string, string[]>
   const rawColorImages = base.color_images || base.colorImages || base.color_galleries || base.colorGalleries || {};
   const normalizedColorGalleries: Record<string, string[]> = {};
   const singleColorMap: Record<string, string> = {};
 
-  if (typeof rawColorImages === 'object' && rawColorImages !== null) {
+  const hasExplicitColorGalleries = typeof rawColorImages === 'object' && rawColorImages !== null && Object.keys(rawColorImages).length > 0;
+
+  if (hasExplicitColorGalleries) {
     Object.entries(rawColorImages).forEach(([colorName, val]) => {
       if (!colorName) return;
       const cleanColorName = colorName.trim();
@@ -211,33 +209,33 @@ export function normalizeProduct(raw: any): any {
         if (cleaned) list.push(cleaned);
       }
 
+      normalizedColorGalleries[cleanColorName] = list;
       if (list.length > 0) {
-        normalizedColorGalleries[cleanColorName] = list;
         singleColorMap[cleanColorName] = list[0];
       }
     });
-  }
-
-  // Also harvest any variant images attached to specific colors
-  const variants = base.variants || base.data?.variants;
-  if (Array.isArray(variants)) {
-    variants.forEach((v) => {
-      if (v?.color && (v.image_url || v.image)) {
-        const cName = String(v.color).trim();
-        const cleaned = cleanImageUrl(v.image_url || v.image);
-        if (cleaned) {
-          if (!normalizedColorGalleries[cName]) {
-            normalizedColorGalleries[cName] = [];
-          }
-          if (!normalizedColorGalleries[cName].includes(cleaned)) {
-            normalizedColorGalleries[cName].push(cleaned);
-          }
-          if (!singleColorMap[cName]) {
-            singleColorMap[cName] = cleaned;
+  } else {
+    // Only fall back to harvesting variants if product has zero explicit color_images
+    const variants = base.variants || base.data?.variants;
+    if (Array.isArray(variants)) {
+      variants.forEach((v) => {
+        if (v?.color && (v.image_url || v.image)) {
+          const cName = String(v.color).trim();
+          const cleaned = cleanImageUrl(v.image_url || v.image);
+          if (cleaned) {
+            if (!normalizedColorGalleries[cName]) {
+              normalizedColorGalleries[cName] = [];
+            }
+            if (!normalizedColorGalleries[cName].includes(cleaned)) {
+              normalizedColorGalleries[cName].push(cleaned);
+            }
+            if (!singleColorMap[cName]) {
+              singleColorMap[cName] = cleaned;
+            }
           }
         }
-      }
-    });
+      });
+    }
   }
 
   // Normalize sizes
@@ -258,6 +256,14 @@ export function normalizeProduct(raw: any): any {
   }
   const colorKeys = Object.keys(normalizedColorGalleries);
   colors = Array.from(new Set([...colors, ...colorKeys])).filter(Boolean);
+
+  // Dedicated Primary Image & All Guaranteed Images
+  const explicitPrimary = cleanImageUrl(base.main_image) || cleanImageUrl(base.mainImage) || cleanImageUrl(base.primary_image) || cleanImageUrl(base.image);
+  const allActiveColorImages = Object.values(normalizedColorGalleries).flat().filter(Boolean);
+  const rawBaseImages = Array.isArray(base.images) ? base.images.map(cleanImageUrl).filter(Boolean) : [];
+  
+  const primaryImage = explicitPrimary || allActiveColorImages[0] || rawBaseImages[0] || DEFAULT_PRODUCT_FALLBACK;
+  const guaranteedImages = Array.from(new Set([primaryImage, ...allActiveColorImages, ...rawBaseImages].filter(Boolean)));
 
   const price = Number(base.price) || 0;
   const originalPrice = base.original_price || base.originalPrice ? Number(base.original_price || base.originalPrice) : null;

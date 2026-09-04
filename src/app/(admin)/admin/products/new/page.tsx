@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ShopifyProductEditor } from '@/admin/components/product/ShopifyProductEditor';
 import { supabase } from '@/admin/lib/supabase';
 import { getCategories, invalidateCache } from '@/lib/api';
+import { broadcastProductUpdate } from '@/lib/productSync';
 import Swal from 'sweetalert2';
 
 export default function AddProductPage() {
@@ -141,6 +142,7 @@ export default function AddProductPage() {
       } catch (_) {}
 
       invalidateCache();
+      broadcastProductUpdate(targetId, 'PRODUCT_CREATED');
 
       await Swal.fire({
         title: isDraft ? 'Saved as Draft ✓' : 'Product Published ✓',

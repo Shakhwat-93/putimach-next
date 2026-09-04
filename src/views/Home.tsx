@@ -8,6 +8,7 @@ import { getProducts, getCategories } from '../lib/api';
 import { supabase } from '../lib/supabase';
 import { collections } from '../data/products';
 import ProductCard from '../components/shop/ProductCard';
+import { subscribeToProductUpdates } from '../lib/productSync';
 
 const InstagramIcon = ({ size = 24, className = "" }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -381,6 +382,20 @@ export default function Home({ initialSettings = null, initialProducts = [], ini
       }
     }
     backgroundSync();
+
+    const unsubscribe = subscribeToProductUpdates(() => {
+      getProducts({ forceRefresh: true }).then((prodData) => {
+        if (prodData?.length) {
+          setProducts(prodData);
+          const top = prodData.find(p => p.badge?.toLowerCase() === 'featured' || p.badge?.toLowerCase() === 'hot') || prodData[0];
+          setTopSellingProduct(top || null);
+        }
+      }).catch(() => {});
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   return (

@@ -2580,6 +2580,12 @@ export const api = {
         try {
           await supabase.from('cb_products').update({ data: updatedData }).eq('id', targetProd.id);
         } catch (_) {}
+        if (typeof window !== 'undefined') {
+          try {
+            const { broadcastProductUpdate } = require('@/lib/productSync');
+            broadcastProductUpdate(targetProd.id);
+          } catch (_) {}
+        }
       }
     } catch (err) {
       console.warn('syncProductFromInventory notice:', err);

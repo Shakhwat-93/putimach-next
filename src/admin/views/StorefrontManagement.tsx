@@ -46,6 +46,7 @@ import { uploadImage } from '../lib/uploadHelper';
 import { ShopifyProductEditor } from '../components/product/ShopifyProductEditor';
 import { MediaPickerModal } from '../components/media/MediaPickerModal';
 import { invalidateCache } from '@/lib/api';
+import { broadcastProductUpdate } from '@/lib/productSync';
 
 const ImageUploadInput = ({ label, value, onChange, placeholder, required = false, local = false }) => {
   const [uploading, setUploading] = useState(false);
@@ -1221,6 +1222,7 @@ export const StorefrontManagement = () => {
       }
 
       invalidateCache();
+      broadcastProductUpdate(editingProduct ? editingProduct.id : targetId, editingProduct ? 'PRODUCT_UPDATED' : 'PRODUCT_CREATED');
       setIsProductModalOpen(false);
       fetchStorefrontData();
     } catch (err) {
@@ -1364,6 +1366,7 @@ export const StorefrontManagement = () => {
       }
 
       invalidateCache();
+      broadcastProductUpdate(finalTargetId, editingProduct ? 'PRODUCT_UPDATED' : 'PRODUCT_CREATED');
 
       setIsProductModalOpen(false);
       setEditingProduct(null);
@@ -1506,6 +1509,8 @@ export const StorefrontManagement = () => {
 
           // Optimistically update UI instantly (0ms delay)
           setProducts(prev => prev.filter(p => p.id !== id));
+          invalidateCache();
+          broadcastProductUpdate(id, 'PRODUCT_DELETED');
 
           // Clear storefront settings cache too if it matches
           localStorage.removeItem('rr_home_settings');

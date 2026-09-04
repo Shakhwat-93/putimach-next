@@ -415,13 +415,14 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
 
     // Cleaned main product image
     const cleanedMainProductImage = cleanImageUrl(mainProductImage);
-    const resolvedPrimaryImage = cleanedMainProductImage || allColorImagesList[0] || primaryImage || '';
+    const resolvedPrimaryImage = (cleanedMainProductImage && (allColorImagesList.includes(cleanedMainProductImage) || allColorImagesList.length === 0))
+      ? cleanedMainProductImage
+      : (allColorImagesList[0] || cleanedMainProductImage || '');
 
     // Complete ordered image list: Main Image FIRST, followed by color groups
     const combinedImages = Array.from(new Set([
       resolvedPrimaryImage,
       ...allColorImagesList,
-      ...(Array.isArray(generalImages) ? generalImages.map(cleanImageUrl).filter(Boolean) : []),
     ].filter(Boolean)));
 
     // Clean and normalize final sizes

@@ -16,6 +16,7 @@ import { ProductCard } from '../components/shop/ProductCard';
 import ProductDetailSkeleton from '@/components/skeletons/storefront/ProductDetailSkeleton';
 import { supabase } from '../lib/supabase';
 import { extractProductImages, DEFAULT_PRODUCT_FALLBACK, cleanImageUrl, isProductInStock } from '../lib/productMedia';
+import { subscribeToProductUpdates } from '../lib/productSync';
 
 export default function ProductDetailView() {
   const { slug } = useParams();
@@ -94,7 +95,9 @@ export default function ProductDetailView() {
 
     // 1. Check normalized color_images / color_galleries
     const rawColorImages = product?.color_images || product?.colorImages || product?.color_galleries || {};
-    if (typeof rawColorImages === 'object' && rawColorImages !== null) {
+    const hasExplicitColors = typeof rawColorImages === 'object' && rawColorImages !== null && Object.keys(rawColorImages).length > 0;
+
+    if (hasExplicitColors) {
       Object.entries(rawColorImages).forEach(([cName, val]) => {
         if (!cName) return;
         const cleanKey = String(cName).trim().toLowerCase();
@@ -110,14 +113,10 @@ export default function ProductDetailView() {
           if (cl) list.push(cl);
         }
 
-        if (list.length > 0) {
-          map[cleanKey] = list;
-        }
+        map[cleanKey] = list;
       });
-    }
-
-    // 2. Check variant items
-    if (Array.isArray(product?.variants)) {
+    } else if (Array.isArray(product?.variants)) {
+      // 2. Only fall back to variant items if product has no explicit color_images
       product.variants.forEach((v) => {
         if (v?.color && (v.image_url || v.image)) {
           const cleanKey = String(v.color).trim().toLowerCase();
@@ -133,7 +132,7 @@ export default function ProductDetailView() {
     return map;
   }, [product]);
 
-  // Guaranteed complete gallery: Main Image ALWAYS FIRST + ALL Color Images (No filtering)
+  // Guaranteed complete gallery: Main Image ALWAYS FIRST + ALL Active Color Images
   const images = useMemo(() => {
     if (!product) return [];
 
@@ -173,8 +172,8 @@ export default function ProductDetailView() {
       }
     });
 
-    // 4. Any general images from product.images
-    if (Array.isArray(product.images)) {
+    // 4. Only if no color images exist at all, fall back to product.images
+    if (list.length === 0 && Array.isArray(product.images)) {
       product.images.forEach((img) => {
         const cl = cleanImageUrl(img);
         if (cl && !list.includes(cl)) {
@@ -383,7 +382,26 @@ export default function ProductDetailView() {
       }
     }
     loadProduct();
-    return () => { isMounted = false; };
+
+    // Subscribe to real-time product synchronization events across all tabs and windows
+    const unsubscribe = subscribeToProductUpdates((payload) => {
+      const targetSlug = String(slug || '').trim().toLowerCase();
+      const payloadId = String(payload.id || '').trim().toLowerCase();
+      const payloadSlug = String(payload.slug || '').trim().toLowerCase();
+
+      if (payload.type === 'ALL_PRODUCTS_SYNC' || !payload.id || payloadId === targetSlug || payloadSlug === targetSlug) {
+        getProductBySlug(slug).then((freshProd) => {
+          if (isMounted && freshProd) {
+            setProduct(freshProd);
+          }
+        }).catch(() => {});
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, [slug]);
 
   if (loading) {
