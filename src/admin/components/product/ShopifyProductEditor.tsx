@@ -218,8 +218,9 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
       setSizeGuide(initialProduct.size_guide || defaultSizeGuide);
       setSizeChartImageUrl(initialProduct.size_guide?.image_url || initialProduct.size_chart_image || '');
 
-      setDescription(initialProduct.description || '');
-      setLongDescription(initialProduct.long_description || initialProduct.description || '');
+      const initialDesc = initialProduct.description || initialProduct.long_description || initialProduct.longDescription || '';
+      setDescription(initialDesc);
+      setLongDescription(initialDesc);
       setFeatures(Array.isArray(initialProduct.features) ? initialProduct.features.join(', ') : (initialProduct.features || ''));
       setMaterial(initialProduct.material || 'Cotton 100%');
 
@@ -472,7 +473,8 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
 
       // Details & Description
       description: description || title,
-      long_description: longDescription || description || title,
+      long_description: description || title,
+      longDescription: description || title,
       features: features ? features.split(',').map(f => f.trim()).filter(Boolean) : [],
       material: material || 'Cotton 100%',
       size_guide: {
@@ -951,9 +953,12 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                 Product Description
               </label>
               <textarea
-                rows={3}
+                rows={4}
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                  setLongDescription(e.target.value);
+                }}
                 placeholder="Describe the weave, style, heritage background, and fit..."
                 className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl border border-border bg-background text-xs sm:text-sm font-normal focus:ring-2 focus:ring-brand focus:outline-none leading-relaxed"
               />

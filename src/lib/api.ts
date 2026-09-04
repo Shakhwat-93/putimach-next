@@ -202,8 +202,19 @@ export async function getProductBySlug(slug) {
     }
 
     if (!data) {
+      const cbRes = await supabase
+        .from('cb_products')
+        .select('id, data, created_at')
+        .or(`id.eq.${slug},data->>slug.eq.${slug}`)
+        .maybeSingle();
+      if (cbRes?.data) {
+        data = cbRes.data;
+      }
+    }
+
+    if (!data) {
       const fallback = (fallbackProducts || []).find(
-        p => String(p.id) === String(slug) || String(p.slug) === String(slug)
+        p => String(p.id).toLowerCase() === String(slug).toLowerCase() || String(p.slug).toLowerCase() === String(slug).toLowerCase()
       );
       return fallback ? normalizeProduct(fallback) : null;
     }

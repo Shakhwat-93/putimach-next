@@ -301,6 +301,9 @@ export function normalizeProduct(raw: any): any {
     stock: effectiveStock,
     in_stock: isAvailable,
     inStock: isAvailable,
+    description: base.description || base.long_description || base.longDescription || '',
+    long_description: base.description || base.long_description || base.longDescription || '',
+    longDescription: base.description || base.long_description || base.longDescription || '',
   };
 }
 

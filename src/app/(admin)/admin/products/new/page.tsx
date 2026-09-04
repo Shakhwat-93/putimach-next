@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShopifyProductEditor } from '@/admin/components/product/ShopifyProductEditor';
 import { supabase } from '@/admin/lib/supabase';
-import { getCategories } from '@/lib/api';
+import { getCategories, invalidateCache } from '@/lib/api';
 import Swal from 'sweetalert2';
 
 export default function AddProductPage() {
@@ -139,6 +139,8 @@ export default function AddProductPage() {
       try {
         await supabase.from('cb_products').update({ data: payload }).eq('id', targetId);
       } catch (_) {}
+
+      invalidateCache();
 
       await Swal.fire({
         title: isDraft ? 'Saved as Draft ✓' : 'Product Published ✓',

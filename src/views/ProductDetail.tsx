@@ -404,7 +404,7 @@ export default function ProductDetailView() {
   const originalPrice = product.original_price || product.originalPrice;
   const reviewsCount = product.reviews_count || product.reviews || 0;
   const rating = product.rating || 5.0;
-  const longDesc = product.long_description || product.longDescription || product.description;
+  const longDesc = product.description || product.long_description || product.longDescription || '';
   const featuresList = Array.isArray(product.features) && product.features.length > 0 
     ? product.features.filter(Boolean) 
     : ['100% Premium Material', 'Custom Oversized Fit', 'Garment Washed Finish', 'Breathable & Durable'];

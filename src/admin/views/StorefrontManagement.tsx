@@ -45,6 +45,7 @@ import { Switch } from '../components/ui/switch';
 import { uploadImage } from '../lib/uploadHelper';
 import { ShopifyProductEditor } from '../components/product/ShopifyProductEditor';
 import { MediaPickerModal } from '../components/media/MediaPickerModal';
+import { invalidateCache } from '@/lib/api';
 
 const ImageUploadInput = ({ label, value, onChange, placeholder, required = false, local = false }) => {
   const [uploading, setUploading] = useState(false);
@@ -1161,8 +1162,8 @@ export const StorefrontManagement = () => {
       features: formattedFeatures,
       material: prodForm.material || null,
       variants: syncedVariants,
-      description: prodForm.description,
-      long_description: prodForm.long_description,
+      description: prodForm.description || prodForm.long_description || '',
+      long_description: prodForm.description || prodForm.long_description || '',
       in_stock: isProductInStock,
       sizes: formattedSizes,
       colors: formattedColors,
@@ -1177,6 +1178,9 @@ export const StorefrontManagement = () => {
           .update({ data: payload })
           .eq('id', editingProduct.id);
         if (error) throw error;
+        try {
+          await supabase.from('cb_products').update({ data: payload }).eq('id', editingProduct.id);
+        } catch (_) {}
       } else {
         if (!payload.slug) {
           payload.slug = generateSlug(payload.name) || 'product-' + Date.now();
@@ -1199,6 +1203,13 @@ export const StorefrontManagement = () => {
             created_at: new Date().toISOString()
           }]);
         if (error) throw error;
+        try {
+          await supabase.from('cb_products').insert([{
+            id: targetId,
+            data: payload,
+            created_at: new Date().toISOString()
+          }]);
+        } catch (_) {}
       }
 
       // Sync with inventory table if connected
@@ -1209,6 +1220,7 @@ export const StorefrontManagement = () => {
           .eq('id', prodForm.inventory_id);
       }
 
+      invalidateCache();
       setIsProductModalOpen(false);
       fetchStorefrontData();
     } catch (err) {
@@ -1350,6 +1362,8 @@ export const StorefrontManagement = () => {
           await supabase.from('cb_products').update({ data: payload }).eq('id', finalTargetId);
         } catch (_) {}
       }
+
+      invalidateCache();
 
       setIsProductModalOpen(false);
       setEditingProduct(null);
