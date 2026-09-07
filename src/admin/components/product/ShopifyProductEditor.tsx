@@ -6,7 +6,7 @@ import {
   Layers, Package, Globe, Tag, ChevronDown, ChevronRight, Sliders,
   HelpCircle, AlertTriangle, Loader2, CheckCircle2, RotateCcw,
   Store, Truck, ShieldCheck, Video, ExternalLink, Palette, Ruler, Info,
-  UploadCloud, Image as ImageIcon, FolderOpen
+  UploadCloud, Image as ImageIcon, FolderOpen, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { RichTextEditor } from './RichTextEditor';
 import { MainProductImageManager } from './MainProductImageManager';
@@ -17,7 +17,7 @@ import { MediaPickerModal } from '../media/MediaPickerModal';
 import { Button } from '../Button';
 import { Card } from '../Card';
 import { Switch } from '../ui/switch';
-import { cleanImageUrl, extractProductImages } from '@/lib/productMedia';
+import { cleanImageUrl, extractProductImages, parseProductFeatures } from '@/lib/productMedia';
 import { uploadImage } from '../../lib/uploadHelper';
 import { cn } from '../../lib/utils';
 import Swal from 'sweetalert2';
@@ -110,7 +110,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
   // 6. Description & Story
   const [description, setDescription] = useState('');
   const [longDescription, setLongDescription] = useState('');
-  const [features, setFeatures] = useState('100% Handloom Weave, Organic Dyes, Tailored Comfort Fit');
+  const [features, setFeatures] = useState<string[]>(['100% Handloom Weave', 'Organic Dyes', 'Tailored Comfort Fit']);
   const [material, setMaterial] = useState('Cotton 100%');
 
   // 7. Advanced Collapsible
@@ -221,7 +221,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
       const initialDesc = initialProduct.description || initialProduct.long_description || initialProduct.longDescription || '';
       setDescription(initialDesc);
       setLongDescription(initialDesc);
-      setFeatures(Array.isArray(initialProduct.features) ? initialProduct.features.join(', ') : (initialProduct.features || ''));
+      setFeatures(parseProductFeatures(initialProduct.features));
       setMaterial(initialProduct.material || 'Cotton 100%');
 
       setSeoTitle(initialProduct.seo_title || '');
@@ -239,6 +239,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
       setColors(['Black']);
       setColorGalleries({ 'Black': [] });
       setSizes(['Free Size', 'M', 'L', 'XL']);
+      setFeatures(['100% Handloom Weave', 'Organic Dyes', 'Tailored Comfort Fit']);
     }
   }, [initialProduct, currentInitialId]);
 
@@ -476,7 +477,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
       description: description || title,
       long_description: description || title,
       longDescription: description || title,
-      features: features ? features.split(',').map(f => f.trim()).filter(Boolean) : [],
+      features: Array.isArray(features) ? features.map(f => String(f || '').trim()).filter(Boolean) : [],
       material: material || 'Cotton 100%',
       size_guide: {
         ...sizeGuide,
@@ -965,32 +966,125 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <div>
-                <label className="block text-[11px] sm:text-xs font-bold text-foreground mb-1">
-                  Material Composition
-                </label>
-                <input
-                  type="text"
-                  value={material}
-                  onChange={(e) => setMaterial(e.target.value)}
-                  placeholder="e.g. 100% Handloom Cotton"
-                  className="w-full px-3 py-1.5 sm:py-2 rounded-xl border border-border bg-background text-xs font-medium focus:ring-2 focus:ring-brand focus:outline-none"
-                />
+            <div>
+              <label className="block text-[11px] sm:text-xs font-bold text-foreground mb-1">
+                Material Composition
+              </label>
+              <input
+                type="text"
+                value={material}
+                onChange={(e) => setMaterial(e.target.value)}
+                placeholder="e.g. 100% Handloom Cotton"
+                className="w-full px-3 py-1.5 sm:py-2 rounded-xl border border-border bg-background text-xs font-medium focus:ring-2 focus:ring-brand focus:outline-none"
+              />
+            </div>
+
+            {/* Dynamic Features & Details (Bullet Point System) */}
+            <div className="pt-3 border-t border-border/60">
+              <div className="flex items-center justify-between gap-2 mb-2.5">
+                <div>
+                  <label className="block text-[11px] sm:text-xs font-bold text-foreground">
+                    Features & Details (Bullet Points)
+                  </label>
+                  <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5">
+                    Rendered as individual bullet points with checkmark icons on the storefront.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFeatures(prev => [...prev, ''])}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand/10 text-brand hover:bg-brand/20 text-xs font-semibold transition-colors shrink-0"
+                >
+                  <Plus size={13} />
+                  <span>Add Feature</span>
+                </button>
               </div>
 
-              <div>
-                <label className="block text-[11px] sm:text-xs font-bold text-foreground mb-1">
-                  Key Highlights (comma-separated)
-                </label>
-                <input
-                  type="text"
-                  value={features}
-                  onChange={(e) => setFeatures(e.target.value)}
-                  placeholder="Garment Washed, Oversized Fit, Breathable"
-                  className="w-full px-3 py-1.5 sm:py-2 rounded-xl border border-border bg-background text-xs font-medium focus:ring-2 focus:ring-brand focus:outline-none"
-                />
-              </div>
+              {features.length === 0 ? (
+                <div className="p-4 rounded-xl border border-dashed border-border text-center bg-muted/20">
+                  <p className="text-xs text-muted-foreground mb-2">No custom features added yet.</p>
+                  <button
+                    type="button"
+                    onClick={() => setFeatures(['100% Premium Material', 'Custom Oversized Fit', 'Garment Washed Finish', 'Breathable & Durable'])}
+                    className="text-xs font-semibold text-brand hover:underline"
+                  >
+                    + Add standard apparel highlights
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {features.map((feat, idx) => (
+                    <div key={idx} className="flex items-center gap-1.5 sm:gap-2">
+                      <span className="w-5 text-center text-[11px] font-bold text-muted-foreground shrink-0 select-none">
+                        {idx + 1}.
+                      </span>
+                      <input
+                        type="text"
+                        value={feat}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFeatures(prev => {
+                            const copy = [...prev];
+                            copy[idx] = val;
+                            return copy;
+                          });
+                        }}
+                        placeholder={`Feature highlight #${idx + 1} (e.g. Soft & Breathable Fabric)`}
+                        className="flex-1 px-3 py-1.5 sm:py-2 rounded-xl border border-border bg-background text-xs font-medium focus:ring-2 focus:ring-brand focus:outline-none"
+                      />
+                      {/* Move Up */}
+                      <button
+                        type="button"
+                        disabled={idx === 0}
+                        onClick={() => {
+                          if (idx === 0) return;
+                          setFeatures(prev => {
+                            const copy = [...prev];
+                            const temp = copy[idx - 1];
+                            copy[idx - 1] = copy[idx];
+                            copy[idx] = temp;
+                            return copy;
+                          });
+                        }}
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                        title="Move Up"
+                      >
+                        <ArrowUp size={13} />
+                      </button>
+                      {/* Move Down */}
+                      <button
+                        type="button"
+                        disabled={idx === features.length - 1}
+                        onClick={() => {
+                          if (idx === features.length - 1) return;
+                          setFeatures(prev => {
+                            const copy = [...prev];
+                            const temp = copy[idx + 1];
+                            copy[idx + 1] = copy[idx];
+                            copy[idx] = temp;
+                            return copy;
+                          });
+                        }}
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                        title="Move Down"
+                      >
+                        <ArrowDown size={13} />
+                      </button>
+                      {/* Delete */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFeatures(prev => prev.filter((_, i) => i !== idx));
+                        }}
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                        title="Remove feature"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

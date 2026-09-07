@@ -104,6 +104,40 @@ export const PrintStudioModal = ({
       })
       .join('\n');
 
+    // Calculate per-format @page and body layout rules
+    let pageCss = '@page { margin: 10mm; }';
+    let bodyCss = 'body { margin: 0; padding: 0; background: #fff; }';
+
+    if (printFormat === 'thermal-pos-58mm') {
+      pageCss = '@page { size: 58mm auto; margin: 0; }';
+      bodyCss = `
+        body { margin: 0; padding: 0; width: 58mm; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .print-workspace { background: #fff; padding: 0; margin: 0; }
+        .sheet-thermal-pos-58mm { width: 58mm !important; max-width: 58mm !important; margin: 0 auto !important; padding: 2mm 3mm !important; box-shadow: none !important; border: none !important; }
+      `;
+    } else if (printFormat === 'thermal-pos-80mm') {
+      pageCss = '@page { size: 80mm auto; margin: 0; }';
+      bodyCss = `
+        body { margin: 0; padding: 0; width: 80mm; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .print-workspace { background: #fff; padding: 0; margin: 0; }
+        .sheet-thermal-pos-80mm { width: 80mm !important; max-width: 80mm !important; margin: 0 auto !important; padding: 3mm !important; box-shadow: none !important; border: none !important; }
+      `;
+    } else if (printFormat === 'thermal-sticker-4x6') {
+      pageCss = '@page { size: 101.6mm 152.4mm; margin: 0; }';
+      bodyCss = `
+        body { margin: 0; padding: 0; width: 101.6mm; background: #fff; }
+        .print-workspace { background: #fff; padding: 0; margin: 0; }
+        .sheet-thermal-sticker-4x6 { width: 101.6mm !important; max-width: 101.6mm !important; margin: 0 auto !important; box-shadow: none !important; border: none !important; }
+      `;
+    } else {
+      pageCss = '@page { size: A4 portrait; margin: 8mm; }';
+      bodyCss = `
+        body { margin: 0; padding: 0; background: #fff; }
+        .print-workspace { background: #fff; padding: 0; }
+        .print-document-sheet { box-shadow: none !important; margin: 0 auto 20px auto; }
+      `;
+    }
+
     const printWindow = window.open('', '_blank', 'width=900,height=700');
     if (!printWindow) return;
 
@@ -115,10 +149,8 @@ export const PrintStudioModal = ({
   <title>Print - PutiMach</title>
   <style>
     ${styles}
-    @page { margin: 10mm; }
-    body { margin: 0; padding: 0; background: #fff; }
-    .print-workspace { background: #fff; padding: 0; }
-    .print-document-sheet { box-shadow: none !important; margin: 0 auto 20px auto; }
+    ${pageCss}
+    ${bodyCss}
   </style>
 </head>
 <body>
@@ -182,6 +214,13 @@ export const PrintStudioModal = ({
               onClick={() => setPrintFormat('thermal-pos-80mm')}
             >
               <Receipt size={15} /> 80mm POS Receipt
+            </button>
+
+            <button 
+              className={`format-btn ${printFormat === 'thermal-pos-58mm' ? 'active' : ''}`}
+              onClick={() => setPrintFormat('thermal-pos-58mm')}
+            >
+              <Receipt size={15} /> 58mm Thermal Receipt
             </button>
 
             <button 
@@ -350,7 +389,16 @@ export const PrintStudioModal = ({
                 />
               )}
 
-              {/* Format 4: A4 2-Up Grid */}
+              {/* Format 4: 58mm Thermal POS Receipt */}
+              {printFormat === 'thermal-pos-58mm' && (
+                <Render58mmReceipt 
+                  order={order} 
+                  brand={brandInfo} 
+                  toggles={toggles} 
+                />
+              )}
+
+              {/* Format 5: A4 2-Up Grid */}
               {printFormat === 'a4-grid-2up' && (
                 <div className="h-full flex flex-col justify-between">
                   <RenderA4Invoice order={order} brand={brandInfo} toggles={{ ...toggles, showImages: false }} compact />
@@ -640,6 +688,190 @@ const RenderPOSReceipt = ({ order, brand, toggles }) => {
         TOTAL: ৳{grandTotal.toLocaleString()}
       </div>
       <div className="text-center mt-3 text-[9px] italic">Thank you for shopping with us!</div>
+    </div>
+  );
+};
+
+/* ── Sub-component 4: 58mm Thermal POS Receipt Renderer ── */
+const Render58mmReceipt = ({ order, brand, toggles }) => {
+  const orderedItems = useMemo(() => {
+    if (Array.isArray(order.ordered_items) && order.ordered_items.length > 0) {
+      return order.ordered_items;
+    }
+    return [{
+      name: order.product_name || 'Item Ordered',
+      quantity: Number(order.quantity) || 1,
+      price: Number(order.price) || 0,
+      image: order.image || order.product_image || null,
+      selectedSize: order.selected_size || order.size || null,
+      selectedColor: order.selected_color || order.color || null
+    }];
+  }, [order]);
+
+  const deliveryCharge = Number(order.delivery_charge) || Number(order.shipping_cost) || 0;
+  const itemsSubtotal = orderedItems.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.quantity || 1)), 0);
+  const discount = Number(order.discount_amount) || Number(order.discount) || 0;
+  const advancePaid = Number(order.advance_paid) || Number(order.advance) || 0;
+  const grandTotal = Number(order.total_amount) || (itemsSubtotal + deliveryCharge - discount);
+  const cashToCollect = Math.max(0, grandTotal - advancePaid);
+  const isPaid = String(order.status).toLowerCase().includes('completed') || 
+                 String(order.payment_status).toLowerCase() === 'paid' || 
+                 cashToCollect === 0;
+
+  const orderDate = order.created_at 
+    ? new Date(order.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) 
+    : new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  const barcodeSvg = useMemo(() => {
+    return generateBarcodeSVG(String(order.id || 'ORD-000').slice(-10), { height: 26, moduleWidth: 1.1, showText: true });
+  }, [order.id]);
+
+  const qrSvg = useMemo(() => {
+    return generateQRCodeSVG(`ORDER:${order.id}|TEL:${order.phone}`, { size: 50 });
+  }, [order.id, order.phone]);
+
+  return (
+    <div className="pos-58mm-container">
+      {/* Brand Header */}
+      <div className="pos-58mm-header text-center">
+        {toggles.showLogo && brand.logo && (
+          <img src={brand.logo} alt={brand.name} className="pos-58mm-logo mx-auto mb-1 max-h-8 object-contain" />
+        )}
+        <div className="pos-58mm-brand-name font-black text-[13px] uppercase tracking-wider">{brand.name}</div>
+        {brand.slogan && <div className="text-[8.5px] text-gray-700 leading-tight mt-0.5">{brand.slogan}</div>}
+        {brand.address && <div className="text-[8px] text-gray-700 leading-tight mt-0.5">{brand.address}</div>}
+        <div className="text-[8.5px] font-bold mt-0.5">Hotline: {brand.phone}</div>
+      </div>
+
+      {/* Dashed Line */}
+      <div className="pos-58mm-divider" />
+
+      {/* Order Info */}
+      <div className="text-[9px] leading-tight space-y-0.5">
+        <div className="flex justify-between items-center">
+          <span className="font-bold">ORDER ID:</span>
+          <span className="font-extrabold text-[10.5px]">#{order.id}</span>
+        </div>
+        <div className="flex justify-between text-gray-700">
+          <span>Date:</span>
+          <span>{orderDate}</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span>Payment:</span>
+          <span className="font-black uppercase">
+            {isPaid ? 'PAID' : 'CASH ON DELIVERY'}
+          </span>
+        </div>
+        {order.courier_name && (
+          <div className="flex justify-between text-[8px] text-gray-700">
+            <span>Courier:</span>
+            <span>{order.courier_name} {order.tracking_id ? `(${order.tracking_id})` : ''}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Customer Info Box */}
+      <div className="pos-58mm-customer-box my-1.5 p-1 border border-black text-[8.5px] leading-tight">
+        <div className="font-bold uppercase text-[8px] border-b border-black pb-0.5 mb-1">CUSTOMER / SHIP TO:</div>
+        <div className="font-black text-[10px]">{order.customer_name || 'Customer'}</div>
+        <div className="font-bold text-[9.5px] mt-0.5">📞 {order.phone}</div>
+        <div className="text-[8.5px] mt-0.5 leading-snug break-words">📍 {order.address}</div>
+        {order.shipping_zone && <div className="text-[8px] font-semibold mt-0.5">Zone: {order.shipping_zone}</div>}
+        {order.notes && <div className="text-[8px] italic mt-0.5 text-gray-800">Note: {order.notes}</div>}
+      </div>
+
+      {/* Dashed Line */}
+      <div className="pos-58mm-divider" />
+
+      {/* Items Section */}
+      <div className="pos-58mm-items my-1">
+        <div className="flex justify-between text-[8.5px] font-bold border-b border-black pb-0.5 mb-1">
+          <span className="w-7/12">ITEM</span>
+          <span className="w-2/12 text-center">QTY</span>
+          <span className="w-3/12 text-right">TOTAL</span>
+        </div>
+        <div className="space-y-1">
+          {orderedItems.map((item, idx) => {
+            const itemTotal = (Number(item.price) || 0) * (Number(item.quantity) || 1);
+            return (
+              <div key={idx} className="text-[8.5px] leading-tight">
+                <div className="font-bold break-words">{item.name || item.product_name}</div>
+                {(item.selectedSize || item.selectedColor || item.size || item.color) && (
+                  <div className="text-[7.5px] text-gray-700">
+                    {item.selectedSize || item.size ? `Size: ${item.selectedSize || item.size}` : ''}
+                    {(item.selectedSize || item.size) && (item.selectedColor || item.color) ? ' • ' : ''}
+                    {item.selectedColor || item.color ? `Color: ${item.selectedColor || item.color}` : ''}
+                  </div>
+                )}
+                <div className="flex justify-between text-[8px] mt-0.5">
+                  <span className="text-gray-600">
+                    {item.quantity} x ৳{Number(item.price || 0).toLocaleString()}
+                  </span>
+                  <span className="font-bold text-[8.5px]">৳{itemTotal.toLocaleString()}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Dashed Line */}
+      <div className="pos-58mm-divider" />
+
+      {/* Financial Breakdown */}
+      {toggles.showPrices && (
+        <div className="text-[8.5px] space-y-0.5">
+          <div className="flex justify-between">
+            <span>Subtotal:</span>
+            <span>৳{itemsSubtotal.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Delivery Fee:</span>
+            <span>৳{deliveryCharge.toLocaleString()}</span>
+          </div>
+          {discount > 0 && (
+            <div className="flex justify-between font-medium">
+              <span>Discount:</span>
+              <span>-৳{discount.toLocaleString()}</span>
+            </div>
+          )}
+          {advancePaid > 0 && (
+            <div className="flex justify-between font-medium">
+              <span>Advance Paid:</span>
+              <span>-৳{advancePaid.toLocaleString()}</span>
+            </div>
+          )}
+          {/* Net Cash to Collect Banner */}
+          <div className="pos-58mm-total-banner mt-1.5 p-1.5 bg-black text-white text-center rounded-xs">
+            <div className="text-[8px] uppercase font-bold tracking-wider">
+              {isPaid ? 'TOTAL PAID AMOUNT' : 'CASH TO COLLECT'}
+            </div>
+            <div className="text-[13px] font-black tracking-tight mt-0.5">
+              ৳{(isPaid ? grandTotal : cashToCollect).toLocaleString()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Barcode & QR Code Footer */}
+      {toggles.showBarcode && (
+        <div className="pos-58mm-barcode-section mt-2 pt-1 border-t border-dashed border-black flex flex-col items-center">
+          <div className="pos-58mm-barcode-svg w-full flex justify-center mb-1 overflow-hidden" dangerouslySetInnerHTML={{ __html: barcodeSvg }} />
+          <div className="pos-58mm-qr-svg flex justify-center" dangerouslySetInnerHTML={{ __html: qrSvg }} />
+        </div>
+      )}
+
+      {/* Terms & Return Policy */}
+      {toggles.showTerms && brand.terms && (
+        <div className="text-[7.5px] text-center text-gray-700 leading-tight mt-2 px-0.5">
+          {brand.terms}
+        </div>
+      )}
+
+      {/* Footer Closing */}
+      <div className="text-center font-bold text-[8px] uppercase mt-1.5 tracking-wider">
+        *** THANK YOU FOR SHOPPING ***
+      </div>
     </div>
   );
 };

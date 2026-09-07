@@ -15,7 +15,7 @@ import { trackViewContent, trackAddToCart } from '../lib/tracking';
 import { ProductCard } from '../components/shop/ProductCard';
 import ProductDetailSkeleton from '@/components/skeletons/storefront/ProductDetailSkeleton';
 import { supabase } from '../lib/supabase';
-import { extractProductImages, DEFAULT_PRODUCT_FALLBACK, cleanImageUrl, isProductInStock } from '../lib/productMedia';
+import { extractProductImages, DEFAULT_PRODUCT_FALLBACK, cleanImageUrl, isProductInStock, parseProductFeatures } from '../lib/productMedia';
 import { subscribeToProductUpdates } from '../lib/productSync';
 
 export default function ProductDetailView() {
@@ -192,10 +192,40 @@ export default function ProductDetailView() {
   const scrollTimeoutRef = useRef(null);
   const [isHovered, setIsHovered] = useState(false);
   const [isInteracting, setIsInteracting] = useState(false);
+  const [isGalleryVisible, setIsGalleryVisible] = useState(true);
   const autoplayTimerRef = useRef(null);
   const resumeTimerRef = useRef(null);
 
   const totalCartCount = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  // Monitor gallery viewport visibility so autoplay pauses when user scrolls down
+  useEffect(() => {
+    const el = sliderRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsGalleryVisible(entry.isIntersecting);
+      },
+      { threshold: 0.05 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // Safely scroll thumbnail row horizontally WITHOUT triggering window-level page scrolling
+  const scrollThumbnailIntoView = useCallback((index: number, smooth = true) => {
+    if (!thumbnailRowRef.current) return;
+    const container = thumbnailRowRef.current;
+    const buttons = container.querySelectorAll('button');
+    const targetButton = buttons[index] as HTMLElement | undefined;
+    if (targetButton) {
+      const targetLeft = targetButton.offsetLeft - (container.clientWidth - targetButton.clientWidth) / 2;
+      container.scrollTo({
+        left: Math.max(0, targetLeft),
+        behavior: smooth ? 'smooth' : 'instant',
+      });
+    }
+  }, []);
 
   // Smoothly navigate to specific slide index
   const goToSlide = useCallback((index: number, smooth = true) => {
@@ -212,25 +242,16 @@ export default function ProductDetailView() {
       });
     }
 
-    if (thumbnailRowRef.current) {
-      const buttons = thumbnailRowRef.current.querySelectorAll('button');
-      if (buttons[index]) {
-        buttons[index].scrollIntoView({
-          behavior: smooth ? 'smooth' : 'instant',
-          block: 'nearest',
-          inline: 'center',
-        });
-      }
-    }
+    scrollThumbnailIntoView(index, smooth);
 
     scrollTimeoutRef.current = setTimeout(() => {
       isScrollingRef.current = false;
     }, 450);
-  }, [images.length]);
+  }, [images.length, scrollThumbnailIntoView]);
 
-  // Autoplay auto-slide with smooth 4s interval, pause on hover/interaction
+  // Autoplay auto-slide with smooth 4s interval, pause on hover/interaction or when out of viewport
   useEffect(() => {
-    if (images.length <= 1 || isHovered || isInteracting) {
+    if (images.length <= 1 || isHovered || isInteracting || !isGalleryVisible) {
       if (autoplayTimerRef.current) clearInterval(autoplayTimerRef.current);
       return;
     }
@@ -245,16 +266,7 @@ export default function ProductDetailView() {
             behavior: 'smooth',
           });
         }
-        if (thumbnailRowRef.current) {
-          const buttons = thumbnailRowRef.current.querySelectorAll('button');
-          if (buttons[next]) {
-            buttons[next].scrollIntoView({
-              behavior: 'smooth',
-              block: 'nearest',
-              inline: 'center',
-            });
-          }
-        }
+        scrollThumbnailIntoView(next, true);
         return next;
       });
     }, 4000);
@@ -262,7 +274,7 @@ export default function ProductDetailView() {
     return () => {
       if (autoplayTimerRef.current) clearInterval(autoplayTimerRef.current);
     };
-  }, [images.length, isHovered, isInteracting]);
+  }, [images.length, isHovered, isInteracting, isGalleryVisible, scrollThumbnailIntoView]);
 
   // Temporarily pause autoplay on user interaction
   const handleUserInteraction = () => {
@@ -358,7 +370,6 @@ export default function ProductDetailView() {
           setSelectedColor(prod?.colors?.[0] || null);
           trackViewContent(prod);
           setLoading(false);
-          window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
 
           if (prod?.category) {
             getProducts({ category: prod.category })
@@ -423,9 +434,12 @@ export default function ProductDetailView() {
   const reviewsCount = product.reviews_count || product.reviews || 0;
   const rating = product.rating || 5.0;
   const longDesc = product.description || product.long_description || product.longDescription || '';
-  const featuresList = Array.isArray(product.features) && product.features.length > 0 
-    ? product.features.filter(Boolean) 
-    : ['100% Premium Material', 'Custom Oversized Fit', 'Garment Washed Finish', 'Breathable & Durable'];
+  const featuresList = useMemo(() => {
+    const parsed = parseProductFeatures(product?.features);
+    return parsed.length > 0 
+      ? parsed 
+      : ['100% Premium Material', 'Custom Oversized Fit', 'Garment Washed Finish', 'Breathable & Durable'];
+  }, [product?.features]);
 
   const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
   const selectedVariant = hasVariants && selectedSize
@@ -930,11 +944,11 @@ export default function ProductDetailView() {
                       exit={{ height: 0 }}
                       className="overflow-hidden"
                     >
-                      <ul className="px-4 pb-4 space-y-1.5 border-t border-[#E9E2D2]/50 pt-2.5">
-                        {featuresList.map((f) => (
-                          <li key={f} className="flex items-center gap-2 text-xs text-gray-600">
-                            <Check size={13} className="text-[#C5A880] flex-shrink-0" />
-                            {f}
+                      <ul className="px-4 pb-4 space-y-2 border-t border-[#E9E2D2]/50 pt-2.5">
+                        {featuresList.map((f, idx) => (
+                          <li key={idx} className="flex items-start gap-2.5 text-xs text-gray-600 leading-relaxed">
+                            <Check size={14} className="text-[#C5A880] flex-shrink-0 mt-0.5" />
+                            <span>{f}</span>
                           </li>
                         ))}
                       </ul>

@@ -344,3 +344,81 @@ export function isProductInStock(product: any, selectedVariant?: any): boolean {
   // 5. Fallback to boolean in_stock
   return product.in_stock !== false && product.inStock !== false;
 }
+
+/**
+ * Universal Product Features Normalizer
+ * Accurately parses features from array, legacy bullet-separated strings (*, •, \n, ;),
+ * or comma-separated strings into a clean, structured string array.
+ */
+export function parseProductFeatures(raw: unknown): string[] {
+  if (!raw) return [];
+
+  let rawList: unknown[] = [];
+
+  if (Array.isArray(raw)) {
+    rawList = raw;
+  } else if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (!trimmed) return [];
+
+    // Attempt JSON parse if it looks like an array
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          rawList = parsed;
+        } else {
+          rawList = [trimmed];
+        }
+      } catch {
+        rawList = [trimmed];
+      }
+    } else {
+      rawList = [trimmed];
+    }
+  } else {
+    return [];
+  }
+
+  const result: string[] = [];
+
+  for (const item of rawList) {
+    if (typeof item !== 'string') {
+      if (item && typeof item === 'object' && 'feature' in (item as any)) {
+        const fStr = String((item as any).feature || '').trim();
+        if (fStr) result.push(fStr);
+      }
+      continue;
+    }
+
+    const str = item.trim();
+    if (!str) continue;
+
+    // Split on bullet markers (*, •, newlines, semicolons) if present
+    if (str.includes('*') || str.includes('•') || str.includes('\n') || str.includes('\r') || str.includes(';')) {
+      const parts = str.split(/[*•\r\n;]+/);
+      for (const p of parts) {
+        const cleaned = p.replace(/^(\d+[\.\)]\s*|[-*•✓·\s]+)/, '').trim();
+        if (cleaned) {
+          result.push(cleaned);
+        }
+      }
+    } else if (str.includes(',')) {
+      // If it doesn't have asterisks or newlines, but contains commas
+      const parts = str.split(',');
+      for (const p of parts) {
+        const cleaned = p.replace(/^(\d+[\.\)]\s*|[-*•✓·\s]+)/, '').trim();
+        if (cleaned) {
+          result.push(cleaned);
+        }
+      }
+    } else {
+      const cleaned = str.replace(/^(\d+[\.\)]\s*|[-*•✓·\s]+)/, '').trim();
+      if (cleaned) {
+        result.push(cleaned);
+      }
+    }
+  }
+
+  return result;
+}
