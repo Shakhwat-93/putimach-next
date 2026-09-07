@@ -186,6 +186,14 @@ export default function ProductDetailView() {
     return unique.length > 0 ? unique : [DEFAULT_PRODUCT_FALLBACK];
   }, [product, colorGalleriesMap]);
 
+  // Guaranteed uniform hook order: features parsed and memoized at top level
+  const featuresList = useMemo(() => {
+    const parsed = parseProductFeatures(product?.features);
+    return parsed.length > 0 
+      ? parsed 
+      : ['100% Premium Material', 'Custom Oversized Fit', 'Garment Washed Finish', 'Breathable & Durable'];
+  }, [product?.features]);
+
   const sliderRef = useRef(null);
   const thumbnailRowRef = useRef(null);
   const isScrollingRef = useRef(false);
@@ -434,12 +442,6 @@ export default function ProductDetailView() {
   const reviewsCount = product.reviews_count || product.reviews || 0;
   const rating = product.rating || 5.0;
   const longDesc = product.description || product.long_description || product.longDescription || '';
-  const featuresList = useMemo(() => {
-    const parsed = parseProductFeatures(product?.features);
-    return parsed.length > 0 
-      ? parsed 
-      : ['100% Premium Material', 'Custom Oversized Fit', 'Garment Washed Finish', 'Breathable & Durable'];
-  }, [product?.features]);
 
   const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
   const selectedVariant = hasVariants && selectedSize
