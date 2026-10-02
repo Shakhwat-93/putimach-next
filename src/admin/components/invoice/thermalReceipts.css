@@ -1,0 +1,335 @@
+/* ==========================================================================
+   EXACT PHYSICAL THERMAL RECEIPT STYLES (58mm & 80mm)
+   Complies with true physical dimensions, dynamic height, and print isolation.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. EXACT 58mm THERMAL RECEIPT LAYOUT
+   Physical Width: 58mm
+   Printable Area: ~48-52mm (handled via internal padding without changing 58mm width)
+   Height: Dynamic (auto)
+   -------------------------------------------------------------------------- */
+.thermal-receipt-58 {
+  width: 58mm !important;
+  max-width: 58mm !important;
+  min-width: 58mm !important;
+  box-sizing: border-box !important;
+  margin: 0 auto !important;
+  padding: 2.5mm 3.5mm !important;
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  font-family: 'Courier New', Courier, Consolas, Monaco, monospace !important;
+  font-size: 8.5pt !important;
+  line-height: 1.25 !important;
+  overflow: hidden !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  -webkit-font-smoothing: antialiased !important;
+  print-color-adjust: exact !important;
+  -webkit-print-color-adjust: exact !important;
+}
+
+.thermal-receipt-58 * {
+  box-sizing: border-box !important;
+  color: #000000 !important;
+}
+
+/* 58mm Typography & Elements */
+.thermal-58-brand-title {
+  font-size: 11pt !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+  text-align: center !important;
+  letter-spacing: 0.5px !important;
+  line-height: 1.15 !important;
+  margin-bottom: 1.5mm !important;
+}
+
+.thermal-58-brand-sub {
+  font-size: 7pt !important;
+  text-align: center !important;
+  line-height: 1.2 !important;
+}
+
+.thermal-58-divider {
+  border: none !important;
+  border-top: 1px dashed #000000 !important;
+  margin: 2mm 0 !important;
+  width: 100% !important;
+}
+
+.thermal-58-double-divider {
+  border: none !important;
+  border-top: 1px dashed #000000 !important;
+  border-bottom: 1px dashed #000000 !important;
+  height: 2px !important;
+  margin: 2mm 0 !important;
+  width: 100% !important;
+}
+
+.thermal-58-meta-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: baseline !important;
+  font-size: 7.5pt !important;
+  margin-bottom: 0.8mm !important;
+}
+
+.thermal-58-customer-box {
+  margin: 1.5mm 0 !important;
+  padding: 1.5mm !important;
+  border: 1px solid #000000 !important;
+  font-size: 7.5pt !important;
+  line-height: 1.2 !important;
+}
+
+.thermal-58-customer-title {
+  font-weight: 800 !important;
+  font-size: 7pt !important;
+  text-transform: uppercase !important;
+  border-bottom: 1px solid #000000 !important;
+  padding-bottom: 0.8mm !important;
+  margin-bottom: 1mm !important;
+}
+
+.thermal-58-customer-name {
+  font-size: 8.5pt !important;
+  font-weight: 900 !important;
+}
+
+.thermal-58-product-row {
+  margin-bottom: 1.8mm !important;
+  font-size: 8pt !important;
+  line-height: 1.2 !important;
+}
+
+.thermal-58-product-title {
+  font-weight: 800 !important;
+  font-size: 8pt !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+}
+
+.thermal-58-product-variant {
+  font-size: 7pt !important;
+  color: #333333 !important;
+  margin-top: 0.5mm !important;
+}
+
+.thermal-58-product-calc {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: baseline !important;
+  font-size: 7.5pt !important;
+  margin-top: 0.5mm !important;
+}
+
+.thermal-58-total-banner {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  padding: 2mm !important;
+  text-align: center !important;
+  margin: 2mm 0 !important;
+}
+
+.thermal-58-total-banner * {
+  color: #ffffff !important;
+}
+
+.thermal-58-total-banner-label {
+  font-size: 7pt !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+.thermal-58-total-banner-amount {
+  font-size: 12pt !important;
+  font-weight: 900 !important;
+  margin-top: 0.8mm !important;
+}
+
+.thermal-58-footer-msg {
+  text-align: center !important;
+  font-size: 7pt !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  margin-top: 2mm !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* --------------------------------------------------------------------------
+   2. EXACT 80mm THERMAL RECEIPT LAYOUT
+   Physical Width: 80mm
+   Printable Area: ~70-74mm (handled via internal padding without changing 80mm width)
+   Height: Dynamic (auto)
+   -------------------------------------------------------------------------- */
+.thermal-receipt-80 {
+  width: 80mm !important;
+  max-width: 80mm !important;
+  min-width: 80mm !important;
+  box-sizing: border-box !important;
+  margin: 0 auto !important;
+  padding: 3.5mm 4.5mm !important;
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  font-family: 'Courier New', Courier, Consolas, Monaco, monospace !important;
+  font-size: 9pt !important;
+  line-height: 1.3 !important;
+  overflow: hidden !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  -webkit-font-smoothing: antialiased !important;
+  print-color-adjust: exact !important;
+  -webkit-print-color-adjust: exact !important;
+}
+
+.thermal-receipt-80 * {
+  box-sizing: border-box !important;
+  color: #000000 !important;
+}
+
+/* 80mm Typography & Multi-Column Elements */
+.thermal-80-brand-title {
+  font-size: 13pt !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+  text-align: center !important;
+  letter-spacing: 0.75px !important;
+  line-height: 1.2 !important;
+  margin-bottom: 1.5mm !important;
+}
+
+.thermal-80-brand-sub {
+  font-size: 8pt !important;
+  text-align: center !important;
+  line-height: 1.25 !important;
+}
+
+.thermal-80-divider {
+  border: none !important;
+  border-top: 1px dashed #000000 !important;
+  margin: 2.5mm 0 !important;
+  width: 100% !important;
+}
+
+.thermal-80-double-divider {
+  border: none !important;
+  border-top: 1px dashed #000000 !important;
+  border-bottom: 1px dashed #000000 !important;
+  height: 2px !important;
+  margin: 2.5mm 0 !important;
+  width: 100% !important;
+}
+
+.thermal-80-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 1.5mm 0 !important;
+}
+
+.thermal-80-table th {
+  border-bottom: 1px solid #000000 !important;
+  padding: 1.2mm 0.8mm !important;
+  font-size: 8pt !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+}
+
+.thermal-80-table td {
+  padding: 1.2mm 0.8mm !important;
+  vertical-align: top !important;
+  font-size: 8.5pt !important;
+}
+
+.thermal-80-total-banner {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  padding: 2.5mm !important;
+  text-align: center !important;
+  margin: 2.5mm 0 !important;
+}
+
+.thermal-80-total-banner * {
+  color: #ffffff !important;
+}
+
+.thermal-80-total-banner-label {
+  font-size: 8pt !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+.thermal-80-total-banner-amount {
+  font-size: 14pt !important;
+  font-weight: 900 !important;
+  margin-top: 1mm !important;
+}
+
+/* --------------------------------------------------------------------------
+   3. PRINT CSS ISOLATION & @page DEFINITIONS
+   -------------------------------------------------------------------------- */
+
+/* Dedicated Isolated Print Modes */
+@media print {
+  /* Reset document root */
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  /* Universal hide for non-print UI when printing */
+  .no-print,
+  .print-studio-header,
+  .print-studio-toolbar,
+  .print-options-panel,
+  .print-action-group,
+  header,
+  nav,
+  aside,
+  button,
+  .sidebar,
+  .admin-sidebar,
+  .admin-header {
+    display: none !important;
+  }
+
+  /* When printing 58mm: exact page size */
+  @page page-58mm {
+    size: 58mm auto;
+    margin: 0;
+  }
+
+  /* When printing 80mm: exact page size */
+  @page page-80mm {
+    size: 80mm auto;
+    margin: 0;
+  }
+
+  /* Standalone A4 page */
+  @page page-a4 {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+
+  /* Apply page rule to respective receipt containers */
+  .thermal-receipt-58 {
+    page: page-58mm;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .thermal-receipt-80 {
+    page: page-80mm;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .standard-invoice-a4 {
+    page: page-a4;
+    page-break-after: always;
+    break-after: page;
+  }
+}

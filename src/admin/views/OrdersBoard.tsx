@@ -212,14 +212,16 @@ export const OrdersBoard = () => {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isPrintStudioOpen, setIsPrintStudioOpen] = useState(false);
   const [printStudioOrders, setPrintStudioOrders] = useState([]);
+  const [printStudioFormat, setPrintStudioFormat] = useState('a4-invoice');
 
-  const handleOpenPrintStudio = (singleOrder = null) => {
+  const handleOpenPrintStudio = (singleOrder = null, format = 'a4-invoice') => {
     if (singleOrder) {
       setPrintStudioOrders([singleOrder]);
     } else {
       const selected = (orders || []).filter(o => selectedOrderIds.includes(o.id));
       setPrintStudioOrders(selected);
     }
+    setPrintStudioFormat(format);
     setIsPrintStudioOpen(true);
   };
 
@@ -1293,6 +1295,7 @@ export const OrdersBoard = () => {
         isOpen={isPrintStudioOpen}
         onClose={() => setIsPrintStudioOpen(false)}
         orders={printStudioOrders}
+        initialFormat={printStudioFormat}
       />
 
       {ConfirmDialogComponent}

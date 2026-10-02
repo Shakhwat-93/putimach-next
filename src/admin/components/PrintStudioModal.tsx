@@ -2,12 +2,19 @@
 // @ts-nocheck
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import './PrintStudioModal.css';
+import './invoice/thermalReceipts.css';
 import { 
   Printer, X, FileText, Tag, Receipt, Grid, 
   Settings, Image, Check, Eye, Copy, RefreshCw, ChevronDown, ChevronUp, Edit3
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { generateBarcodeSVG, generateQRCodeSVG } from '../utils/barcode';
+import { 
+  mapOrderToInvoiceData, 
+  ThermalReceipt58, 
+  ThermalReceipt80, 
+  StandardInvoice 
+} from './invoice';
 
 export const PrintStudioModal = ({
   isOpen,
@@ -17,6 +24,12 @@ export const PrintStudioModal = ({
 }) => {
   const [printFormat, setPrintFormat] = useState(initialFormat);
   const [showBrandEditor, setShowBrandEditor] = useState(false);
+
+  useEffect(() => {
+    if (initialFormat) {
+      setPrintFormat(initialFormat);
+    }
+  }, [initialFormat, isOpen]);
 
   // Print Toggles
   const [toggles, setToggles] = useState({
@@ -95,7 +108,7 @@ export const PrintStudioModal = ({
     const printContent = printWorkspaceRef.current;
     if (!printContent) return;
 
-    // Collect all stylesheets from the current page
+    // Collect all stylesheets from current page
     const styles = Array.from(document.styleSheets)
       .map(sheet => {
         try {
@@ -104,42 +117,121 @@ export const PrintStudioModal = ({
       })
       .join('\n');
 
-    // Calculate per-format @page and body layout rules
-    let pageCss = '@page { margin: 10mm; }';
-    let bodyCss = 'body { margin: 0; padding: 0; background: #fff; }';
+    let pageCss = '';
+    let bodyCss = '';
 
     if (printFormat === 'thermal-pos-58mm') {
       pageCss = '@page { size: 58mm auto; margin: 0; }';
       bodyCss = `
-        body { margin: 0; padding: 0; width: 58mm; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .print-workspace { background: #fff; padding: 0; margin: 0; }
-        .sheet-thermal-pos-58mm { width: 58mm !important; max-width: 58mm !important; margin: 0 auto !important; padding: 2mm 3mm !important; box-shadow: none !important; border: none !important; }
+        * { box-sizing: border-box !important; }
+        html, body {
+          margin: 0 !important;
+          padding: 0 !important;
+          width: 58mm !important;
+          max-width: 58mm !important;
+          min-width: 58mm !important;
+          background: #ffffff !important;
+          color: #000000 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          overflow-x: hidden !important;
+        }
+        .print-workspace { background: #ffffff !important; padding: 0 !important; margin: 0 !important; }
+        .print-document-sheet { box-shadow: none !important; margin: 0 !important; padding: 0 !important; border: none !important; background: transparent !important; }
+        .thermal-receipt-58 {
+          width: 58mm !important;
+          max-width: 58mm !important;
+          min-width: 58mm !important;
+          margin: 0 auto !important;
+          padding: 2.5mm 3.5mm !important;
+          box-sizing: border-box !important;
+          box-shadow: none !important;
+          border: none !important;
+          page-break-after: always;
+          break-after: page;
+        }
+        .thermal-receipt-58:last-child {
+          page-break-after: auto;
+          break-after: auto;
+        }
       `;
     } else if (printFormat === 'thermal-pos-80mm') {
       pageCss = '@page { size: 80mm auto; margin: 0; }';
       bodyCss = `
-        body { margin: 0; padding: 0; width: 80mm; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .print-workspace { background: #fff; padding: 0; margin: 0; }
-        .sheet-thermal-pos-80mm { width: 80mm !important; max-width: 80mm !important; margin: 0 auto !important; padding: 3mm !important; box-shadow: none !important; border: none !important; }
+        * { box-sizing: border-box !important; }
+        html, body {
+          margin: 0 !important;
+          padding: 0 !important;
+          width: 80mm !important;
+          max-width: 80mm !important;
+          min-width: 80mm !important;
+          background: #ffffff !important;
+          color: #000000 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          overflow-x: hidden !important;
+        }
+        .print-workspace { background: #ffffff !important; padding: 0 !important; margin: 0 !important; }
+        .print-document-sheet { box-shadow: none !important; margin: 0 !important; padding: 0 !important; border: none !important; background: transparent !important; }
+        .thermal-receipt-80 {
+          width: 80mm !important;
+          max-width: 80mm !important;
+          min-width: 80mm !important;
+          margin: 0 auto !important;
+          padding: 3.5mm 4.5mm !important;
+          box-sizing: border-box !important;
+          box-shadow: none !important;
+          border: none !important;
+          page-break-after: always;
+          break-after: page;
+        }
+        .thermal-receipt-80:last-child {
+          page-break-after: auto;
+          break-after: auto;
+        }
       `;
     } else if (printFormat === 'thermal-sticker-4x6') {
       pageCss = '@page { size: 101.6mm 152.4mm; margin: 0; }';
       bodyCss = `
-        body { margin: 0; padding: 0; width: 101.6mm; background: #fff; }
-        .print-workspace { background: #fff; padding: 0; margin: 0; }
-        .sheet-thermal-sticker-4x6 { width: 101.6mm !important; max-width: 101.6mm !important; margin: 0 auto !important; box-shadow: none !important; border: none !important; }
+        html, body { margin: 0 !important; padding: 0 !important; width: 101.6mm !important; background: #fff !important; }
+        .print-workspace { background: #fff !important; padding: 0 !important; margin: 0 !important; }
+        .sheet-thermal-sticker-4x6, .print-document-sheet { width: 101.6mm !important; max-width: 101.6mm !important; margin: 0 auto !important; box-shadow: none !important; border: none !important; }
       `;
     } else {
       pageCss = '@page { size: A4 portrait; margin: 8mm; }';
       bodyCss = `
-        body { margin: 0; padding: 0; background: #fff; }
-        .print-workspace { background: #fff; padding: 0; }
-        .print-document-sheet { box-shadow: none !important; margin: 0 auto 20px auto; }
+        html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+        .print-workspace { background: #fff !important; padding: 0 !important; }
+        .print-document-sheet { box-shadow: none !important; margin: 0 auto 20px auto !important; }
       `;
     }
 
     const printWindow = window.open('', '_blank', 'width=900,height=700');
-    if (!printWindow) return;
+    if (!printWindow) {
+      // Fallback: create invisible iframe for printing when popups are blocked
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+      const doc = iframe.contentWindow?.document;
+      if (doc) {
+        doc.open();
+        doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Print - PutiMach</title><style>${styles}\n${pageCss}\n${bodyCss}</style></head><body>${printContent.innerHTML}</body></html>`);
+        doc.close();
+        setTimeout(() => {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+          setTimeout(() => {
+            if (document.body.contains(iframe)) document.body.removeChild(iframe);
+          }, 2500);
+        }, 500);
+      }
+      return;
+    }
 
     printWindow.document.write(`
 <!DOCTYPE html>
@@ -174,15 +266,15 @@ export const PrintStudioModal = ({
           <div className="print-studio-title">
             <Printer size={22} className="text-teal-400" />
             <div>
-              <h2>Enterprise Invoice & Label Print Studio</h2>
+              <h2>Enterprise Invoice & Receipt Studio</h2>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="print-badge">{activeOrders.length} Order{activeOrders.length > 1 ? 's' : ''} Selected</span>
-                <span className="text-xs text-slate-400">Ready for Laser, Inkjet & Thermal Printers</span>
+                <span className="text-xs text-slate-400">Ready for A4 Laser/Inkjet & 58mm / 80mm Thermal POS Printers</span>
               </div>
             </div>
           </div>
           <button 
-            className="p-1.5 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+            className="p-1.5 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
             onClick={onClose}
             title="Close Print Studio"
           >
@@ -193,16 +285,34 @@ export const PrintStudioModal = ({
         {/* ── Format & Action Toolbar ── */}
         <div className="print-studio-toolbar">
           <div className="print-format-selector">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">Paper Layout:</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">Print Layout:</span>
             
             <button 
+              type="button"
               className={`format-btn ${printFormat === 'a4-invoice' ? 'active' : ''}`}
               onClick={() => setPrintFormat('a4-invoice')}
             >
-              <FileText size={15} /> A4 Full Invoice
+              <FileText size={15} /> 1. Standard / A4 Invoice
             </button>
 
             <button 
+              type="button"
+              className={`format-btn ${printFormat === 'thermal-pos-58mm' ? 'active' : ''}`}
+              onClick={() => setPrintFormat('thermal-pos-58mm')}
+            >
+              <Receipt size={15} /> 2. 58mm Thermal Receipt
+            </button>
+
+            <button 
+              type="button"
+              className={`format-btn ${printFormat === 'thermal-pos-80mm' ? 'active' : ''}`}
+              onClick={() => setPrintFormat('thermal-pos-80mm')}
+            >
+              <Receipt size={15} /> 3. 80mm Thermal Receipt
+            </button>
+
+            <button 
+              type="button"
               className={`format-btn ${printFormat === 'thermal-sticker-4x6' ? 'active' : ''}`}
               onClick={() => setPrintFormat('thermal-sticker-4x6')}
             >
@@ -210,20 +320,7 @@ export const PrintStudioModal = ({
             </button>
 
             <button 
-              className={`format-btn ${printFormat === 'thermal-pos-80mm' ? 'active' : ''}`}
-              onClick={() => setPrintFormat('thermal-pos-80mm')}
-            >
-              <Receipt size={15} /> 80mm POS Receipt
-            </button>
-
-            <button 
-              className={`format-btn ${printFormat === 'thermal-pos-58mm' ? 'active' : ''}`}
-              onClick={() => setPrintFormat('thermal-pos-58mm')}
-            >
-              <Receipt size={15} /> 58mm Thermal Receipt
-            </button>
-
-            <button 
+              type="button"
               className={`format-btn ${printFormat === 'a4-grid-2up' ? 'active' : ''}`}
               onClick={() => setPrintFormat('a4-grid-2up')}
             >
@@ -233,13 +330,14 @@ export const PrintStudioModal = ({
 
           <div className="print-action-group">
             <button 
-              className="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 flex items-center gap-1.5 border border-slate-700"
+              type="button"
+              className="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 flex items-center gap-1.5 border border-slate-700 cursor-pointer"
               onClick={() => setShowBrandEditor(!showBrandEditor)}
             >
               <Edit3 size={14} /> {showBrandEditor ? 'Hide Brand Config' : 'Customize Identity'}
             </button>
 
-            <button className="btn-print-now" onClick={handlePrint}>
+            <button type="button" className="btn-print-now cursor-pointer" onClick={handlePrint}>
               <Printer size={18} /> Print Now ({activeOrders.length})
             </button>
           </div>
@@ -315,7 +413,7 @@ export const PrintStudioModal = ({
               checked={toggles.showImages} 
               onChange={() => handleToggle('showImages')} 
             />
-            Product Images
+            Product Images (A4)
           </label>
 
           <label className="option-toggle">
@@ -345,247 +443,83 @@ export const PrintStudioModal = ({
             Return Terms
           </label>
 
-          <label className="option-toggle">
-            <input 
-              type="checkbox" 
-              checked={toggles.showSignature} 
-              onChange={() => handleToggle('showSignature')} 
-            />
-            Signature Box
-          </label>
+          {printFormat === 'a4-invoice' && (
+            <label className="option-toggle">
+              <input 
+                type="checkbox" 
+                checked={toggles.showSignature} 
+                onChange={() => handleToggle('showSignature')} 
+              />
+              Signature Box
+            </label>
+          )}
         </div>
 
         {/* ── Live Preview Sheet Workspace ── */}
         <div className="print-workspace" ref={printWorkspaceRef}>
-          {activeOrders.map((order, idx) => (
-            <div 
-              key={order.id || idx} 
-              className={`print-document-sheet sheet-${printFormat}`}
-            >
-              {/* Format 1: A4 Full Tax Invoice */}
-              {printFormat === 'a4-invoice' && (
-                <RenderA4Invoice 
-                  order={order} 
-                  brand={brandInfo} 
-                  toggles={toggles} 
-                />
-              )}
+          {activeOrders.map((order, idx) => {
+            const mappedData = mapOrderToInvoiceData(order);
 
-              {/* Format 2: 4"x6" Thermal Shipping Sticker */}
-              {printFormat === 'thermal-sticker-4x6' && (
-                <RenderThermalSticker 
-                  order={order} 
-                  brand={brandInfo} 
-                  toggles={toggles} 
-                />
-              )}
+            return (
+              <div 
+                key={order.id || idx} 
+                className={`print-document-sheet sheet-${printFormat}`}
+              >
+                {/* 1. Standard / A4 Invoice */}
+                {printFormat === 'a4-invoice' && (
+                  <StandardInvoice 
+                    data={mappedData} 
+                    brand={brandInfo} 
+                    toggles={toggles} 
+                  />
+                )}
 
-              {/* Format 3: 80mm POS Receipt */}
-              {printFormat === 'thermal-pos-80mm' && (
-                <RenderPOSReceipt 
-                  order={order} 
-                  brand={brandInfo} 
-                  toggles={toggles} 
-                />
-              )}
+                {/* 2. 58mm Thermal Receipt */}
+                {printFormat === 'thermal-pos-58mm' && (
+                  <ThermalReceipt58 
+                    data={mappedData} 
+                    brand={brandInfo} 
+                    toggles={toggles} 
+                  />
+                )}
 
-              {/* Format 4: 58mm Thermal POS Receipt */}
-              {printFormat === 'thermal-pos-58mm' && (
-                <Render58mmReceipt 
-                  order={order} 
-                  brand={brandInfo} 
-                  toggles={toggles} 
-                />
-              )}
+                {/* 3. 80mm Thermal Receipt */}
+                {printFormat === 'thermal-pos-80mm' && (
+                  <ThermalReceipt80 
+                    data={mappedData} 
+                    brand={brandInfo} 
+                    toggles={toggles} 
+                  />
+                )}
 
-              {/* Format 5: A4 2-Up Grid */}
-              {printFormat === 'a4-grid-2up' && (
-                <div className="h-full flex flex-col justify-between">
-                  <RenderA4Invoice order={order} brand={brandInfo} toggles={{ ...toggles, showImages: false }} compact />
-                  <div className="border-b-2 border-dashed border-slate-300 my-4" />
-                  <RenderA4Invoice order={order} brand={brandInfo} toggles={{ ...toggles, showImages: false }} compact />
-                </div>
-              )}
-            </div>
-          ))}
+                {/* 4. 4"x6" Thermal Shipping Sticker */}
+                {printFormat === 'thermal-sticker-4x6' && (
+                  <RenderThermalSticker 
+                    order={order} 
+                    brand={brandInfo} 
+                    toggles={toggles} 
+                  />
+                )}
+
+                {/* 5. A4 2-Up Grid */}
+                {printFormat === 'a4-grid-2up' && (
+                  <div className="h-full flex flex-col justify-between">
+                    <StandardInvoice data={mappedData} brand={brandInfo} toggles={{ ...toggles, showImages: false }} compact />
+                    <div className="border-b-2 border-dashed border-slate-300 my-4" />
+                    <StandardInvoice data={mappedData} brand={brandInfo} toggles={{ ...toggles, showImages: false }} compact />
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
-      </div>
-    </div>
-    );
-};
-
-/* ── Sub-component 1: Full A4 Invoice Renderer ── */
-const RenderA4Invoice = ({ order, brand, toggles, compact = false }) => {
-  const orderedItems = useMemo(() => {
-    if (Array.isArray(order.ordered_items) && order.ordered_items.length > 0) {
-      return order.ordered_items;
-    }
-    return [{
-      name: order.product_name || 'Item Ordered',
-      quantity: Number(order.quantity) || 1,
-      price: Number(order.price) || 0,
-      image: order.image || order.product_image || null,
-      selectedSize: order.selected_size || order.size || null,
-      selectedColor: order.selected_color || order.color || null
-    }];
-  }, [order]);
-
-  const deliveryCharge = Number(order.delivery_charge) || Number(order.shipping_cost) || 0;
-  const itemsSubtotal = orderedItems.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.quantity || 1)), 0);
-  const grandTotal = Number(order.total_amount) || (itemsSubtotal + deliveryCharge);
-  const isPaid = String(order.status).toLowerCase().includes('completed') || String(order.payment_status).toLowerCase() === 'paid';
-
-  const barcodeSvg = useMemo(() => {
-    return generateBarcodeSVG(order.id || 'ORD-000', { height: 40, showText: true });
-  }, [order.id]);
-
-  const qrSvg = useMemo(() => {
-    return generateQRCodeSVG(`ORDER:${order.id}|PHONE:${order.phone}`, { size: 70 });
-  }, [order.id, order.phone]);
-
-  return (
-    <div className="w-full h-full flex flex-col justify-between">
-      <div>
-        {/* Brand Header */}
-        <div className="invoice-header">
-          <div className="invoice-brand-col">
-            {toggles.showLogo && brand.logo && (
-              <img src={brand.logo} alt={brand.name} className="invoice-brand-logo" />
-            )}
-            <div>
-              <div className="invoice-brand-name">{brand.name}</div>
-              <div className="invoice-brand-sub">{brand.slogan}</div>
-              <div className="invoice-brand-sub mt-1">{brand.address} • Hotline: {brand.phone}</div>
-            </div>
-          </div>
-          <div className="invoice-meta-col">
-            <div className="invoice-title">INVOICE</div>
-            <div className="invoice-meta-row"><strong>Invoice No:</strong> #{order.id}</div>
-            <div className="invoice-meta-row"><strong>Date:</strong> {order.created_at ? new Date(order.created_at).toLocaleDateString() : new Date().toLocaleDateString()}</div>
-            <div className="invoice-meta-row"><strong>Payment:</strong> {isPaid ? 'PAID' : 'CASH ON DELIVERY'}</div>
-          </div>
-        </div>
-
-        {/* Parties Box */}
-        <div className="invoice-parties-grid">
-          <div className="party-box">
-            <div className="party-title">CUSTOMER DETAILS (BILL TO / SHIP TO)</div>
-            <div className="party-name">{order.customer_name || 'Valued Customer'}</div>
-            <div className="party-detail"><strong>Phone:</strong> {order.phone}</div>
-            <div className="party-detail"><strong>Address:</strong> {order.address}</div>
-            {order.shipping_zone && (
-              <div className="party-detail"><strong>Zone:</strong> {order.shipping_zone}</div>
-            )}
-          </div>
-          <div className="party-box">
-            <div className="party-title">SHIPPING & COURIER REF</div>
-            <div className="party-detail"><strong>Courier Service:</strong> {order.courier_name || 'Steadfast Courier'}</div>
-            <div className="party-detail"><strong>Courier Tracking ID:</strong> {order.tracking_id || order.courier_assigned_id || 'Pending'}</div>
-            <div className="party-detail"><strong>Order Status:</strong> {order.status || 'New'}</div>
-            {order.notes && (
-              <div className="party-detail mt-1 italic text-slate-600"><strong>Note:</strong> {order.notes}</div>
-            )}
-          </div>
-        </div>
-
-        {/* Table */}
-        <table className="invoice-items-table">
-          <thead>
-            <tr>
-              <th style={{ width: '40px' }}>SL</th>
-              {toggles.showImages && <th style={{ width: '50px' }}>Item</th>}
-              <th>Product Details</th>
-              <th style={{ textAlign: 'right', width: '90px' }}>Price</th>
-              <th style={{ textAlign: 'center', width: '60px' }}>Qty</th>
-              <th style={{ textAlign: 'right', width: '100px' }}>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orderedItems.map((item, idx) => {
-              const itemTotal = (Number(item.price) || 0) * (Number(item.quantity) || 1);
-              return (
-                <tr key={idx}>
-                  <td>{idx + 1}</td>
-                  {toggles.showImages && (
-                    <td>
-                      {item.image ? (
-                        <img src={item.image} alt={item.name} className="item-thumb" />
-                      ) : (
-                        <div className="item-thumb bg-slate-200 flex items-center justify-center text-slate-500 font-bold text-xs">P</div>
-                      )}
-                    </td>
-                  )}
-                  <td>
-                    <div className="font-bold text-slate-900">{item.name || item.product_name}</div>
-                    {(item.selectedSize || item.selectedColor || item.size || item.color) && (
-                      <div className="text-xs text-slate-500 mt-0.5">
-                        {item.selectedSize || item.size ? `Size: ${item.selectedSize || item.size}` : ''}
-                        {(item.selectedSize || item.size) && (item.selectedColor || item.color) ? ' | ' : ''}
-                        {item.selectedColor || item.color ? `Color: ${item.selectedColor || item.color}` : ''}
-                      </div>
-                    )}
-                  </td>
-                  <td style={{ textAlign: 'right' }}>৳ {Number(item.price || 0).toLocaleString()}</td>
-                  <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{item.quantity}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 'bold' }}>৳ {itemTotal.toLocaleString()}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-
-        {/* Financial Totals */}
-        <div className="invoice-summary-grid">
-          <div className="invoice-notes-col">
-            <strong>Terms & Return Policy:</strong>
-            <p className="mt-1 leading-normal">{brand.terms}</p>
-          </div>
-
-          {toggles.showPrices && (
-            <table className="invoice-totals-table">
-              <tbody>
-                <tr>
-                  <td className="total-label">Subtotal:</td>
-                  <td className="total-val">৳ {itemsSubtotal.toLocaleString()}</td>
-                </tr>
-                <tr>
-                  <td className="total-label">Delivery Fee:</td>
-                  <td className="total-val">৳ {deliveryCharge.toLocaleString()}</td>
-                </tr>
-                <tr className="grand-total">
-                  <td className="total-label">Cash to Collect:</td>
-                  <td className="total-val">৳ {grandTotal.toLocaleString()}</td>
-                </tr>
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-
-      {/* Footer / Barcode & Signature */}
-      <div className="invoice-footer">
-        {toggles.showBarcode ? (
-          <div className="invoice-barcode-box">
-            <div dangerouslySetInnerHTML={{ __html: barcodeSvg }} />
-          </div>
-        ) : <div />}
-
-        {toggles.showBarcode && (
-          <div dangerouslySetInnerHTML={{ __html: qrSvg }} />
-        )}
-
-        {toggles.showSignature ? (
-          <div className="invoice-signature-box">
-            <div className="signature-line">Authorized Signature</div>
-          </div>
-        ) : <div />}
       </div>
     </div>
   );
 };
 
-/* ── Sub-component 2: 4"x6" Thermal Sticker Renderer ── */
+/* ── 4"x6" Thermal Sticker Renderer ── */
 const RenderThermalSticker = ({ order, brand, toggles }) => {
   const deliveryCharge = Number(order.delivery_charge) || Number(order.shipping_cost) || 0;
   const grandTotal = Number(order.total_amount) || (Number(order.price || 0) + deliveryCharge);
@@ -648,229 +582,6 @@ const RenderThermalSticker = ({ order, brand, toggles }) => {
         <div className="text-center flex-1 ml-2">
           <div dangerouslySetInnerHTML={{ __html: barcodeSvg }} />
         </div>
-      </div>
-    </div>
-  );
-};
-
-/* ── Sub-component 3: 80mm POS Receipt Renderer ── */
-const RenderPOSReceipt = ({ order, brand, toggles }) => {
-  const deliveryCharge = Number(order.delivery_charge) || Number(order.shipping_cost) || 0;
-  const grandTotal = Number(order.total_amount) || (Number(order.price || 0) + deliveryCharge);
-  
-  return (
-    <div className="p-2 text-black bg-white font-mono text-[10px]">
-      <div className="text-center font-bold text-sm uppercase">{brand.name}</div>
-      <div className="text-center text-[9px] mb-2">{brand.address} • {brand.phone}</div>
-      <div className="border-t border-b border-black py-1 my-1">
-        <div>ORDER: #{order.id}</div>
-        <div>DATE: {new Date().toLocaleDateString()}</div>
-        <div>CUSTOMER: {order.customer_name}</div>
-        <div>TEL: {order.phone}</div>
-      </div>
-      <div className="my-2">
-        <div className="font-bold border-b border-black pb-0.5">ITEMS</div>
-        {Array.isArray(order.ordered_items) && order.ordered_items.length > 0 ? (
-          order.ordered_items.map((it, i) => (
-            <div key={i} className="flex justify-between py-0.5">
-              <span>{it.name} x{it.quantity}</span>
-              <span>৳{(Number(it.price) * Number(it.quantity)).toLocaleString()}</span>
-            </div>
-          ))
-        ) : (
-          <div className="flex justify-between py-0.5">
-            <span>{order.product_name} x{order.quantity || 1}</span>
-            <span>৳{Number(order.price || 0).toLocaleString()}</span>
-          </div>
-        )}
-      </div>
-      <div className="border-t border-black pt-1 font-bold text-right text-[11px]">
-        TOTAL: ৳{grandTotal.toLocaleString()}
-      </div>
-      <div className="text-center mt-3 text-[9px] italic">Thank you for shopping with us!</div>
-    </div>
-  );
-};
-
-/* ── Sub-component 4: 58mm Thermal POS Receipt Renderer ── */
-const Render58mmReceipt = ({ order, brand, toggles }) => {
-  const orderedItems = useMemo(() => {
-    if (Array.isArray(order.ordered_items) && order.ordered_items.length > 0) {
-      return order.ordered_items;
-    }
-    return [{
-      name: order.product_name || 'Item Ordered',
-      quantity: Number(order.quantity) || 1,
-      price: Number(order.price) || 0,
-      image: order.image || order.product_image || null,
-      selectedSize: order.selected_size || order.size || null,
-      selectedColor: order.selected_color || order.color || null
-    }];
-  }, [order]);
-
-  const deliveryCharge = Number(order.delivery_charge) || Number(order.shipping_cost) || 0;
-  const itemsSubtotal = orderedItems.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.quantity || 1)), 0);
-  const discount = Number(order.discount_amount) || Number(order.discount) || 0;
-  const advancePaid = Number(order.advance_paid) || Number(order.advance) || 0;
-  const grandTotal = Number(order.total_amount) || (itemsSubtotal + deliveryCharge - discount);
-  const cashToCollect = Math.max(0, grandTotal - advancePaid);
-  const isPaid = String(order.status).toLowerCase().includes('completed') || 
-                 String(order.payment_status).toLowerCase() === 'paid' || 
-                 cashToCollect === 0;
-
-  const orderDate = order.created_at 
-    ? new Date(order.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) 
-    : new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-
-  const barcodeSvg = useMemo(() => {
-    return generateBarcodeSVG(String(order.id || 'ORD-000').slice(-10), { height: 26, moduleWidth: 1.1, showText: true });
-  }, [order.id]);
-
-  const qrSvg = useMemo(() => {
-    return generateQRCodeSVG(`ORDER:${order.id}|TEL:${order.phone}`, { size: 50 });
-  }, [order.id, order.phone]);
-
-  return (
-    <div className="pos-58mm-container">
-      {/* Brand Header */}
-      <div className="pos-58mm-header text-center">
-        {toggles.showLogo && brand.logo && (
-          <img src={brand.logo} alt={brand.name} className="pos-58mm-logo mx-auto mb-1 max-h-8 object-contain" />
-        )}
-        <div className="pos-58mm-brand-name font-black text-[13px] uppercase tracking-wider">{brand.name}</div>
-        {brand.slogan && <div className="text-[8.5px] text-gray-700 leading-tight mt-0.5">{brand.slogan}</div>}
-        {brand.address && <div className="text-[8px] text-gray-700 leading-tight mt-0.5">{brand.address}</div>}
-        <div className="text-[8.5px] font-bold mt-0.5">Hotline: {brand.phone}</div>
-      </div>
-
-      {/* Dashed Line */}
-      <div className="pos-58mm-divider" />
-
-      {/* Order Info */}
-      <div className="text-[9px] leading-tight space-y-0.5">
-        <div className="flex justify-between items-center">
-          <span className="font-bold">ORDER ID:</span>
-          <span className="font-extrabold text-[10.5px]">#{order.id}</span>
-        </div>
-        <div className="flex justify-between text-gray-700">
-          <span>Date:</span>
-          <span>{orderDate}</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span>Payment:</span>
-          <span className="font-black uppercase">
-            {isPaid ? 'PAID' : 'CASH ON DELIVERY'}
-          </span>
-        </div>
-        {order.courier_name && (
-          <div className="flex justify-between text-[8px] text-gray-700">
-            <span>Courier:</span>
-            <span>{order.courier_name} {order.tracking_id ? `(${order.tracking_id})` : ''}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Customer Info Box */}
-      <div className="pos-58mm-customer-box my-1.5 p-1 border border-black text-[8.5px] leading-tight">
-        <div className="font-bold uppercase text-[8px] border-b border-black pb-0.5 mb-1">CUSTOMER / SHIP TO:</div>
-        <div className="font-black text-[10px]">{order.customer_name || 'Customer'}</div>
-        <div className="font-bold text-[9.5px] mt-0.5">📞 {order.phone}</div>
-        <div className="text-[8.5px] mt-0.5 leading-snug break-words">📍 {order.address}</div>
-        {order.shipping_zone && <div className="text-[8px] font-semibold mt-0.5">Zone: {order.shipping_zone}</div>}
-        {order.notes && <div className="text-[8px] italic mt-0.5 text-gray-800">Note: {order.notes}</div>}
-      </div>
-
-      {/* Dashed Line */}
-      <div className="pos-58mm-divider" />
-
-      {/* Items Section */}
-      <div className="pos-58mm-items my-1">
-        <div className="flex justify-between text-[8.5px] font-bold border-b border-black pb-0.5 mb-1">
-          <span className="w-7/12">ITEM</span>
-          <span className="w-2/12 text-center">QTY</span>
-          <span className="w-3/12 text-right">TOTAL</span>
-        </div>
-        <div className="space-y-1">
-          {orderedItems.map((item, idx) => {
-            const itemTotal = (Number(item.price) || 0) * (Number(item.quantity) || 1);
-            return (
-              <div key={idx} className="text-[8.5px] leading-tight">
-                <div className="font-bold break-words">{item.name || item.product_name}</div>
-                {(item.selectedSize || item.selectedColor || item.size || item.color) && (
-                  <div className="text-[7.5px] text-gray-700">
-                    {item.selectedSize || item.size ? `Size: ${item.selectedSize || item.size}` : ''}
-                    {(item.selectedSize || item.size) && (item.selectedColor || item.color) ? ' • ' : ''}
-                    {item.selectedColor || item.color ? `Color: ${item.selectedColor || item.color}` : ''}
-                  </div>
-                )}
-                <div className="flex justify-between text-[8px] mt-0.5">
-                  <span className="text-gray-600">
-                    {item.quantity} x ৳{Number(item.price || 0).toLocaleString()}
-                  </span>
-                  <span className="font-bold text-[8.5px]">৳{itemTotal.toLocaleString()}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Dashed Line */}
-      <div className="pos-58mm-divider" />
-
-      {/* Financial Breakdown */}
-      {toggles.showPrices && (
-        <div className="text-[8.5px] space-y-0.5">
-          <div className="flex justify-between">
-            <span>Subtotal:</span>
-            <span>৳{itemsSubtotal.toLocaleString()}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Delivery Fee:</span>
-            <span>৳{deliveryCharge.toLocaleString()}</span>
-          </div>
-          {discount > 0 && (
-            <div className="flex justify-between font-medium">
-              <span>Discount:</span>
-              <span>-৳{discount.toLocaleString()}</span>
-            </div>
-          )}
-          {advancePaid > 0 && (
-            <div className="flex justify-between font-medium">
-              <span>Advance Paid:</span>
-              <span>-৳{advancePaid.toLocaleString()}</span>
-            </div>
-          )}
-          {/* Net Cash to Collect Banner */}
-          <div className="pos-58mm-total-banner mt-1.5 p-1.5 bg-black text-white text-center rounded-xs">
-            <div className="text-[8px] uppercase font-bold tracking-wider">
-              {isPaid ? 'TOTAL PAID AMOUNT' : 'CASH TO COLLECT'}
-            </div>
-            <div className="text-[13px] font-black tracking-tight mt-0.5">
-              ৳{(isPaid ? grandTotal : cashToCollect).toLocaleString()}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Barcode & QR Code Footer */}
-      {toggles.showBarcode && (
-        <div className="pos-58mm-barcode-section mt-2 pt-1 border-t border-dashed border-black flex flex-col items-center">
-          <div className="pos-58mm-barcode-svg w-full flex justify-center mb-1 overflow-hidden" dangerouslySetInnerHTML={{ __html: barcodeSvg }} />
-          <div className="pos-58mm-qr-svg flex justify-center" dangerouslySetInnerHTML={{ __html: qrSvg }} />
-        </div>
-      )}
-
-      {/* Terms & Return Policy */}
-      {toggles.showTerms && brand.terms && (
-        <div className="text-[7.5px] text-center text-gray-700 leading-tight mt-2 px-0.5">
-          {brand.terms}
-        </div>
-      )}
-
-      {/* Footer Closing */}
-      <div className="text-center font-bold text-[8px] uppercase mt-1.5 tracking-wider">
-        *** THANK YOU FOR SHOPPING ***
       </div>
     </div>
   );

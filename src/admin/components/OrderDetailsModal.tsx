@@ -9,7 +9,7 @@ import {
   User, Phone, MapPin, Package, Calendar, Clock, 
   History, Edit2, X, Clipboard, Copy, ExternalLink, 
   Truck, CheckCircle2, AlertCircle, Info, RotateCcw, Loader2, Printer, Tag,
-  Globe, Check
+  Globe, Check, ChevronDown
 } from 'lucide-react';
 import CurrencyIcon from './CurrencyIcon';
 import api from '../lib/api';
@@ -27,6 +27,14 @@ export const OrderDetailsModal = ({ isOpen, onClose, order, onEdit }) => {
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [activeTab, setActiveTab] = useState('details'); // 'details' | 'history'
   const [isPrintStudioOpen, setIsPrintStudioOpen] = useState(false);
+  const [printFormat, setPrintFormat] = useState('a4-invoice');
+  const [isPrintMenuOpen, setIsPrintMenuOpen] = useState(false);
+
+  const handleOpenPrintFormat = (fmt = 'a4-invoice') => {
+    setPrintFormat(fmt);
+    setIsPrintStudioOpen(true);
+    setIsPrintMenuOpen(false);
+  };
   
   // Note Quick Templates States
   const [customTemplates, setCustomTemplates] = useState(() => {
@@ -480,15 +488,59 @@ export const OrderDetailsModal = ({ isOpen, onClose, order, onEdit }) => {
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsPrintStudioOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-secondary/50 hover:bg-secondary text-xs font-bold text-foreground transition-all cursor-pointer shadow-2xs"
-            title="Open Print Studio for Invoice or Sticker"
-          >
-            <Printer size={13} className="text-primary" />
-            <span>Print / Invoice</span>
-          </button>
+          <div className="relative">
+            <div className="inline-flex rounded-xl shadow-2xs border border-border overflow-hidden">
+              <button
+                type="button"
+                onClick={() => handleOpenPrintFormat('a4-invoice')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-secondary/50 hover:bg-secondary text-xs font-bold text-foreground transition-all cursor-pointer"
+                title="Print Invoice / Receipt"
+              >
+                <Printer size={13} className="text-primary" />
+                <span>Print Invoice</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsPrintMenuOpen(!isPrintMenuOpen)}
+                className="px-2 py-1.5 bg-secondary/70 hover:bg-secondary text-xs font-bold text-foreground border-l border-border transition-all cursor-pointer"
+                title="Choose Print Format"
+              >
+                <ChevronDown size={13} />
+              </button>
+            </div>
+
+            {isPrintMenuOpen && (
+              <div className="absolute right-0 top-full mt-1.5 w-56 bg-popover text-popover-foreground border border-border rounded-xl shadow-xl z-50 p-1.5 text-xs animate-in fade-in-50">
+                <div className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider border-b border-border mb-1">
+                  Select Print Format
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleOpenPrintFormat('a4-invoice')}
+                  className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-muted font-medium flex items-center justify-between cursor-pointer transition-colors"
+                >
+                  <span className="font-bold">1. Standard / A4 Invoice</span>
+                  <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono">A4</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleOpenPrintFormat('thermal-pos-58mm')}
+                  className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-muted font-medium flex items-center justify-between cursor-pointer transition-colors"
+                >
+                  <span className="font-bold">2. 58mm Thermal Receipt</span>
+                  <span className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold px-1.5 py-0.5 rounded font-mono">58mm</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleOpenPrintFormat('thermal-pos-80mm')}
+                  className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-muted font-medium flex items-center justify-between cursor-pointer transition-colors"
+                >
+                  <span className="font-bold">3. 80mm Thermal Receipt</span>
+                  <span className="text-[10px] bg-teal-500/10 text-teal-600 dark:text-teal-400 font-bold px-1.5 py-0.5 rounded font-mono">80mm</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ── 2. Top Summary Row (Order Reference & Total Amount) ── */}
@@ -975,8 +1027,8 @@ export const OrderDetailsModal = ({ isOpen, onClose, order, onEdit }) => {
 
         {/* ── 5. Modal Footer Actions ── */}
         <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-border mt-6">
-          <Button variant="secondary" onClick={() => setIsPrintStudioOpen(true)} className="h-9 px-3.5 text-xs font-bold">
-            <Printer size={14} className="mr-1.5 text-primary" /> Print Invoice / Label
+          <Button variant="secondary" onClick={() => handleOpenPrintFormat(printFormat || 'a4-invoice')} className="h-9 px-3.5 text-xs font-bold">
+            <Printer size={14} className="mr-1.5 text-primary" /> Print Invoice
           </Button>
           <Button variant="secondary" onClick={onClose} className="h-9 px-3.5 text-xs font-bold">
             Close Window
@@ -994,6 +1046,7 @@ export const OrderDetailsModal = ({ isOpen, onClose, order, onEdit }) => {
         isOpen={isPrintStudioOpen} 
         onClose={() => setIsPrintStudioOpen(false)} 
         orders={[effectiveOrder]} 
+        initialFormat={printFormat}
       />
     </Modal>
   );
