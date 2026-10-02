@@ -416,14 +416,13 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
 
     // Cleaned main product image
     const cleanedMainProductImage = cleanImageUrl(mainProductImage);
-    const resolvedPrimaryImage = (cleanedMainProductImage && (allColorImagesList.includes(cleanedMainProductImage) || allColorImagesList.length === 0))
-      ? cleanedMainProductImage
-      : (allColorImagesList[0] || cleanedMainProductImage || '');
+    const resolvedPrimaryImage = cleanedMainProductImage || allColorImagesList[0] || '';
 
-    // Complete ordered image list: Main Image FIRST, followed by color groups
+    // Complete ordered image list: Main Image FIRST, followed by color groups and any general images
     const combinedImages = Array.from(new Set([
       resolvedPrimaryImage,
       ...allColorImagesList,
+      ...(Array.isArray(generalImages) ? generalImages.map(cleanImageUrl).filter(Boolean) : [])
     ].filter(Boolean)));
 
     // Clean and normalize final sizes
@@ -512,6 +511,31 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
     }
     return null;
   }, [price, compareAtPrice]);
+
+  // Collect all available images for quick cover selection
+  const allAvailableImages = useMemo(() => {
+    const list: string[] = [];
+    const cleanedMain = cleanImageUrl(mainProductImage);
+    if (cleanedMain && !list.includes(cleanedMain)) list.push(cleanedMain);
+
+    Object.values(colorGalleries || {}).forEach((g) => {
+      if (Array.isArray(g)) {
+        g.forEach((url) => {
+          const clean = cleanImageUrl(url);
+          if (clean && !list.includes(clean)) list.push(clean);
+        });
+      }
+    });
+
+    if (Array.isArray(generalImages)) {
+      generalImages.forEach((url) => {
+        const clean = cleanImageUrl(url);
+        if (clean && !list.includes(clean)) list.push(clean);
+      });
+    }
+
+    return list;
+  }, [mainProductImage, colorGalleries, generalImages]);
 
   return (
     <form onSubmit={(e) => handleSubmit(e, false)} className="max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-6">
@@ -728,6 +752,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
             <MainProductImageManager
               mainImage={mainProductImage}
               onMainImageChange={setMainProductImage}
+              availableImages={allAvailableImages}
             />
           </div>
 
@@ -738,6 +763,8 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
               colorGalleries={colorGalleries}
               onColorsChange={setColors}
               onGalleriesChange={setColorGalleries}
+              mainProductImage={mainProductImage}
+              onSetMainProductImage={setMainProductImage}
             />
           </div>
 

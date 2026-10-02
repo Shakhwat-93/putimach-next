@@ -16,6 +16,8 @@ interface ColorGalleryManagerProps {
   colorGalleries: Record<string, string[]>;
   onColorsChange: (colors: string[]) => void;
   onGalleriesChange: (galleries: Record<string, string[]>) => void;
+  mainProductImage?: string;
+  onSetMainProductImage?: (url: string) => void;
 }
 
 const PRESET_COLORS = [
@@ -28,6 +30,8 @@ export const ColorGalleryManager: React.FC<ColorGalleryManagerProps> = ({
   colorGalleries = {},
   onColorsChange,
   onGalleriesChange,
+  mainProductImage,
+  onSetMainProductImage,
 }) => {
   const [newColorInput, setNewColorInput] = useState('');
   const [isAddingCustom, setIsAddingCustom] = useState(false);
@@ -436,21 +440,62 @@ export const ColorGalleryManager: React.FC<ColorGalleryManagerProps> = ({
                             loading="lazy"
                           />
 
-                          {/* Primary Badge */}
+                          {/* Color Gallery Primary Badge (Top Left) */}
                           {isPrimary ? (
                             <div className="absolute top-1 left-1 z-10 px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[8px] sm:text-[9px] font-black uppercase tracking-wider shadow-xs flex items-center gap-0.5">
                               <Star size={9} className="fill-white" />
-                              <span className="hidden xs:inline">Primary</span>
+                              <span className="hidden xs:inline">Color 1st</span>
                             </div>
                           ) : (
                             <button
                               type="button"
                               onClick={() => setAsPrimary(colorName, imgUrl)}
                               className="absolute top-1 left-1 z-10 px-1.5 py-0.5 rounded bg-black/75 hover:bg-emerald-600 text-white text-[8px] sm:text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer shadow-xs"
+                              title="Set as 1st photo for this color"
                             >
-                              Set Primary
+                              Color 1st
                             </button>
                           )}
+
+                          {/* Global Main Show Picture / Catalog Card Cover (Top Right) */}
+                          {(() => {
+                            const isMainShowPic = cleanImageUrl(imgUrl) === cleanImageUrl(mainProductImage);
+                            if (isMainShowPic) {
+                              return (
+                                <div
+                                  className="absolute top-1 right-1 z-10 px-1.5 py-0.5 rounded bg-amber-500 text-black text-[8px] sm:text-[9px] font-black uppercase tracking-wider shadow-xs flex items-center gap-0.5"
+                                  title="Current Front Show Picture for Catalog Card"
+                                >
+                                  <Star size={8} className="fill-black" />
+                                  <span>Cover</span>
+                                </div>
+                              );
+                            }
+                            if (onSetMainProductImage) {
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    onSetMainProductImage(imgUrl);
+                                    Swal.fire({
+                                      toast: true,
+                                      position: 'top-end',
+                                      icon: 'success',
+                                      title: 'Set as Main Show Picture (Catalog Card)!',
+                                      showConfirmButton: false,
+                                      timer: 1800,
+                                    });
+                                  }}
+                                  className="absolute top-1 right-1 z-10 px-1.5 py-0.5 rounded bg-black/75 hover:bg-amber-500 hover:text-black text-amber-300 text-[8px] sm:text-[9px] font-bold tracking-wider transition-all cursor-pointer shadow-xs flex items-center gap-0.5 opacity-90 group-hover:opacity-100"
+                                  title="Set as Main Front Show Picture for Catalog Card"
+                                >
+                                  <Star size={8} />
+                                  <span>Make Cover</span>
+                                </button>
+                              );
+                            }
+                            return null;
+                          })()}
 
                           {/* Reorder / Action Overlay Controls */}
                           <div className="absolute inset-x-0 bottom-0 p-1 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-center justify-between">

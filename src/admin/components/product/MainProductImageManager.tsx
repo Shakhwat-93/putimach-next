@@ -14,11 +14,13 @@ import Swal from 'sweetalert2';
 interface MainProductImageManagerProps {
   mainImage: string;
   onMainImageChange: (url: string) => void;
+  availableImages?: string[];
 }
 
 export const MainProductImageManager: React.FC<MainProductImageManagerProps> = ({
   mainImage,
   onMainImageChange,
+  availableImages = [],
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
@@ -235,6 +237,82 @@ export const MainProductImageManager: React.FC<MainProductImageManagerProps> = (
           </div>
         </div>
       )}
+
+      {/* Quick Select from Existing Product Photos */}
+      {(() => {
+        const availableCandidates = Array.from(new Set(
+          (availableImages || [])
+            .map(cleanImageUrl)
+            .filter(Boolean)
+        ));
+
+        if (availableCandidates.length === 0) return null;
+
+        return (
+          <div className="pt-3 border-t border-border/60 space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+              <div className="flex items-center gap-1.5">
+                <Sparkles size={13} className="text-amber-500" />
+                <span className="text-xs font-bold text-foreground">
+                  Pick from Uploaded Photos ({availableCandidates.length} Photos)
+                </span>
+              </div>
+              <span className="text-[11px] text-muted-foreground">
+                Click any photo below to instantly set it as the Main Front Show Picture.
+              </span>
+            </div>
+
+            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2 p-2 bg-muted/20 rounded-xl border border-border/60">
+              {availableCandidates.map((url, idx) => {
+                const isSelected = cleanCurrentUrl === url;
+                return (
+                  <button
+                    key={`${url}-${idx}`}
+                    type="button"
+                    onClick={() => {
+                      onMainImageChange(url);
+                      Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'success',
+                        title: 'Main Show Picture selected!',
+                        showConfirmButton: false,
+                        timer: 1500,
+                      });
+                    }}
+                    className={cn(
+                      "group relative aspect-[3/4] rounded-lg overflow-hidden border-2 transition-all p-0.5 bg-background cursor-pointer",
+                      isSelected
+                        ? "border-amber-500 ring-2 ring-amber-500/30 shadow-md scale-[1.03]"
+                        : "border-border/80 hover:border-amber-500/60 hover:scale-[1.02]"
+                    )}
+                    title={isSelected ? "Active Main Show Picture (Front Card Cover)" : "Click to set as Main Show Picture"}
+                  >
+                    <img
+                      src={url}
+                      alt={`Photo ${idx + 1}`}
+                      className="w-full h-full object-cover rounded-md"
+                      loading="lazy"
+                    />
+                    {isSelected ? (
+                      <div className="absolute top-1 left-1 bg-amber-500 text-black text-[8px] font-black px-1 py-0.5 rounded shadow flex items-center gap-0.5">
+                        <Star size={8} className="fill-black" />
+                        <span>COVER</span>
+                      </div>
+                    ) : (
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-0.5">
+                        <span className="text-[8px] font-bold text-white bg-black/80 px-1 py-0.5 rounded text-center leading-tight">
+                          Make Cover
+                        </span>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Media Picker Modal */}
       <MediaPickerModal
