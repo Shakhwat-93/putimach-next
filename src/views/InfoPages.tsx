@@ -2,7 +2,7 @@
 // @ts-nocheck
 // src/pages/InfoPages.jsx
 import React, { useState, useEffect } from 'react';
-import { Truck, ShieldAlert, Ruler, BookOpen, Loader2 } from 'lucide-react';
+import { Truck, ShieldAlert, Ruler, BookOpen, Loader2, Sparkles, Clock, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { InfoPageSkeleton } from '@/components/skeletons/storefront/ShopHeaderSkeleton';
 
 function useSiteSettings(key) {
@@ -82,30 +82,122 @@ export function SizingGuide() {
 }
 
 export function ShippingInfo() {
-  const { data: contact } = useSiteSettings('contact_info');
-  const { data: shipping } = useSiteSettings('shipping_rates');
+  const { data: contact, loading: contactLoading } = useSiteSettings('contact_info');
+  const { data: shipping, loading: shippingLoading } = useSiteSettings('shipping_rates');
+  const { data: home, loading: homeLoading } = useSiteSettings('home_page');
+
   const phone = contact?.phone || '01827-406756';
   const facebook = contact?.facebook_url || 'https://www.facebook.com/share/1HitDwyphD';
-  const inside = shipping?.inside ?? 60;
-  const sub = shipping?.sub ?? 100;
-  const outside = shipping?.outside ?? 120;
+
+  // Dynamic values priority: shipping_rates -> home_page -> defaults
+  const inside = Number(shipping?.inside ?? home?.shippingInsideDhaka ?? 80);
+  const sub = Number(shipping?.sub ?? home?.shippingSubDhaka ?? 100);
+  const outside = Number(shipping?.outside ?? home?.shippingOutsideDhaka ?? 150);
+  const freeThreshold = Number(shipping?.freeDeliveryThreshold ?? home?.freeDeliveryThreshold ?? 0);
+
+  const isLoading = shippingLoading && homeLoading;
+
   return (
     <div className="min-h-screen pt-24 pb-16 bg-base-800 text-surface-primary">
       <div className="container-site max-w-3xl">
         <p className="section-label mb-2">Help &amp; Guides</p>
         <h1 className="font-black text-3xl sm:text-4xl text-surface-primary mb-6">Shipping Policy</h1>
-        <div className="glass-dark p-6 sm:p-8 rounded-xl border border-base-300/40 space-y-6">
-          <div className="flex gap-4 items-start"><Truck className="text-brand flex-shrink-0 mt-1" size={24} /><div><h2 className="font-bold text-lg text-surface-primary">Cash On Delivery All Over Bangladesh</h2><p className="text-surface-secondary text-sm mt-1">We provide cash on delivery service to all locations across Bangladesh.</p></div></div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-base-300/30 pt-6">
-            <div className="p-4 rounded-lg bg-base-900/40 border border-base-300/30"><h3 className="font-bold text-brand text-xs uppercase tracking-wider mb-2">Inside Dhaka</h3><p className="text-xl font-black text-surface-primary">৳ {inside}</p></div>
-            <div className="p-4 rounded-lg bg-base-900/40 border border-base-300/30"><h3 className="font-bold text-brand text-xs uppercase tracking-wider mb-2">Sub Dhaka</h3><p className="text-xl font-black text-surface-primary">৳ {sub}</p><p className="text-[10px] text-surface-muted mt-1">(Narayanganj, Keraniganj, Savar, Gazipur)</p></div>
-            <div className="p-4 rounded-lg bg-base-900/40 border border-base-300/30"><h3 className="font-bold text-brand text-xs uppercase tracking-wider mb-2">Outside Dhaka</h3><p className="text-xl font-black text-surface-primary">৳ {outside}</p></div>
+
+        {isLoading ? (
+          <InfoPageSkeleton />
+        ) : (
+          <div className="glass-dark p-6 sm:p-8 rounded-xl border border-base-300/40 space-y-6">
+            <div className="flex gap-4 items-start">
+              <Truck className="text-brand flex-shrink-0 mt-1" size={26} />
+              <div>
+                <h2 className="font-bold text-lg sm:text-xl text-surface-primary">Cash On Delivery All Over Bangladesh</h2>
+                <p className="text-surface-secondary text-sm mt-1 leading-relaxed">
+                  We provide premium express delivery with Cash on Delivery across all 64 districts in Bangladesh.
+                </p>
+              </div>
+            </div>
+
+            {/* Delivery Charge Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-base-300/30 pt-6">
+              <div className="p-4 rounded-xl bg-base-900/60 border border-base-300/30 flex flex-col justify-between">
+                <div>
+                  <h3 className="font-bold text-brand text-xs uppercase tracking-wider mb-1.5">Inside Dhaka</h3>
+                  <p className="text-2xl font-black text-surface-primary font-mono">৳ {inside}</p>
+                </div>
+                <div className="mt-3 pt-2.5 border-t border-base-300/20 flex items-center gap-1.5 text-[11px] text-surface-muted">
+                  <Clock size={13} className="text-brand flex-shrink-0" />
+                  <span>24–48 Hours Delivery</span>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-base-900/60 border border-base-300/30 flex flex-col justify-between">
+                <div>
+                  <h3 className="font-bold text-brand text-xs uppercase tracking-wider mb-1.5">Sub Dhaka</h3>
+                  <p className="text-2xl font-black text-surface-primary font-mono">৳ {sub}</p>
+                  <p className="text-[10px] text-surface-muted mt-1 leading-tight">(Narayanganj, Keraniganj, Savar, Gazipur)</p>
+                </div>
+                <div className="mt-3 pt-2.5 border-t border-base-300/20 flex items-center gap-1.5 text-[11px] text-surface-muted">
+                  <Clock size={13} className="text-brand flex-shrink-0" />
+                  <span>2–3 Days Delivery</span>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-base-900/60 border border-base-300/30 flex flex-col justify-between">
+                <div>
+                  <h3 className="font-bold text-brand text-xs uppercase tracking-wider mb-1.5">Outside Dhaka</h3>
+                  <p className="text-2xl font-black text-surface-primary font-mono">৳ {outside}</p>
+                  <p className="text-[10px] text-surface-muted mt-1 leading-tight">All other districts nationwide</p>
+                </div>
+                <div className="mt-3 pt-2.5 border-t border-base-300/20 flex items-center gap-1.5 text-[11px] text-surface-muted">
+                  <Clock size={13} className="text-brand flex-shrink-0" />
+                  <span>3–5 Days Delivery</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Free Delivery Threshold Banner (if configured) */}
+            {freeThreshold > 0 && (
+              <div className="p-4 rounded-xl bg-brand/10 border border-brand/25 flex items-center gap-3">
+                <Sparkles className="text-brand flex-shrink-0" size={22} />
+                <p className="text-xs sm:text-sm text-surface-primary">
+                  <span className="font-bold text-brand uppercase tracking-wider">Free Delivery Offer: </span>
+                  Enjoy complimentary express delivery all over Bangladesh on orders over{' '}
+                  <span className="font-mono font-bold text-brand">৳{freeThreshold.toLocaleString('en-BD')}</span>!
+                </p>
+              </div>
+            )}
+
+            {/* Delivery Guarantees */}
+            <div className="border-t border-base-300/30 pt-5 space-y-2.5 text-xs text-surface-secondary">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={15} className="text-brand flex-shrink-0" />
+                <span><strong>Open Parcel Inspection:</strong> Check garment fabric, size, and fit with the delivery concierge before payment.</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={15} className="text-brand flex-shrink-0" />
+                <span><strong>7-Day Easy Exchange:</strong> Hassle-free size and product exchanges available within 7 days of receipt.</span>
+              </div>
+            </div>
+
+            {/* Concierge & Support Footer */}
+            <div className="border-t border-base-300/30 pt-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs text-surface-muted">
+              <div>
+                <p className="font-bold text-surface-primary text-sm">PutiMach Concierge</p>
+                <p className="mt-1">
+                  Helpline: <a href={`tel:${phone.replace(/-/g, '')}`} className="hover:text-brand font-mono font-semibold">{phone}</a>
+                </p>
+              </div>
+              <a 
+                href={facebook} 
+                target="_blank" 
+                rel="noreferrer" 
+                className="inline-flex items-center gap-1.5 text-[#C5A880] font-bold hover:underline transition-colors"
+              >
+                Follow us on Facebook →
+              </a>
+            </div>
           </div>
-          <div className="border-t border-base-300/30 pt-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs text-surface-muted">
-            <div><p className="font-bold text-surface-primary">PutiMach</p><p className="mt-1">Mobile: <a href={`tel:${phone.replace(/-/g,'')}`} className="hover:text-brand font-mono">{phone}</a></p></div>
-            <a href={facebook} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[#C5A880] font-bold hover:underline">Follow us on Facebook →</a>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

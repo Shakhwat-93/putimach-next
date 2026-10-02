@@ -1672,6 +1672,26 @@ export const StorefrontManagement = () => {
         body: JSON.stringify({ data: settingData }),
       }).catch(() => null);
 
+      // If updating home_page, also dual-sync shipping_rates so all consumers stay 100% in sync
+      if (settingId === 'home_page') {
+        const shippingRatesPayload = {
+          inside: Number(homeSettings.shippingInsideDhaka ?? 80),
+          sub: Number(homeSettings.shippingSubDhaka ?? 100),
+          outside: Number(homeSettings.shippingOutsideDhaka ?? 150),
+          freeDeliveryThreshold: Number(homeSettings.freeDeliveryThreshold ?? 2500),
+        };
+        await supabase
+          .from('cb_settings')
+          .upsert({ id: 'shipping_rates', data: shippingRatesPayload, created_at: new Date().toISOString() })
+          .catch(() => null);
+
+        await fetch('/admin-api/site-settings/shipping_rates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: shippingRatesPayload }),
+        }).catch(() => null);
+      }
+
       // Instantly sync local cache so page reload uses updated data
       try {
         const raw = localStorage.getItem('sf_cached_data');
@@ -2430,7 +2450,17 @@ export const StorefrontManagement = () => {
                   {/* Shipping Charges section */}
                   {bannerSection === 'shipping' && (
                     <div className="space-y-4">
-                      <h2 className="text-h3 font-black border-b border-base-800 pb-2">Delivery & Shipping Fees</h2>
+                      <div className="flex items-center justify-between border-b border-base-800 pb-2">
+                        <h2 className="text-h3 font-black">🚚 Delivery &amp; Shipping Fees</h2>
+                        <button
+                          type="submit"
+                          disabled={saveLoading}
+                          className="action-btn-primary"
+                          style={{ padding: '8px 20px', fontSize: '12px', borderRadius: '6px', height: 'auto', boxShadow: 'none' }}
+                        >
+                          {saveLoading ? 'Saving...' : '💾 Save Shipping Settings'}
+                        </button>
+                      </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="flex flex-col gap-2">
                           <label className="text-sm font-medium text-foreground">Inside Dhaka Delivery Fee (৳)</label>

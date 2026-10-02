@@ -640,18 +640,18 @@ export default function Checkout() {
   useEffect(() => {
     async function loadRates() {
       try {
-        const { data, error } = await supabase
-          .from('site_settings')
-          .select('data')
-          .eq('id', 'shipping_rates')
-          .maybeSingle();
-        if (data && data.data) {
-          setShippingRates({
-            inside: Number(data.data.inside ?? DEFAULT_SHIPPING.inside),
-            sub: Number(data.data.sub ?? DEFAULT_SHIPPING.sub),
-            outside: Number(data.data.outside ?? DEFAULT_SHIPPING.outside)
-          });
-        }
+        const [shippingRes, homeRes] = await Promise.all([
+          supabase.from('site_settings').select('data').eq('id', 'shipping_rates').maybeSingle(),
+          supabase.from('site_settings').select('data').eq('id', 'home_page').maybeSingle(),
+        ]);
+        const sData = shippingRes?.data?.data;
+        const hData = homeRes?.data?.data;
+
+        setShippingRates({
+          inside: Number(sData?.inside ?? hData?.shippingInsideDhaka ?? DEFAULT_SHIPPING.inside),
+          sub: Number(sData?.sub ?? hData?.shippingSubDhaka ?? DEFAULT_SHIPPING.sub),
+          outside: Number(sData?.outside ?? hData?.shippingOutsideDhaka ?? DEFAULT_SHIPPING.outside)
+        });
       } catch (err) {
         console.warn('Failed to load dynamic shipping rates, using defaults:', err);
       }
@@ -959,7 +959,8 @@ export default function Checkout() {
       extraDetails.push(`Coupon: ${appliedCouponCode} (-৳${validatedDiscountAmount})`);
     }
     if (shippingArea) {
-      extraDetails.push(`Zone: ${shippingArea === 'inside' ? 'Inside Dhaka (৳80)' : 'Outside Dhaka (৳150)'}`);
+      const zoneName = shippingArea === 'inside' ? 'Inside Dhaka' : (shippingArea === 'sub' ? 'Sub Dhaka' : 'Outside Dhaka');
+      extraDetails.push(`Zone: ${zoneName} (৳${baseShipping})`);
     }
     let enrichedNotes = form.note.trim();
     if (extraDetails.length > 0) {
@@ -1042,7 +1043,7 @@ export default function Checkout() {
       quantity: totalItemCount,
       items: totalItemCount,
       amount: calculatedFinalAmount,
-      shipping_zone: shippingArea === 'inside' ? 'Inside Dhaka' : 'Outside Dhaka',
+      shipping_zone: shippingArea === 'inside' ? 'Inside Dhaka' : (shippingArea === 'sub' ? 'Sub Dhaka' : 'Outside Dhaka'),
       notes: enrichedNotes || null,
       source: 'Website',
       status: 'New',
