@@ -8,7 +8,7 @@ import Link from 'next/link';
 
 import {
   User, Phone, MapPin, MessageSquare, ShoppingBag,
-  CheckCircle, CheckCircle2, AlertCircle, Loader2, ChevronRight, Tag, Truck, CreditCard,
+  CheckCircle, CheckCircle2, AlertCircle, AlertTriangle, Loader2, ChevronRight, Tag, Truck, CreditCard,
   ArrowLeft, Zap, Package, Mail, Trash2, Plus, Minus, X, Sparkles
 } from 'lucide-react';
 import useCartStore from '../store/cartStore';
@@ -516,6 +516,32 @@ export default function Checkout() {
   const [error, setError] = useState('');
   const [orderNumber, setOrderNumber] = useState('');
   const [orderedItems, setOrderedItems] = useState([]);
+  const [stockErrorModal, setStockErrorModal] = useState<{
+    isOpen: boolean;
+    productName: string;
+    size?: string | null;
+    color?: string | null;
+    availableStock?: number;
+    requestedQty?: number;
+    image?: string | null;
+    message?: string;
+  } | null>(null);
+
+  // Lock body scroll and listen for Escape key when stock error popup is active
+  useEffect(() => {
+
+    if (stockErrorModal) {
+      document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') setStockErrorModal(null);
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = '';
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [stockErrorModal]);
 
   const [shippingRates, setShippingRates] = useState(DEFAULT_SHIPPING);
   const [shippingArea, setShippingArea] = useState('inside'); // 'inside' | 'sub' | 'outside'
@@ -1006,7 +1032,20 @@ export default function Checkout() {
           });
 
           if (matchedVariant && (Number(matchedVariant.stock) || 0) < orderQty) {
-            setError(`Sorry, "${item.product?.name || 'Product'}" (${targetSize}) does not have enough stock available.`);
+            const available = Math.max(0, Number(matchedVariant.stock) || 0);
+            setError('');
+            setStockErrorModal({
+              isOpen: true,
+              productName: item.product?.name || 'Product',
+              size: targetSize || null,
+              color: (targetColor && targetColor !== 'None') ? targetColor : null,
+              availableStock: available,
+              requestedQty: orderQty,
+              image: item.product?.image || null,
+              message: available === 0
+                ? `Sorry, "${item.product?.name || 'Product'}" ${targetSize ? `(${targetSize})` : ''} is out of stock.`
+                : `Sorry, only ${available} ${available === 1 ? 'item' : 'items'} available for "${item.product?.name || 'Product'}" ${targetSize ? `(${targetSize})` : ''}. You requested ${orderQty}.`
+            });
             setSubmitting(false);
             isSubmittingRef.current = false;
             return;
@@ -1023,7 +1062,20 @@ export default function Checkout() {
           }
 
           if (invStock !== undefined && invStock !== null && Number(invStock) < orderQty) {
-            setError(`Sorry, "${item.product?.name || 'Product'}" is out of stock or does not have enough quantity.`);
+            const available = Math.max(0, Number(invStock) || 0);
+            setError('');
+            setStockErrorModal({
+              isOpen: true,
+              productName: item.product?.name || 'Product',
+              size: targetSize || null,
+              color: (targetColor && targetColor !== 'None') ? targetColor : null,
+              availableStock: available,
+              requestedQty: orderQty,
+              image: item.product?.image || null,
+              message: available === 0
+                ? `Sorry, "${item.product?.name || 'Product'}" is out of stock.`
+                : `Sorry, only ${available} ${available === 1 ? 'item' : 'items'} available for "${item.product?.name || 'Product'}". You requested ${orderQty}.`
+            });
             setSubmitting(false);
             isSubmittingRef.current = false;
             return;
@@ -1358,7 +1410,7 @@ export default function Checkout() {
                 <h2 className="font-black text-base text-surface-primary">Delivery Information</h2>
               </div>
 
-              {error && (
+              {error && !stockErrorModal && (
                 <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold">
                   ⚠️ {error}
                 </div>
@@ -1536,22 +1588,24 @@ export default function Checkout() {
                 </a>
               </div>
 
-              <OrderSummary 
-                items={items} 
-                subtotal={subtotal} 
-                shipping={finalShipping} 
-                total={total}
-                discountAmount={discountAmount}
-                freeShippingUnlocked={isFreeShippingUnlocked}
-                appliedCouponCode={appliedCouponCode}
-                discountTitle={discountResult?.discount_title || ''}
-                couponInput={couponInput}
-                setCouponInput={setCouponInput}
-                couponLoading={couponLoading}
-                couponError={couponError}
-                onApplyCoupon={handleApplyCoupon}
-                onRemoveCoupon={handleRemoveCoupon}
-              />
+              <div id="checkout-order-summary">
+                <OrderSummary 
+                  items={items} 
+                  subtotal={subtotal} 
+                  shipping={finalShipping} 
+                  total={total}
+                  discountAmount={discountAmount}
+                  freeShippingUnlocked={isFreeShippingUnlocked}
+                  appliedCouponCode={appliedCouponCode}
+                  discountTitle={discountResult?.discount_title || ''}
+                  couponInput={couponInput}
+                  setCouponInput={setCouponInput}
+                  couponLoading={couponLoading}
+                  couponError={couponError}
+                  onApplyCoupon={handleApplyCoupon}
+                  onRemoveCoupon={handleRemoveCoupon}
+                />
+              </div>
 
               {/* Submit Place Order Button */}
               <button
@@ -1581,6 +1635,140 @@ export default function Checkout() {
           </motion.div>
         </form>
       </div>
+
+      {/* ─── STOCK UNAVAILABLE MODAL POPUP (ALL DEVICES: MOBILE, TABLET, DESKTOP) ─── */}
+      <AnimatePresence>
+        {stockErrorModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+            {/* Backdrop with blur */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setStockErrorModal(null)}
+              className="fixed inset-0 bg-black/80 backdrop-blur-md"
+            />
+
+            {/* Modal Dialog Card */}
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="stock-modal-title"
+              initial={{ opacity: 0, scale: 0.92, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 16 }}
+              transition={{ type: 'spring', damping: 26, stiffness: 360 }}
+              className="relative w-full max-w-md bg-[#1C1613] text-[#FDFBF7] border border-amber-500/30 rounded-3xl p-6 sm:p-7 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85)] z-10 overflow-hidden"
+            >
+              {/* Ambient Warm Glow */}
+              <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-56 h-56 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
+
+              {/* Close 'X' Button */}
+              <button
+                type="button"
+                onClick={() => setStockErrorModal(null)}
+                className="absolute top-4 right-4 p-2 rounded-full text-surface-muted hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                aria-label="Close dialog"
+              >
+                <X size={18} />
+              </button>
+
+              {/* Content */}
+              <div className="flex flex-col items-center text-center">
+                {/* Warning Icon Badge */}
+                <div className="w-14 h-14 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mb-4 text-amber-400 shadow-inner">
+                  <AlertTriangle size={28} className="animate-pulse" />
+                </div>
+
+                <h3 id="stock-modal-title" className="text-xl sm:text-2xl font-black text-white tracking-tight mb-1">
+                  স্টকে পর্যাপ্ত পরিমাণ নেই
+                </h3>
+                <p className="text-[11px] uppercase tracking-widest font-bold text-amber-400/90 mb-4">
+                  Stock Unavailable
+                </p>
+
+                {/* Product Detail Card */}
+                <div className="w-full p-3.5 rounded-2xl bg-black/40 border border-white/10 flex items-center gap-3.5 text-left mb-4">
+                  {stockErrorModal.image ? (
+                    <div className="w-14 h-16 rounded-xl overflow-hidden bg-base-800 flex-shrink-0 border border-white/10">
+                      <img
+                        src={stockErrorModal.image}
+                        alt={stockErrorModal.productName}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-14 h-16 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0 text-surface-muted">
+                      <Package size={22} />
+                    </div>
+                  )}
+
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-sm text-white line-clamp-1">
+                      {stockErrorModal.productName}
+                    </h4>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                      {stockErrorModal.size && (
+                        <span className="px-2 py-0.5 rounded-md bg-white/10 text-[11px] font-mono font-medium text-[#E9E2D2]">
+                          Size: {stockErrorModal.size}
+                        </span>
+                      )}
+                      {stockErrorModal.color && (
+                        <span className="px-2 py-0.5 rounded-md bg-white/10 text-[11px] font-mono font-medium text-[#E9E2D2]">
+                          Color: {stockErrorModal.color}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-2">
+                      {stockErrorModal.availableStock === 0 ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/30 text-rose-300 text-[10px] font-bold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping" />
+                          Currently Out of Stock
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[10px] font-bold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                          Only {stockErrorModal.availableStock} remaining (Requested {stockErrorModal.requestedQty})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-xs text-surface-muted leading-relaxed mb-6 px-1">
+                  দুঃখিত! আপনার সিলেক্ট করা আইটেম বা সাইজটির পর্যাপ্ত স্টক এই মুহূর্তে নেই। অনুগ্রহ করে অন্য সাইজ নির্বাচন করুন অথবা কার্ট থেকে কোয়ান্টিটি আপডেট করুন।
+                </p>
+
+                {/* Action Buttons */}
+                <div className="w-full flex flex-col sm:flex-row gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStockErrorModal(null);
+                      const el = document.getElementById('checkout-order-summary');
+                      if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }
+                    }}
+                    className="flex-1 py-3 px-4 rounded-xl bg-brand hover:bg-brand-400 text-white font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-md hover:shadow-lg active:scale-98 flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <ShoppingBag size={14} />
+                    <span>ব্যাগ পরিবর্তন করুন</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStockErrorModal(null)}
+                    className="py-3 px-5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs uppercase tracking-wider border border-white/10 transition-colors active:scale-98 cursor-pointer"
+                  >
+                    ঠিক আছে
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
