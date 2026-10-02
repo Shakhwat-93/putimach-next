@@ -1,5 +1,9 @@
 // @ts-nocheck
 const DEFAULT_PRODUCTS = [
+  { name: 'Remi Cotton Trousers', category: 'Pants', unit_price: 799, color: '#0d9488' },
+  { name: 'Sweatpant', category: 'Pants', unit_price: 799, color: '#3b82f6' },
+  { name: 'Pant', category: 'Pants', unit_price: 799, color: '#6366f1' },
+  { name: 'Tang Shirt', category: 'Shirts', unit_price: 799, color: '#f59e0b' },
   { name: 'TOY BOX', category: 'TOY BOX', unit_price: 1250, color: '#f97316' },
   { name: 'ORGANIZER', category: 'ORGANIZER', unit_price: 850, color: '#059669' },
   { name: 'Travel bag', category: 'Bags', unit_price: 950, color: '#1d4ed8' },
@@ -105,10 +109,11 @@ export const findBestProductMatch = (query = '', inventory = []) => {
   }) || null;
 };
 
-export const createProductLine = (inventory = [], productName = 'TOY BOX', overrides = {}) => {
+export const createProductLine = (inventory = [], productName = '', overrides = {}) => {
   const catalog = buildProductCatalog(inventory);
-  const fallback = catalog.find((item) => item.name === 'TOY BOX') || catalog[0] || DEFAULT_PRODUCTS[0];
-  const selected = findProductRecordByName(inventory, productName) || fallback;
+  const fallback = catalog[0] || DEFAULT_PRODUCTS[0];
+  const targetName = productName || fallback.name;
+  const selected = findProductRecordByName(inventory, targetName) || fallback;
 
   return {
     name: selected.name,

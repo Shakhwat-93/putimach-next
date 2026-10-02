@@ -3,8 +3,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './CommandPalette.css';
 import { useRouter } from 'next/navigation';
+import { Search, Command } from 'lucide-react';
 
-import { 
+export const CommandPalette = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const inputRef = useRef(null);
+  const paletteRef = useRef(null);
+  const allResults = [];
+
+  useEffect(() => {
     const handleKeyDown = (e) => {
       // Toggle Palette: Cmd+K or Ctrl+K
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -22,11 +31,11 @@ import {
       // Navigate Results: Arrows
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setSelectedIndex(prev => (prev + 1) % allResults.length);
+        setSelectedIndex(prev => (prev + 1) % (allResults.length || 1));
       }
       if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setSelectedIndex(prev => (prev - 1 + allResults.length) % allResults.length);
+        setSelectedIndex(prev => (prev - 1 + (allResults.length || 1)) % (allResults.length || 1));
       }
 
       // Execute: Enter
