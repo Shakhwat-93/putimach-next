@@ -259,6 +259,14 @@ export const OrderRow = ({ order, onDetails, onStatusChange, onEdit, onPrint, on
           </button>
           <button 
             type="button"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-teal-500 hover:bg-secondary transition-colors cursor-pointer"
+            onClick={() => onPrint && onPrint(order)}
+            title="Print Invoice / Thermal Receipt"
+          >
+            <Printer size={13} />
+          </button>
+          <button 
+            type="button"
             className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
             onClick={() => onDelete(order.id)}
             title="Delete Order"

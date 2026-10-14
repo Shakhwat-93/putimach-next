@@ -214,14 +214,15 @@ export const OrdersBoard = () => {
   const [printStudioOrders, setPrintStudioOrders] = useState([]);
   const [printStudioFormat, setPrintStudioFormat] = useState('a4-invoice');
 
-  const handleOpenPrintStudio = (singleOrder = null, format = 'a4-invoice') => {
+  const handleOpenPrintStudio = (singleOrder = null, format = null) => {
     if (singleOrder) {
       setPrintStudioOrders([singleOrder]);
     } else {
       const selected = (orders || []).filter(o => selectedOrderIds.includes(o.id));
       setPrintStudioOrders(selected);
     }
-    setPrintStudioFormat(format);
+    const preferred = typeof window !== 'undefined' ? localStorage.getItem('putimach_preferred_print_format') : null;
+    setPrintStudioFormat(format || preferred || 'a4-invoice');
     setIsPrintStudioOpen(true);
   };
 

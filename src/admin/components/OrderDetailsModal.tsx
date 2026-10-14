@@ -27,11 +27,24 @@ export const OrderDetailsModal = ({ isOpen, onClose, order, onEdit }) => {
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [activeTab, setActiveTab] = useState('details'); // 'details' | 'history'
   const [isPrintStudioOpen, setIsPrintStudioOpen] = useState(false);
-  const [printFormat, setPrintFormat] = useState('a4-invoice');
+  const [printFormat, setPrintFormat] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('putimach_preferred_print_format');
+      if (saved && ['a4-invoice', 'thermal-pos-58mm', 'thermal-pos-80mm'].includes(saved)) {
+        return saved;
+      }
+    }
+    return 'a4-invoice';
+  });
   const [isPrintMenuOpen, setIsPrintMenuOpen] = useState(false);
 
   const handleOpenPrintFormat = (fmt = 'a4-invoice') => {
     setPrintFormat(fmt);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('putimach_preferred_print_format', fmt);
+      } catch {}
+    }
     setIsPrintStudioOpen(true);
     setIsPrintMenuOpen(false);
   };

@@ -23,8 +23,8 @@ export const ThermalReceipt58: React.FC<ThermalReceipt58Props> = ({
   const barcodeSvg = useMemo(() => {
     if (!toggles.showBarcode) return '';
     return generateBarcodeSVG(String(data.orderNumber || data.orderId || 'ORD').slice(-12), {
-      height: 24,
-      moduleWidth: 1.1,
+      height: 22,
+      moduleWidth: 1.05,
       showText: true,
     });
   }, [data.orderNumber, data.orderId, toggles.showBarcode]);
@@ -32,7 +32,7 @@ export const ThermalReceipt58: React.FC<ThermalReceipt58Props> = ({
   const qrSvg = useMemo(() => {
     if (!toggles.showBarcode) return '';
     return generateQRCodeSVG(`ORDER:${data.orderNumber}|TEL:${data.customerPhone}|TOTAL:${data.grandTotal}`, {
-      size: 48,
+      size: 46,
     });
   }, [data.orderNumber, data.customerPhone, data.grandTotal, toggles.showBarcode]);
 
@@ -50,7 +50,7 @@ export const ThermalReceipt58: React.FC<ThermalReceipt58Props> = ({
         margin: '0 auto',
       }}
     >
-      {/* ── 1. Store / Brand Name & Contacts ── */}
+      {/* ── 1. Store / Brand Header ── */}
       <div style={{ textAlign: 'center' }}>
         {toggles.showLogo && brand.logo && (
           <img
@@ -58,7 +58,7 @@ export const ThermalReceipt58: React.FC<ThermalReceipt58Props> = ({
             alt={brand.name}
             style={{
               maxHeight: '26px',
-              maxWidth: '85%',
+              maxWidth: '80%',
               objectFit: 'contain',
               margin: '0 auto 1.5mm auto',
               display: 'block',
@@ -83,11 +83,11 @@ export const ThermalReceipt58: React.FC<ThermalReceipt58Props> = ({
           <span>ORDER REF:</span>
           <span style={{ fontSize: '8.5pt' }}>#{data.orderNumber}</span>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#222' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#111' }}>
           <span>Date:</span>
           <span>{data.dateFormatted}</span>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#222' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#111' }}>
           <span>Time:</span>
           <span>{data.timeFormatted}</span>
         </div>
@@ -105,7 +105,7 @@ export const ThermalReceipt58: React.FC<ThermalReceipt58Props> = ({
           <div style={{ fontWeight: 'bold', marginTop: '0.5mm' }}>Zone: {data.deliveryArea}</div>
         )}
         {data.courierName && (
-          <div style={{ fontSize: '7pt', color: '#333', marginTop: '0.5mm' }}>
+          <div style={{ fontSize: '7pt', color: '#222', marginTop: '0.5mm' }}>
             Courier: {data.courierName} {data.trackingId ? `(#${data.trackingId})` : ''}
           </div>
         )}
@@ -113,10 +113,10 @@ export const ThermalReceipt58: React.FC<ThermalReceipt58Props> = ({
 
       <div className="thermal-58-divider" />
 
-      {/* ── 3. Products List (Optimized for Narrow Paper) ── */}
+      {/* ── 3. Products List (Specialized 2-Line Layout for 58mm) ── */}
       <div style={{ margin: '1mm 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '7.5pt', fontWeight: '900', borderBottom: '1px solid #000', paddingBottom: '0.5mm', marginBottom: '1mm' }}>
-          <span>PRODUCT</span>
+          <span>ITEM DESCRIPTION</span>
           <span>TOTAL</span>
         </div>
 
@@ -165,7 +165,7 @@ export const ThermalReceipt58: React.FC<ThermalReceipt58Props> = ({
           )}
 
           <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', borderTop: '1px dotted #000', paddingTop: '0.8mm', marginTop: '0.8mm' }}>
-            <span>Total Amount:</span>
+            <span>Total Order Amount:</span>
             <span>৳{data.grandTotal.toLocaleString()}</span>
           </div>
 
@@ -227,7 +227,7 @@ export const ThermalReceipt58: React.FC<ThermalReceipt58Props> = ({
 
       {/* ── 8. Return Terms / Policy ── */}
       {toggles.showTerms && brand.terms && (
-        <div style={{ fontSize: '6.5pt', textAlign: 'center', color: '#333', lineHeight: 1.2, marginTop: '2mm', padding: '0 1mm' }}>
+        <div style={{ fontSize: '6.5pt', textAlign: 'center', color: '#222', lineHeight: 1.2, marginTop: '2mm', padding: '0 1mm' }}>
           {brand.terms}
         </div>
       )}

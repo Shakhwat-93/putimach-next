@@ -23,8 +23,8 @@ export const ThermalReceipt80: React.FC<ThermalReceipt80Props> = ({
   const barcodeSvg = useMemo(() => {
     if (!toggles.showBarcode) return '';
     return generateBarcodeSVG(String(data.orderNumber || data.orderId || 'ORD').slice(-14), {
-      height: 28,
-      moduleWidth: 1.3,
+      height: 26,
+      moduleWidth: 1.25,
       showText: true,
     });
   }, [data.orderNumber, data.orderId, toggles.showBarcode]);
@@ -32,7 +32,7 @@ export const ThermalReceipt80: React.FC<ThermalReceipt80Props> = ({
   const qrSvg = useMemo(() => {
     if (!toggles.showBarcode) return '';
     return generateQRCodeSVG(`ORDER:${data.orderNumber}|PHONE:${data.customerPhone}|TOTAL:${data.grandTotal}`, {
-      size: 58,
+      size: 54,
     });
   }, [data.orderNumber, data.customerPhone, data.grandTotal, toggles.showBarcode]);
 
@@ -83,7 +83,7 @@ export const ThermalReceipt80: React.FC<ThermalReceipt80Props> = ({
           <span style={{ fontWeight: 'bold' }}>ORDER NO:</span>
           <span style={{ fontSize: '9.5pt', fontWeight: '900' }}>#{data.orderNumber}</span>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#222' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#111' }}>
           <span>Order Date & Time:</span>
           <span>{data.dateFormatted} at {data.timeFormatted}</span>
         </div>
@@ -94,7 +94,7 @@ export const ThermalReceipt80: React.FC<ThermalReceipt80Props> = ({
         <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #000', paddingBottom: '1mm', marginBottom: '1.2mm' }}>
           <span style={{ fontWeight: '900', textTransform: 'uppercase', fontSize: '7.5pt' }}>CUSTOMER (BILL & SHIP TO)</span>
           {data.courierName && (
-            <span style={{ fontSize: '7pt', color: '#333' }}>Courier: {data.courierName}</span>
+            <span style={{ fontSize: '7pt', color: '#222' }}>Courier: {data.courierName}</span>
           )}
         </div>
 
@@ -107,7 +107,7 @@ export const ThermalReceipt80: React.FC<ThermalReceipt80Props> = ({
           <div style={{ fontWeight: 'bold', marginTop: '0.8mm' }}>Zone: {data.deliveryArea}</div>
         )}
         {data.trackingId && (
-          <div style={{ fontSize: '7.5pt', color: '#333', marginTop: '0.5mm' }}>
+          <div style={{ fontSize: '7.5pt', color: '#222', marginTop: '0.5mm' }}>
             Tracking ID: #{data.trackingId}
           </div>
         )}
@@ -120,10 +120,10 @@ export const ThermalReceipt80: React.FC<ThermalReceipt80Props> = ({
         <table className="thermal-80-table">
           <thead>
             <tr>
-              <th style={{ textAlign: 'left', width: '50%' }}>Item Details</th>
-              <th style={{ textAlign: 'center', width: '15%' }}>Qty</th>
-              <th style={{ textAlign: 'right', width: '15%' }}>Price</th>
-              <th style={{ textAlign: 'right', width: '20%' }}>Total</th>
+              <th style={{ textAlign: 'left', width: '46%' }}>Item Details</th>
+              <th style={{ textAlign: 'center', width: '12%' }}>Qty</th>
+              <th style={{ textAlign: 'right', width: '20%' }}>Price</th>
+              <th style={{ textAlign: 'right', width: '22%' }}>Total</th>
             </tr>
           </thead>
           <tbody>
@@ -134,7 +134,7 @@ export const ThermalReceipt80: React.FC<ThermalReceipt80Props> = ({
                     {idx + 1}. {item.name}
                   </div>
                   {(item.size || item.color || item.sku) && (
-                    <div style={{ fontSize: '7.5pt', color: '#333', marginTop: '0.5mm' }}>
+                    <div style={{ fontSize: '7.5pt', color: '#222', marginTop: '0.5mm' }}>
                       {item.size ? `Size: ${item.size}` : ''}
                       {item.size && item.color ? ' | ' : ''}
                       {item.color ? `Color: ${item.color}` : ''}
@@ -185,7 +185,7 @@ export const ThermalReceipt80: React.FC<ThermalReceipt80Props> = ({
             </div>
           )}
 
-          {/* Prominent Total Banner */}
+          {/* Prominent High-Contrast Total Banner */}
           <div className="thermal-80-total-banner">
             <div className="thermal-80-total-banner-label">
               {data.isPaid ? 'TOTAL PAID AMOUNT' : 'NET CASH TO COLLECT (COD)'}

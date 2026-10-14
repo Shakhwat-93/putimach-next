@@ -13,7 +13,8 @@ import {
   mapOrderToInvoiceData, 
   ThermalReceipt58, 
   ThermalReceipt80, 
-  StandardInvoice 
+  StandardInvoice,
+  getIsolatedPrintCss
 } from './invoice';
 
 export const PrintStudioModal = ({
@@ -22,14 +23,35 @@ export const PrintStudioModal = ({
   orders = [],
   initialFormat = 'a4-invoice'
 }) => {
-  const [printFormat, setPrintFormat] = useState(initialFormat);
+  const [printFormat, setPrintFormat] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('putimach_preferred_print_format');
+      if (saved && ['a4-invoice', 'thermal-pos-58mm', 'thermal-pos-80mm', 'thermal-sticker-4x6', 'a4-grid-2up'].includes(saved)) {
+        return initialFormat && initialFormat !== 'a4-invoice' ? initialFormat : saved;
+      }
+    }
+    return initialFormat || 'a4-invoice';
+  });
+
   const [showBrandEditor, setShowBrandEditor] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   useEffect(() => {
     if (initialFormat) {
       setPrintFormat(initialFormat);
     }
   }, [initialFormat, isOpen]);
+
+  const handleFormatChange = (fmt) => {
+    setPrintFormat(fmt);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('putimach_preferred_print_format', fmt);
+      } catch {
+        // Ignore localStorage quota errors
+      }
+    }
+  };
 
   // Print Toggles
   const [toggles, setToggles] = useState({
@@ -104,157 +126,150 @@ export const PrintStudioModal = ({
     setToggles(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  /**
+   * Enterprise Isolated Print Engine
+   * Eliminates popup-blocker issues, prevents dark-mode/dashboard leaks,
+   * ensures exact millimetre sizing and decodes images before calling print().
+   */
   const handlePrint = () => {
     const printContent = printWorkspaceRef.current;
     if (!printContent) return;
 
-    // Collect all stylesheets from current page
-    const styles = Array.from(document.styleSheets)
-      .map(sheet => {
-        try {
-          return Array.from(sheet.cssRules).map(r => r.cssText).join('\n');
-        } catch { return ''; }
-      })
-      .join('\n');
+    setIsPrinting(true);
 
-    let pageCss = '';
-    let bodyCss = '';
+    const isolatedCss = getIsolatedPrintCss(printFormat);
+    const contentHtml = printContent.innerHTML;
 
-    if (printFormat === 'thermal-pos-58mm') {
-      pageCss = '@page { size: 58mm auto; margin: 0; }';
-      bodyCss = `
-        * { box-sizing: border-box !important; }
-        html, body {
-          margin: 0 !important;
-          padding: 0 !important;
-          width: 58mm !important;
-          max-width: 58mm !important;
-          min-width: 58mm !important;
-          background: #ffffff !important;
-          color: #000000 !important;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-          overflow-x: hidden !important;
-        }
-        .print-workspace { background: #ffffff !important; padding: 0 !important; margin: 0 !important; }
-        .print-document-sheet { box-shadow: none !important; margin: 0 !important; padding: 0 !important; border: none !important; background: transparent !important; }
-        .thermal-receipt-58 {
-          width: 58mm !important;
-          max-width: 58mm !important;
-          min-width: 58mm !important;
-          margin: 0 auto !important;
-          padding: 2.5mm 3.5mm !important;
-          box-sizing: border-box !important;
-          box-shadow: none !important;
-          border: none !important;
-          page-break-after: always;
-          break-after: page;
-        }
-        .thermal-receipt-58:last-child {
-          page-break-after: auto;
-          break-after: auto;
-        }
-      `;
-    } else if (printFormat === 'thermal-pos-80mm') {
-      pageCss = '@page { size: 80mm auto; margin: 0; }';
-      bodyCss = `
-        * { box-sizing: border-box !important; }
-        html, body {
-          margin: 0 !important;
-          padding: 0 !important;
-          width: 80mm !important;
-          max-width: 80mm !important;
-          min-width: 80mm !important;
-          background: #ffffff !important;
-          color: #000000 !important;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-          overflow-x: hidden !important;
-        }
-        .print-workspace { background: #ffffff !important; padding: 0 !important; margin: 0 !important; }
-        .print-document-sheet { box-shadow: none !important; margin: 0 !important; padding: 0 !important; border: none !important; background: transparent !important; }
-        .thermal-receipt-80 {
-          width: 80mm !important;
-          max-width: 80mm !important;
-          min-width: 80mm !important;
-          margin: 0 auto !important;
-          padding: 3.5mm 4.5mm !important;
-          box-sizing: border-box !important;
-          box-shadow: none !important;
-          border: none !important;
-          page-break-after: always;
-          break-after: page;
-        }
-        .thermal-receipt-80:last-child {
-          page-break-after: auto;
-          break-after: auto;
-        }
-      `;
-    } else if (printFormat === 'thermal-sticker-4x6') {
-      pageCss = '@page { size: 101.6mm 152.4mm; margin: 0; }';
-      bodyCss = `
-        html, body { margin: 0 !important; padding: 0 !important; width: 101.6mm !important; background: #fff !important; }
-        .print-workspace { background: #fff !important; padding: 0 !important; margin: 0 !important; }
-        .sheet-thermal-sticker-4x6, .print-document-sheet { width: 101.6mm !important; max-width: 101.6mm !important; margin: 0 auto !important; box-shadow: none !important; border: none !important; }
-      `;
-    } else {
-      pageCss = '@page { size: A4 portrait; margin: 8mm; }';
-      bodyCss = `
-        html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
-        .print-workspace { background: #fff !important; padding: 0 !important; }
-        .print-document-sheet { box-shadow: none !important; margin: 0 auto 20px auto !important; }
-      `;
+    // Clean up any old print iframe
+    const oldIframe = document.getElementById('putimach-silent-print-frame');
+    if (oldIframe && document.body.contains(oldIframe)) {
+      document.body.removeChild(oldIframe);
     }
 
-    const printWindow = window.open('', '_blank', 'width=900,height=700');
-    if (!printWindow) {
-      // Fallback: create invisible iframe for printing when popups are blocked
-      const iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = '0';
-      document.body.appendChild(iframe);
-      const doc = iframe.contentWindow?.document;
-      if (doc) {
-        doc.open();
-        doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Print - PutiMach</title><style>${styles}\n${pageCss}\n${bodyCss}</style></head><body>${printContent.innerHTML}</body></html>`);
-        doc.close();
-        setTimeout(() => {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-          setTimeout(() => {
-            if (document.body.contains(iframe)) document.body.removeChild(iframe);
-          }, 2500);
-        }, 500);
-      }
+    // Create an isolated hidden iframe
+    const iframe = document.createElement('iframe');
+    iframe.id = 'putimach-silent-print-frame';
+    iframe.style.position = 'fixed';
+    iframe.style.top = '-10000px';
+    iframe.style.left = '-10000px';
+    iframe.style.width = '100px';
+    iframe.style.height = '100px';
+    iframe.style.opacity = '0';
+    iframe.style.pointerEvents = 'none';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    const frameDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    const frameWin = iframe.contentWindow;
+
+    if (!frameDoc || !frameWin) {
+      setIsPrinting(false);
+      // Fallback to popup if iframe access fails
+      openPopupPrint(contentHtml, isolatedCss);
       return;
     }
 
-    printWindow.document.write(`
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>Print - PutiMach</title>
-  <style>
-    ${styles}
-    ${pageCss}
-    ${bodyCss}
-  </style>
-</head>
-<body>
-  ${printContent.innerHTML}
-</body>
-</html>`);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 500);
+    frameDoc.open();
+    frameDoc.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>PutiMach Invoice - ${printFormat}</title>
+        <style>
+          ${isolatedCss}
+        </style>
+      </head>
+      <body>
+        ${contentHtml}
+      </body>
+      </html>
+    `);
+    frameDoc.close();
+
+    // Wait for all images to decode and fonts to load before triggering print
+    const executePrint = () => {
+      const imgs = Array.from(frameDoc.images || []);
+      const imgPromises = imgs.map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise(res => {
+          img.onload = res;
+          img.onerror = res;
+        });
+      });
+
+      const fontPromise = frameDoc.fonts && frameDoc.fonts.ready ? frameDoc.fonts.ready : Promise.resolve();
+
+      Promise.all([...imgPromises, fontPromise]).then(() => {
+        setTimeout(() => {
+          try {
+            frameWin.focus();
+            frameWin.print();
+          } catch (err) {
+            console.error('Iframe print error, falling back to popup:', err);
+            openPopupPrint(contentHtml, isolatedCss);
+          } finally {
+            setIsPrinting(false);
+            // Delay cleanup to allow print dialog to finish
+            setTimeout(() => {
+              if (document.body.contains(iframe)) {
+                document.body.removeChild(iframe);
+              }
+            }, 3000);
+          }
+        }, 120);
+      });
+    };
+
+    // Execute when DOM in iframe is ready
+    if (frameDoc.readyState === 'complete') {
+      executePrint();
+    } else {
+      frameWin.onload = executePrint;
+    }
+  };
+
+  /**
+   * Secondary Fallback: Popup Window Print
+   */
+  const openPopupPrint = (contentHtml, isolatedCss) => {
+    try {
+      const printWindow = window.open('', '_blank', 'width=900,height=750');
+      if (!printWindow) {
+        alert('Please allow popups or check browser permissions to print invoices.');
+        setIsPrinting(false);
+        return;
+      }
+
+      printWindow.document.open();
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Print - PutiMach</title>
+          <style>
+            ${isolatedCss}
+          </style>
+        </head>
+        <body>
+          ${contentHtml}
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
+
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+        setIsPrinting(false);
+      }, 500);
+    } catch (e) {
+      console.error('Popup print failed:', e);
+      setIsPrinting(false);
+    }
   };
 
   return (
@@ -269,7 +284,7 @@ export const PrintStudioModal = ({
               <h2>Enterprise Invoice & Receipt Studio</h2>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="print-badge">{activeOrders.length} Order{activeOrders.length > 1 ? 's' : ''} Selected</span>
-                <span className="text-xs text-slate-400">Ready for A4 Laser/Inkjet & 58mm / 80mm Thermal POS Printers</span>
+                <span className="text-xs text-slate-400">Ready for Standard A4 & 58mm / 80mm Thermal POS Printers</span>
               </div>
             </div>
           </div>
@@ -287,42 +302,47 @@ export const PrintStudioModal = ({
           <div className="print-format-selector">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">Print Layout:</span>
             
+            {/* 1. Standard / A4 Invoice */}
             <button 
               type="button"
               className={`format-btn ${printFormat === 'a4-invoice' ? 'active' : ''}`}
-              onClick={() => setPrintFormat('a4-invoice')}
+              onClick={() => handleFormatChange('a4-invoice')}
             >
               <FileText size={15} /> 1. Standard / A4 Invoice
             </button>
 
+            {/* 2. 58mm Thermal Receipt */}
             <button 
               type="button"
               className={`format-btn ${printFormat === 'thermal-pos-58mm' ? 'active' : ''}`}
-              onClick={() => setPrintFormat('thermal-pos-58mm')}
+              onClick={() => handleFormatChange('thermal-pos-58mm')}
             >
               <Receipt size={15} /> 2. 58mm Thermal Receipt
             </button>
 
+            {/* 3. 80mm Thermal Receipt */}
             <button 
               type="button"
               className={`format-btn ${printFormat === 'thermal-pos-80mm' ? 'active' : ''}`}
-              onClick={() => setPrintFormat('thermal-pos-80mm')}
+              onClick={() => handleFormatChange('thermal-pos-80mm')}
             >
               <Receipt size={15} /> 3. 80mm Thermal Receipt
             </button>
 
+            {/* 4. 4"x6" Thermal Sticker */}
             <button 
               type="button"
               className={`format-btn ${printFormat === 'thermal-sticker-4x6' ? 'active' : ''}`}
-              onClick={() => setPrintFormat('thermal-sticker-4x6')}
+              onClick={() => handleFormatChange('thermal-sticker-4x6')}
             >
               <Tag size={15} /> 4"x6" Thermal Sticker
             </button>
 
+            {/* 5. A4 2-Up (2/Page) */}
             <button 
               type="button"
               className={`format-btn ${printFormat === 'a4-grid-2up' ? 'active' : ''}`}
-              onClick={() => setPrintFormat('a4-grid-2up')}
+              onClick={() => handleFormatChange('a4-grid-2up')}
             >
               <Grid size={15} /> A4 2-Up (2/Page)
             </button>
@@ -337,8 +357,13 @@ export const PrintStudioModal = ({
               <Edit3 size={14} /> {showBrandEditor ? 'Hide Brand Config' : 'Customize Identity'}
             </button>
 
-            <button type="button" className="btn-print-now cursor-pointer" onClick={handlePrint}>
-              <Printer size={18} /> Print Now ({activeOrders.length})
+            <button 
+              type="button" 
+              className="btn-print-now cursor-pointer disabled:opacity-50" 
+              onClick={handlePrint}
+              disabled={isPrinting}
+            >
+              <Printer size={18} /> {isPrinting ? 'Preparing Print...' : `Print Now (${activeOrders.length})`}
             </button>
           </div>
         </div>
@@ -407,14 +432,16 @@ export const PrintStudioModal = ({
             Show Logo
           </label>
 
-          <label className="option-toggle">
-            <input 
-              type="checkbox" 
-              checked={toggles.showImages} 
-              onChange={() => handleToggle('showImages')} 
-            />
-            Product Images (A4)
-          </label>
+          {printFormat === 'a4-invoice' && (
+            <label className="option-toggle">
+              <input 
+                type="checkbox" 
+                checked={toggles.showImages} 
+                onChange={() => handleToggle('showImages')} 
+              />
+              Product Images (A4)
+            </label>
+          )}
 
           <label className="option-toggle">
             <input 

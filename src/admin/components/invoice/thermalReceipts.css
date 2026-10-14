@@ -6,7 +6,7 @@
 /* --------------------------------------------------------------------------
    1. EXACT 58mm THERMAL RECEIPT LAYOUT
    Physical Width: 58mm
-   Printable Area: ~48-52mm (handled via internal padding without changing 58mm width)
+   Printable Area: ~50mm (handled via 4mm internal padding without changing 58mm width)
    Height: Dynamic (auto)
    -------------------------------------------------------------------------- */
 .thermal-receipt-58 {
@@ -15,11 +15,11 @@
   min-width: 58mm !important;
   box-sizing: border-box !important;
   margin: 0 auto !important;
-  padding: 2.5mm 3.5mm !important;
+  padding: 2.5mm 4mm !important;
   background-color: #ffffff !important;
   color: #000000 !important;
   font-family: 'Courier New', Courier, Consolas, Monaco, monospace !important;
-  font-size: 8.5pt !important;
+  font-size: 8pt !important;
   line-height: 1.25 !important;
   overflow: hidden !important;
   word-break: break-word !important;
@@ -54,7 +54,7 @@
 .thermal-58-divider {
   border: none !important;
   border-top: 1px dashed #000000 !important;
-  margin: 2mm 0 !important;
+  margin: 1.5mm 0 !important;
   width: 100% !important;
 }
 
@@ -63,7 +63,7 @@
   border-top: 1px dashed #000000 !important;
   border-bottom: 1px dashed #000000 !important;
   height: 2px !important;
-  margin: 2mm 0 !important;
+  margin: 1.5mm 0 !important;
   width: 100% !important;
 }
 
@@ -98,7 +98,7 @@
 }
 
 .thermal-58-product-row {
-  margin-bottom: 1.8mm !important;
+  margin-bottom: 1.5mm !important;
   font-size: 8pt !important;
   line-height: 1.2 !important;
 }
@@ -161,7 +161,7 @@
 /* --------------------------------------------------------------------------
    2. EXACT 80mm THERMAL RECEIPT LAYOUT
    Physical Width: 80mm
-   Printable Area: ~70-74mm (handled via internal padding without changing 80mm width)
+   Printable Area: ~72mm (handled via 4mm internal padding without changing 80mm width)
    Height: Dynamic (auto)
    -------------------------------------------------------------------------- */
 .thermal-receipt-80 {
@@ -170,11 +170,11 @@
   min-width: 80mm !important;
   box-sizing: border-box !important;
   margin: 0 auto !important;
-  padding: 3.5mm 4.5mm !important;
+  padding: 3mm 4mm !important;
   background-color: #ffffff !important;
   color: #000000 !important;
   font-family: 'Courier New', Courier, Consolas, Monaco, monospace !important;
-  font-size: 9pt !important;
+  font-size: 8.5pt !important;
   line-height: 1.3 !important;
   overflow: hidden !important;
   word-break: break-word !important;
@@ -209,7 +209,7 @@
 .thermal-80-divider {
   border: none !important;
   border-top: 1px dashed #000000 !important;
-  margin: 2.5mm 0 !important;
+  margin: 2mm 0 !important;
   width: 100% !important;
 }
 
@@ -218,7 +218,7 @@
   border-top: 1px dashed #000000 !important;
   border-bottom: 1px dashed #000000 !important;
   height: 2px !important;
-  margin: 2.5mm 0 !important;
+  margin: 2mm 0 !important;
   width: 100% !important;
 }
 
@@ -268,19 +268,42 @@
 }
 
 /* --------------------------------------------------------------------------
-   3. PRINT CSS ISOLATION & @page DEFINITIONS
+   3. IN-PAGE PRINT ISOLATION & @media print RULES
    -------------------------------------------------------------------------- */
-
-/* Dedicated Isolated Print Modes */
 @media print {
-  /* Reset document root */
+  /* Hide all app scaffolding outside the print overlay */
+  body > *:not(.print-studio-overlay):not(#putimach-silent-print-frame) {
+    display: none !important;
+  }
+
+  /* Reset print container to clean background */
   html, body {
     margin: 0 !important;
     padding: 0 !important;
     background: #ffffff !important;
+    color: #000000 !important;
   }
 
-  /* Universal hide for non-print UI when printing */
+  .print-studio-overlay {
+    position: static !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    backdrop-filter: none !important;
+  }
+
+  .print-studio-container {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  /* Universal hide for non-print toolbar UI */
   .no-print,
   .print-studio-header,
   .print-studio-toolbar,
@@ -296,40 +319,33 @@
     display: none !important;
   }
 
-  /* When printing 58mm: exact page size */
-  @page page-58mm {
-    size: 58mm auto;
-    margin: 0;
+  .print-workspace {
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    max-height: none !important;
+    min-height: auto !important;
+    display: block !important;
   }
 
-  /* When printing 80mm: exact page size */
-  @page page-80mm {
-    size: 80mm auto;
-    margin: 0;
+  .print-document-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
-  /* Standalone A4 page */
-  @page page-a4 {
-    size: A4 portrait;
-    margin: 8mm;
+  .print-document-sheet:not(:last-child) {
+    page-break-after: always !important;
+    break-after: page !important;
   }
 
-  /* Apply page rule to respective receipt containers */
-  .thermal-receipt-58 {
-    page: page-58mm;
-    page-break-after: always;
-    break-after: page;
-  }
-
-  .thermal-receipt-80 {
-    page: page-80mm;
-    page-break-after: always;
-    break-after: page;
-  }
-
-  .standard-invoice-a4 {
-    page: page-a4;
-    page-break-after: always;
-    break-after: page;
+  .print-document-sheet:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
   }
 }
