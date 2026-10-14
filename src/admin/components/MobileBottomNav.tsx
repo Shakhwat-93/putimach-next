@@ -26,18 +26,18 @@ export const MobileBottomNav = () => {
   const showInstallAction = !isNativeApp();
 
   const allItems = [
-    { path: '/admin',                      label: 'Overview',    icon: LayoutDashboard, roles: null },
-    { path: '/admin/ordersboard',          label: 'Orders',      icon: ShoppingCart,    roles: null },
-    { path: '/admin/storefrontmanagement', label: 'Storefront',  icon: Store,           roles: ['Admin'] },
-    { path: '/admin/call-team',             label: 'Calls',       icon: Headphones,      roles: ['Admin', 'Call Team'] },
-    { path: '/admin/moderator',             label: 'Moderator',   icon: ShieldCheck,     roles: ['Admin', 'Moderator'] },
-    { path: '/admin/steadfast',             label: 'Courier Hub', icon: Truck,           roles: ['Admin', 'Courier Team', 'Moderator'] },
-    { path: '/admin/factory',               label: 'Confirmed',   icon: Factory,         roles: ['Admin', 'Factory Team'] },
-    { path: '/admin/inventorypage',         label: 'Inventory',   icon: Package,         roles: ['Admin', 'Moderator'] },
-    { path: '/admin/digital-marketer',      label: 'Marketing',   icon: Megaphone,       roles: ['Admin', 'Digital Marketer'] },
-    { path: '/admin/taskboard',             label: 'Tasks',       icon: ClipboardList,   roles: null },
-    { path: '/admin/reportspanel',          label: 'Analytics',   icon: BarChart3,       roles: ['Admin'] },
-    { path: '/admin/usermanagement',        label: 'Users',       icon: Users,           roles: ['Admin'] },
+    { path: '/ahasan',                      label: 'Overview',    icon: LayoutDashboard, roles: null },
+    { path: '/ahasan/ordersboard',          label: 'Orders',      icon: ShoppingCart,    roles: null },
+    { path: '/ahasan/storefrontmanagement', label: 'Storefront',  icon: Store,           roles: ['Admin'] },
+    { path: '/ahasan/call-team',             label: 'Calls',       icon: Headphones,      roles: ['Admin', 'Call Team'] },
+    { path: '/ahasan/moderator',             label: 'Moderator',   icon: ShieldCheck,     roles: ['Admin', 'Moderator'] },
+    { path: '/ahasan/steadfast',             label: 'Courier Hub', icon: Truck,           roles: ['Admin', 'Courier Team', 'Moderator'] },
+    { path: '/ahasan/factory',               label: 'Confirmed',   icon: Factory,         roles: ['Admin', 'Factory Team'] },
+    { path: '/ahasan/inventorypage',         label: 'Inventory',   icon: Package,         roles: ['Admin', 'Moderator'] },
+    { path: '/ahasan/digital-marketer',      label: 'Marketing',   icon: Megaphone,       roles: ['Admin', 'Digital Marketer'] },
+    { path: '/ahasan/taskboard',             label: 'Tasks',       icon: ClipboardList,   roles: null },
+    { path: '/ahasan/reportspanel',          label: 'Analytics',   icon: BarChart3,       roles: ['Admin'] },
+    { path: '/ahasan/usermanagement',        label: 'Users',       icon: Users,           roles: ['Admin'] },
   ];
 
   const visibleItems = allItems.filter(item => !item.roles || hasAnyRole(item.roles));

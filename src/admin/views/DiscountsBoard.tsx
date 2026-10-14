@@ -164,7 +164,7 @@ export const DiscountsBoard: React.FC = () => {
 
           <Button
             size="sm"
-            onClick={() => router.push('/admin/discounts/new')}
+            onClick={() => router.push('/ahasan/discounts/new')}
             className="rounded-xl text-xs font-bold gap-1.5 shadow-sm px-4"
           >
             <Plus size={14} />
@@ -238,7 +238,7 @@ export const DiscountsBoard: React.FC = () => {
             {!searchQuery && (
               <Button
                 size="sm"
-                onClick={() => router.push('/admin/discounts/new')}
+                onClick={() => router.push('/ahasan/discounts/new')}
                 className="rounded-xl text-xs font-bold gap-1.5"
               >
                 <Plus size={14} /> Create Discount
@@ -269,7 +269,7 @@ export const DiscountsBoard: React.FC = () => {
                         <div className="flex flex-col">
                           <button
                             type="button"
-                            onClick={() => router.push(`/admin/discounts/${d.id}`)}
+                            onClick={() => router.push(`/ahasan/discounts/${d.id}`)}
                             className="font-bold text-foreground hover:text-primary text-left truncate cursor-pointer"
                           >
                             {d.title || d.code || 'Untitled Discount'}
@@ -357,7 +357,7 @@ export const DiscountsBoard: React.FC = () => {
 
                           <button
                             type="button"
-                            onClick={() => router.push(`/admin/discounts/${d.id}`)}
+                            onClick={() => router.push(`/ahasan/discounts/${d.id}`)}
                             className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                             title="Edit discount"
                           >

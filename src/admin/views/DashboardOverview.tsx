@@ -212,7 +212,7 @@ export const DashboardOverview = () => {
             </div>
           </div>
           <Link 
-            href="/admin/orders" 
+            href="/ahasan/orders" 
             className="inline-flex items-center justify-center rounded-lg bg-destructive text-destructive-foreground px-4 py-2 text-sm font-bold shadow transition-colors hover:bg-destructive/90 shrink-0"
           >
             Take Action Now →
@@ -391,7 +391,7 @@ export const DashboardOverview = () => {
 
       {/* My Tasks Widget */}
       <Link 
-        href="/admin/tasks" 
+        href="/ahasan/tasks" 
         className="block rounded-2xl border border-primary/20 bg-primary/5 p-4 shadow-sm transition-all hover:bg-primary/10 hover:shadow-md"
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

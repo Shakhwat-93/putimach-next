@@ -52,7 +52,7 @@ export const AIBriefing = ({ stats, avgCallDelay, slaRate }) => {
         id: 'call-team',
         text: 'Prioritize the Call Team queue to reduce delay',
         icon: <Clock size={14} />,
-        action: '/admin/call-team'
+        action: '/ahasan/call-team'
       });
     }
     if (stats.factoryQueueCount > 10) {
@@ -60,7 +60,7 @@ export const AIBriefing = ({ stats, avgCallDelay, slaRate }) => {
         id: 'factory',
         text: 'Factory backlog is growing. Check production capacity.',
         icon: <TrendingUp size={14} />,
-        action: '/admin/factory'
+        action: '/ahasan/factory'
       });
     }
     if (slaRate < 70) {
@@ -68,7 +68,7 @@ export const AIBriefing = ({ stats, avgCallDelay, slaRate }) => {
         id: 'sla',
         text: 'SLA rate is dropping. Review first-call protocols.',
         icon: <AlertCircle size={14} />,
-        action: '/admin/reportspanel'
+        action: '/ahasan/reportspanel'
       });
     }
     
@@ -77,7 +77,7 @@ export const AIBriefing = ({ stats, avgCallDelay, slaRate }) => {
         id: 'new',
         text: 'Create a new order to boost today\'s revenue',
         icon: <Sparkles size={14} />,
-        action: '/admin/ordersboard'
+        action: '/ahasan/ordersboard'
       });
     }
 

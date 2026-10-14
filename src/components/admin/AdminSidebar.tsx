@@ -10,12 +10,12 @@ import {
 import useAuthStore from '../../store/authStore';
 
 const navItems = [
-  { to: '/admin', end: true, icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/admin/products', icon: Package, label: 'Products' },
-  { to: '/admin/media', icon: ImageIcon, label: 'Media' },
-  { to: '/admin/categories', icon: FolderKanban, label: 'Categories' },
-  { to: '/admin/orders', icon: ShoppingCart, label: 'Orders' },
-  { to: '/admin/customers', icon: Users, label: 'Customers' },
+  { to: '/ahasan', end: true, icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/ahasan/products', icon: Package, label: 'Products' },
+  { to: '/ahasan/media', icon: ImageIcon, label: 'Media' },
+  { to: '/ahasan/categories', icon: FolderKanban, label: 'Categories' },
+  { to: '/ahasan/orders', icon: ShoppingCart, label: 'Orders' },
+  { to: '/ahasan/customers', icon: Users, label: 'Customers' },
 ];
 
 export default function AdminSidebar({ mobileOpen, onClose }) {
@@ -25,14 +25,14 @@ export default function AdminSidebar({ mobileOpen, onClose }) {
   const handleLogout = async () => {
     await logout();
     if (onClose) onClose();
-    router.push('/admin/login');
+    router.push('/ahasan/login');
   };
 
   const NavContent = ({ isMobile }) => (
     <div className="flex flex-col h-full overflow-y-auto">
       {/* Header / Logo */}
       <div className="p-6 border-b border-base-300/80 flex items-center justify-between bg-gradient-to-b from-brand/5 to-transparent">
-        <Link href="/admin" onClick={onClose} className="flex items-center gap-3 group">
+        <Link href="/ahasan" onClick={onClose} className="flex items-center gap-3 group">
           <div className="w-12 h-12 rounded-2xl overflow-hidden flex items-center justify-center bg-base-900 border border-brand/20 shadow-glow-sm group-hover:scale-105 transition-transform duration-300 flex-shrink-0">
             <img src="/api/media/uploads/img_1786602897193_2103.webp" alt="PutiMach Logo" className="w-full h-full object-cover" />
           </div>
@@ -80,7 +80,7 @@ export default function AdminSidebar({ mobileOpen, onClose }) {
 
         <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-surface-muted mb-3">Website & CMS</p>
         <Link
-          href="/admin/website/pages"
+          href="/ahasan/website/pages"
           onClick={onClose}
           className="flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-small font-bold text-surface-secondary hover:text-surface-primary hover:bg-base-800 transition-all duration-300 relative group"
         >

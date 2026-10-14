@@ -103,8 +103,8 @@ export const Header = ({ onMenuToggle }) => {
     return () => clearTimeout(delay);
   }, [searchQuery, isAdmin]);
 
-  const navigateToOrder = (order) => { router.push(`/admin/ordersboard?viewOrder=${order.id}`); setIsSearchDropdownOpen(false); setSearchQuery(''); };
-  const navigateToUser = (user) => { router.push(`/admin/usermanagement?viewUser=${user.id}`); setIsSearchDropdownOpen(false); setSearchQuery(''); };
+  const navigateToOrder = (order) => { router.push(`/ahasan/ordersboard?viewOrder=${order.id}`); setIsSearchDropdownOpen(false); setSearchQuery(''); };
+  const navigateToUser = (user) => { router.push(`/ahasan/usermanagement?viewUser=${user.id}`); setIsSearchDropdownOpen(false); setSearchQuery(''); };
 
   const formatTime = (dateStr) => {
     const date = new Date(dateStr), now = new Date(), diff = now - date;
@@ -160,7 +160,7 @@ export const Header = ({ onMenuToggle }) => {
 
   const handleNotifClick = (notif) => {
     if (notif.id) markAsRead(notif.id);
-    router.push(notif.type?.startsWith('TASK_') ? '/admin/taskboard' : '/admin/orders');
+    router.push(notif.type?.startsWith('TASK_') ? '/ahasan/taskboard' : '/ahasan/orders');
     setIsNotifOpen(false);
   };
 
@@ -301,7 +301,7 @@ export const Header = ({ onMenuToggle }) => {
             <div className="max-h-64 overflow-y-auto divide-y divide-border/50">
               {startupUnreadNotifications.map(notif => (
                 <button key={notif.id}
-                  onClick={() => { markAsRead(notif.id); router.push('/admin/ordersboard'); closeStartupUnreadModal(); }}
+                  onClick={() => { markAsRead(notif.id); router.push('/ahasan/ordersboard'); closeStartupUnreadModal(); }}
                   className="flex w-full items-start gap-3 px-5 py-3.5 text-left hover:bg-secondary transition-colors"
                 >
                   <div className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-lg', toneClasses[getNotifTone(notif)])}>
@@ -421,7 +421,7 @@ export const Header = ({ onMenuToggle }) => {
               )}
             </div>
             <div className="border-t border-border px-4 py-2.5">
-              <Link href="/admin/settings" onClick={() => setIsNotifOpen(false)}
+              <Link href="/ahasan/settings" onClick={() => setIsNotifOpen(false)}
                 className="text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors">
                 System Audit Logs →
               </Link>
@@ -460,11 +460,11 @@ export const Header = ({ onMenuToggle }) => {
                   <Menu size={15} /> Open Menu
                 </button>
               )}
-              <button onClick={() => { router.push('/admin/profile'); setIsDropdownOpen(false); }}
+              <button onClick={() => { router.push('/ahasan/profile'); setIsDropdownOpen(false); }}
                 className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-secondary transition-colors">
                 <UserIcon size={15} /> Profile
               </button>
-              <button onClick={() => { router.push('/admin/settings'); setIsDropdownOpen(false); }}
+              <button onClick={() => { router.push('/ahasan/settings'); setIsDropdownOpen(false); }}
                 className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-secondary transition-colors">
                 <Settings size={15} /> Settings
               </button>

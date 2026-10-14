@@ -19,7 +19,7 @@ export default function AdminLogin() {
 
     try {
       await loginAdmin(email, password);
-      router.push('/admin');
+      router.push('/ahasan');
     } catch (err) {
       setError(err.message || 'Invalid credentials. Please verify your admin credentials.');
     } finally {

@@ -27,7 +27,7 @@ export default function ProtectedRoute({ children }) {
   }
 
   if (!session) {
-    return {/* <Navigate to="/admin/login" /> */};
+    return {/* <Navigate to="/ahasan/login" /> */};
   }
 
   return children;

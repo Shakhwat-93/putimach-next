@@ -82,12 +82,12 @@ export const GlobalSearchModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const navigateToOrder = (order) => {
-    router.push(`/admin/ordersboard?viewOrder=${order.id}`);
+    router.push(`/ahasan/ordersboard?viewOrder=${order.id}`);
     onClose();
   };
 
   const navigateToUser = (user) => {
-    router.push(`/admin/usermanagement?viewUser=${user.id}`);
+    router.push(`/ahasan/usermanagement?viewUser=${user.id}`);
     onClose();
   };
 

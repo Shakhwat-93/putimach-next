@@ -99,6 +99,20 @@ const nextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: '/admin',
+        destination: '/ahasan',
+        permanent: false,
+      },
+      {
+        source: '/admin/:path*',
+        destination: '/ahasan/:path*',
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

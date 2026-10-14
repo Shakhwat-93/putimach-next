@@ -8,7 +8,7 @@ import ClientOnly from '@/admin/components/ClientOnly';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isLogin = pathname === '/admin/login';
+  const isLogin = pathname === '/ahasan/login';
   
   return (
     <ClientOnly>

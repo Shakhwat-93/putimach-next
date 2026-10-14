@@ -17,40 +17,40 @@ import { useTheme } from '../context/ThemeContext';
 import { cn } from '../lib/utils';
 
 const menuItems = [
-  { path: '/admin', label: 'Overview', icon: LayoutDashboard, group: 'Main Console' },
-  { path: '/admin/tasks', label: 'Tasks', icon: ClipboardList, group: 'Main Console' },
+  { path: '/ahasan', label: 'Overview', icon: LayoutDashboard, group: 'Main Console' },
+  { path: '/ahasan/tasks', label: 'Tasks', icon: ClipboardList, group: 'Main Console' },
   {
-    path: '/admin/orders', label: 'Orders', icon: ShoppingCart, group: 'Main Console',
+    path: '/ahasan/orders', label: 'Orders', icon: ShoppingCart, group: 'Main Console',
     children: [
-      { path: '/admin/orders?status=All', label: 'All Orders', status: 'All', tone: 'all' },
-      { path: '/admin/orders?status=Pending%20Call', label: 'Pending Call', status: 'Pending Call', tone: 'pending' },
-      { path: '/admin/orders?status=Final%20Call%20Pending', label: 'Final Call', status: 'Final Call Pending', tone: 'final' },
-      { path: '/admin/orders?status=Confirmed', label: 'Confirmed', status: 'Confirmed', tone: 'confirmed' },
-      { path: '/admin/orders?status=Cancelled', label: 'Cancelled', status: 'Cancelled', tone: 'cancelled' },
-      { path: '/admin/orders?status=Fake%20Order', label: 'Fake Order', status: 'Fake Order', tone: 'fake' }
+      { path: '/ahasan/orders?status=All', label: 'All Orders', status: 'All', tone: 'all' },
+      { path: '/ahasan/orders?status=Pending%20Call', label: 'Pending Call', status: 'Pending Call', tone: 'pending' },
+      { path: '/ahasan/orders?status=Final%20Call%20Pending', label: 'Final Call', status: 'Final Call Pending', tone: 'final' },
+      { path: '/ahasan/orders?status=Confirmed', label: 'Confirmed', status: 'Confirmed', tone: 'confirmed' },
+      { path: '/ahasan/orders?status=Cancelled', label: 'Cancelled', status: 'Cancelled', tone: 'cancelled' },
+      { path: '/ahasan/orders?status=Fake%20Order', label: 'Fake Order', status: 'Fake Order', tone: 'fake' }
     ]
   },
-  { path: '/admin/incomplete-checkouts', label: 'Incomplete Checkouts', icon: Clock, roles: ['Admin', 'Digital Marketer', 'Call Team'], group: 'Main Console' },
-  { path: '/admin/storefront', label: 'Storefront', icon: Store, roles: ['Admin'], group: 'Main Console' },
-  { path: '/admin/discounts', label: 'Discounts', icon: Tag, roles: ['Admin', 'Digital Marketer'], group: 'Main Console' },
-  { path: '/admin/inventory', label: 'Inventory', icon: Package, roles: ['Admin', 'Moderator'], group: 'Main Console' },
-  { path: '/admin/media', label: 'Media', icon: ImageIcon, roles: ['Admin', 'Digital Marketer'], group: 'Main Console' },
-  { path: '/admin/factory', label: 'Confirmed', icon: Factory, roles: ['Admin', 'Factory Team'], group: 'Logistics' },
-  { path: '/admin/steadfast', label: 'Courier Hub', icon: Truck, roles: ['Admin', 'Courier Team', 'Moderator'], group: 'Logistics' },
-  { path: '/admin/moderator', label: 'Moderator', icon: ShieldCheck, roles: ['Admin', 'Moderator'], group: 'Intelligence' },
-  { path: '/admin/call-team', label: 'Call Team', icon: Headphones, roles: ['Admin', 'Call Team'], group: 'Intelligence' },
-  { path: '/admin/users', label: 'Users', icon: Users, roles: ['Admin'], group: 'Intelligence' },
-  { path: '/admin/fraud', label: 'Fraud', icon: ShieldAlert, roles: ['Admin'], group: 'Intelligence' },
-  { path: '/admin/reports', label: 'Sales Report', icon: BarChart3, roles: ['Admin'], group: 'System' },
+  { path: '/ahasan/incomplete-checkouts', label: 'Incomplete Checkouts', icon: Clock, roles: ['Admin', 'Digital Marketer', 'Call Team'], group: 'Main Console' },
+  { path: '/ahasan/storefront', label: 'Storefront', icon: Store, roles: ['Admin'], group: 'Main Console' },
+  { path: '/ahasan/discounts', label: 'Discounts', icon: Tag, roles: ['Admin', 'Digital Marketer'], group: 'Main Console' },
+  { path: '/ahasan/inventory', label: 'Inventory', icon: Package, roles: ['Admin', 'Moderator'], group: 'Main Console' },
+  { path: '/ahasan/media', label: 'Media', icon: ImageIcon, roles: ['Admin', 'Digital Marketer'], group: 'Main Console' },
+  { path: '/ahasan/factory', label: 'Confirmed', icon: Factory, roles: ['Admin', 'Factory Team'], group: 'Logistics' },
+  { path: '/ahasan/steadfast', label: 'Courier Hub', icon: Truck, roles: ['Admin', 'Courier Team', 'Moderator'], group: 'Logistics' },
+  { path: '/ahasan/moderator', label: 'Moderator', icon: ShieldCheck, roles: ['Admin', 'Moderator'], group: 'Intelligence' },
+  { path: '/ahasan/call-team', label: 'Call Team', icon: Headphones, roles: ['Admin', 'Call Team'], group: 'Intelligence' },
+  { path: '/ahasan/users', label: 'Users', icon: Users, roles: ['Admin'], group: 'Intelligence' },
+  { path: '/ahasan/fraud', label: 'Fraud', icon: ShieldAlert, roles: ['Admin'], group: 'Intelligence' },
+  { path: '/ahasan/reports', label: 'Sales Report', icon: BarChart3, roles: ['Admin'], group: 'System' },
   {
-    path: '/admin/digital-marketer', label: 'Marketing', icon: Megaphone, roles: ['Admin', 'Digital Marketer'], group: 'System',
+    path: '/ahasan/digital-marketer', label: 'Marketing', icon: Megaphone, roles: ['Admin', 'Digital Marketer'], group: 'System',
     children: [
-      { path: '/admin/digital-marketer', label: 'Campaigns' },
-      { path: '/admin/digital-marketer/content-planning', label: 'Content Planning' },
-      { path: '/admin/digital-marketer/finance-planning', label: 'Finance Plan' }
+      { path: '/ahasan/digital-marketer', label: 'Campaigns' },
+      { path: '/ahasan/digital-marketer/content-planning', label: 'Content Planning' },
+      { path: '/ahasan/digital-marketer/finance-planning', label: 'Finance Plan' }
     ]
   },
-  { path: '/admin/backup', label: 'Backup', icon: DatabaseBackup, roles: ['Admin'], group: 'System' },
+  { path: '/ahasan/backup', label: 'Backup', icon: DatabaseBackup, roles: ['Admin'], group: 'System' },
 ];
 
 const GROUP_ORDER = ['Main Console', 'Logistics', 'Intelligence', 'System'];
@@ -71,8 +71,8 @@ export const Sidebar = ({ isOpen, onClose }) => {
   const { appName } = useBranding();
   const { theme, toggleTheme } = useTheme();
   const [openMenus, setOpenMenus] = useState(() => ({
-    orders: pathname.startsWith('/admin/orders'),
-    marketing: pathname.startsWith('/admin/digital-marketer')
+    orders: pathname.startsWith('/ahasan/orders'),
+    marketing: pathname.startsWith('/ahasan/digital-marketer')
   }));
 
   useEffect(() => { onClose?.(); }, [pathname]);
@@ -104,7 +104,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
 
         {/* ── Header ── */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-sidebar-border">
-          <Link href="/admin" className="flex items-center gap-2.5" onClick={onClose}>
+          <Link href="/ahasan" className="flex items-center gap-2.5" onClick={onClose}>
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground font-display font-black text-sm">
               {(appName?.charAt(0) || 'P').toUpperCase()}
             </div>
@@ -221,7 +221,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
         {/* ── Footer ── */}
         <div className="border-t border-sidebar-border p-3 space-y-1">
           <Link
-            href="/admin/profile"
+            href="/ahasan/profile"
             onClick={onClose}
             className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-secondary transition-colors"
           >

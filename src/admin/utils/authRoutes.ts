@@ -1,11 +1,11 @@
 // @ts-nocheck
 const ROLE_ROUTES = {
-  Admin: '/admin',
-  Moderator: '/admin/moderator',
-  'Call Team': '/admin/call-team',
-  'Courier Team': '/admin/courier',
-  'Factory Team': '/admin/factory',
-  'Digital Marketer': '/admin/digital-marketer',
+  Admin: '/ahasan',
+  Moderator: '/ahasan/moderator',
+  'Call Team': '/ahasan/call-team',
+  'Courier Team': '/ahasan/courier',
+  'Factory Team': '/ahasan/factory',
+  'Digital Marketer': '/ahasan/digital-marketer',
 };
 
 export const getRoleRoute = (roles = []) => {
@@ -17,5 +17,5 @@ export const getRoleRoute = (roles = []) => {
     }
   }
 
-  return '/admin';
+  return '/ahasan';
 };

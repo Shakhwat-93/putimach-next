@@ -28,8 +28,8 @@ export const DashboardLayout = ({ children }) => {
   const storage = getSessionStorage();
 
   useEffect(() => {
-    if (isAuthReady && !loading && !user && pathname !== '/admin/login') {
-      router.push('/admin/login');
+    if (isAuthReady && !loading && !user && pathname !== '/ahasan/login') {
+      router.push('/ahasan/login');
     }
   }, [user, loading, isAuthReady, pathname, router]);
 
@@ -82,7 +82,7 @@ export const DashboardLayout = ({ children }) => {
     );
   }
 
-  if (!user && pathname !== '/admin/login') {
+  if (!user && pathname !== '/ahasan/login') {
     return null;
   }
 
@@ -105,7 +105,7 @@ export const DashboardLayout = ({ children }) => {
                 New update available! <strong>v{updateVersion.versionName}</strong> (Build {updateVersion.versionCode})
               </span>
               <button
-                onClick={() => router.push('/admin/settings?section=update')}
+                onClick={() => router.push('/ahasan/settings?section=update')}
                 className="ml-2 rounded-full bg-amber-600 px-3 py-0.5 text-[10px] font-bold text-white hover:bg-amber-700 transition-colors"
               >
                 Update Now

@@ -66,7 +66,7 @@ export const MobileQuickFab = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <button
-                  onClick={() => handleAction('/admin/storefrontmanagement')}
+                  onClick={() => handleAction('/ahasan/storefrontmanagement')}
                   className="flex flex-col items-start gap-2 rounded-2xl border border-border bg-secondary/40 p-4 text-left transition-all active:scale-[0.97] hover:bg-secondary"
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-500">
@@ -79,7 +79,7 @@ export const MobileQuickFab = () => {
                 </button>
 
                 <button
-                  onClick={() => handleAction('/admin/ordersboard')}
+                  onClick={() => handleAction('/ahasan/ordersboard')}
                   className="flex flex-col items-start gap-2 rounded-2xl border border-border bg-secondary/40 p-4 text-left transition-all active:scale-[0.97] hover:bg-secondary"
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/15 text-blue-500">
@@ -92,7 +92,7 @@ export const MobileQuickFab = () => {
                 </button>
 
                 <button
-                  onClick={() => handleAction('/admin/taskboard')}
+                  onClick={() => handleAction('/ahasan/taskboard')}
                   className="flex flex-col items-start gap-2 rounded-2xl border border-border bg-secondary/40 p-4 text-left transition-all active:scale-[0.97] hover:bg-secondary"
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/15 text-amber-500">

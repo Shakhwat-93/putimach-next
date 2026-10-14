@@ -469,7 +469,7 @@ export default function IncompleteCheckoutsBoard() {
                   <span>Successfully converted to <strong>Order #{selectedRecord.converted_order_id}</strong></span>
                 </div>
                 <a
-                  href={`/admin/orders`}
+                  href={`/ahasan/orders`}
                   className="font-bold underline hover:text-emerald-900 dark:hover:text-white inline-flex items-center gap-1 shrink-0"
                 >
                   <span>View</span>

@@ -5,12 +5,12 @@ import { usePathname } from 'next/navigation';
 
 
 const pageTitles = {
-  '/admin': 'Dashboard',
-  '/admin/products': 'Products',
-  '/admin/categories': 'Categories',
-  '/admin/orders': 'Orders',
-  '/admin/customers': 'Customers',
-  '/admin/website/pages': 'CMS Pages',
+  '/ahasan': 'Dashboard',
+  '/ahasan/products': 'Products',
+  '/ahasan/categories': 'Categories',
+  '/ahasan/orders': 'Orders',
+  '/ahasan/customers': 'Customers',
+  '/ahasan/website/pages': 'CMS Pages',
 };
 
 export default function AdminTopbar({ onMenuClick }) {
