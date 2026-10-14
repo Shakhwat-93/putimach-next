@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, X, Search, Zap, Package, UserCheck } from 'lucide-react';
+import { ShoppingBag, X, Search, Zap, Package, UserCheck, ChevronDown, ArrowRight, Layers } from 'lucide-react';
 import { useCartStore } from '../../store/cartStore';
 import CartDrawer from './CartDrawer';
 import { getCategories } from '../../lib/api';
@@ -48,62 +48,99 @@ export default function Navbar({
     if (initialNavMenu) setNavMenu(initialNavMenu);
   }, [initialNavMenu]);
 
+  const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
     if (initialCategories && initialCategories.length > 0) setCategories(initialCategories);
   }, [initialCategories]);
 
   useEffect(() => {
-    async function fetchFreshCms() {
+    let isMounted = true;
+    async function loadFreshCms() {
       try {
-        const { data: bData } = await supabase
-          .from('cb_settings')
-          .select('data')
-          .eq('id', 'brand_settings')
-          .maybeSingle();
-        if (bData?.data?.logoUrl || bData?.data?.brandName) {
-          setBrandSettings(prev => ({ ...prev, ...bData.data }));
+        const [bRes, catsRes] = await Promise.all([
+          supabase.from('cb_settings').select('data').eq('id', 'brand_settings').maybeSingle(),
+          getCategories()
+        ]);
+        if (!isMounted) return;
+        if (bRes?.data?.data?.logoUrl || bRes?.data?.data?.brandName) {
+          setBrandSettings(prev => ({ ...prev, ...bRes.data.data }));
+        }
+        if (Array.isArray(catsRes) && catsRes.length > 0) {
+          setCategories(catsRes);
         }
       } catch (err) {
         // Non-critical background sync
       }
     }
-    fetchFreshCms();
+    loadFreshCms();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
 
-  const displayMenu = useMemo(() => {
+  // Filter only active, published categories
+  const activeCategories = useMemo(() => {
+    return (categories || []).filter((c) => {
+      if (!c || !c.name) return false;
+      if (c.status === 'draft' || c.status === 'inactive' || c.is_active === false) return false;
+      return true;
+    });
+  }, [categories]);
+
+  // Build category hierarchy supporting subcategories if parent_id exists
+  const categoryTree = useMemo(() => {
+    const active = activeCategories;
+    const hasParents = active.some((c) => Boolean(c.parent_id || c.parentId || c.parent || c.parent_slug));
+    if (!hasParents) {
+      return active.map((c) => ({ ...c, subcategories: [] }));
+    }
+    const parents = active.filter((c) => !c.parent_id && !c.parentId && !c.parent && !c.parent_slug);
+    const children = active.filter((c) => Boolean(c.parent_id || c.parentId || c.parent || c.parent_slug));
+
+    return parents.map((p) => {
+      const pId = String(p.id || '').trim().toLowerCase();
+      const pSlug = String(p.slug || '').trim().toLowerCase();
+      const subs = children.filter((c) => {
+        const parentRef = String(c.parent_id || c.parentId || c.parent || c.parent_slug || '').trim().toLowerCase();
+        return parentRef === pId || parentRef === pSlug;
+      });
+      return {
+        ...p,
+        subcategories: subs,
+      };
+    });
+  }, [activeCategories]);
+
+  // Primary navigation items (excluding category links to prevent duplicates)
+  const primaryNavLinks = useMemo(() => {
     let list = Array.isArray(navMenu) ? [...navMenu] : [];
 
-    if (categories.length > 0) {
-      const activeCatSlugs = new Set(categories.map((c) => String(c.slug || c.id || '').trim().toLowerCase()));
-      list = list.filter((item) => {
-        if (!item.url) return true;
-        if (item.url.startsWith('/shop?category=') || item.url.startsWith('/shop?cat=')) {
-          const catSlug = item.url.replace(/^\/shop\?(category|cat)=/, '').trim().toLowerCase();
-          return activeCatSlugs.has(catSlug) || activeCatSlugs.has(catSlug.replace(/-[a-z0-9]{4,6}$/i, ''));
-        }
-        return true;
-      });
-    }
+    list = list.filter((item) => {
+      if (!item || !item.url) return false;
+      const u = item.url.toLowerCase();
+      if (u.includes('category=') || u.includes('cat=' )) return false;
+      return true;
+    });
 
-    if (!list || list.length === 0) {
-      const defaultNav = [
+    if (list.length === 0) {
+      return [
+        { label: 'HOME', url: '/' },
         { label: 'NEW DROPS', url: '/shop?badge=NEW DROP' },
         { label: 'ALL PRODUCTS', url: '/shop' },
       ];
-      categories.forEach((cat) => {
-        defaultNav.push({
-          label: (cat.name || '').trim().toUpperCase(),
-          url: `/shop?category=${encodeURIComponent(cat.slug || cat.id)}`,
-        });
-      });
-      defaultNav.push({ label: 'TRACK ORDER', url: '/track' });
-      return defaultNav;
     }
 
     return list;
-  }, [navMenu, categories]);
+  }, [navMenu]);
+
+  const toggleCatExpand = (catId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setExpandedCats((prev) => ({ ...prev, [catId]: !prev[catId] }));
+  };
 
   useEffect(() => {
     async function loadAnnouncement() {
@@ -292,7 +329,7 @@ export default function Navbar({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.25 }}
               onClick={() => setMobileOpen(false)}
-              className="fixed inset-0 z-50 bg-[#1C1613]/70 backdrop-blur-sm"
+              className="fixed inset-0 z-[60] bg-[#1C1613]/70 backdrop-blur-sm"
             />
 
             {/* Left Side Drawer Container */}
@@ -302,10 +339,10 @@ export default function Navbar({
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="fixed left-0 top-0 bottom-0 z-50 w-full max-w-xs sm:max-w-sm bg-[#FDFBF7] border-r border-[#E9E2D2] shadow-2xl flex flex-col justify-between text-[#1C1613]"
+              className="fixed left-0 top-0 bottom-0 z-[65] w-full max-w-xs sm:max-w-sm bg-[#FDFBF7] border-r border-[#E9E2D2] shadow-2xl flex flex-col justify-between text-[#1C1613] h-[100dvh]"
             >
               {/* Top Header */}
-              <div className="flex items-center justify-between px-6 py-5 border-b border-[#E9E2D2] bg-white">
+              <div className="flex items-center justify-between px-6 py-5 border-b border-[#E9E2D2] bg-white shrink-0">
                 <Link href="/" onClick={() => setMobileOpen(false)} className="flex items-center gap-2.5">
                   {brandSettings.logoUrl && (
                     <img 
@@ -330,22 +367,143 @@ export default function Navbar({
                 </button>
               </div>
 
-              {/* Menu Links */}
-              <div className="flex-1 overflow-y-auto py-2">
-                {displayMenu.map((item, idx) => (
+              {/* Scrollable Navigation Body */}
+              <div className="flex-1 overflow-y-auto overscroll-contain py-2 scrollbar-thin">
+                {/* 1. Primary Page Links */}
+                <div className="py-1 border-b border-[#E9E2D2]/60">
+                  {primaryNavLinks.map((item, idx) => (
+                    <Link
+                      key={idx}
+                      href={item.url || '/shop'}
+                      onClick={() => setMobileOpen(false)}
+                      className="flex items-center justify-between px-6 py-3 font-serif text-xs font-black tracking-widest text-[#1C1613] hover:text-[#C5A880] hover:bg-[#F7F4EE]/60 transition-all uppercase"
+                    >
+                      <span>{item.label}</span>
+                      <ArrowRight size={13} className="text-[#C5A880]/50" />
+                    </Link>
+                  ))}
+                </div>
+
+                {/* 2. Dedicated Shop by Category Section */}
+                <div className="py-3.5 border-b border-[#E9E2D2]/60">
+                  <div className="px-6 pb-2.5 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 font-serif text-[11px] font-black tracking-[0.2em] uppercase text-[#C5A880]">
+                      <Layers size={13} className="text-[#C5A880]" />
+                      <span>Shop by Category</span>
+                    </div>
+                    {activeCategories.length > 0 && (
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#E9E2D2]/70 text-[#1C1613] uppercase tracking-wider">
+                        {activeCategories.length} Collections
+                      </span>
+                    )}
+                  </div>
+
+                  {activeCategories.length === 0 ? (
+                    <div className="px-6 py-3 text-xs text-gray-400 italic font-serif">
+                      Loading categories...
+                    </div>
+                  ) : (
+                    <div className="space-y-0.5">
+                      {categoryTree.map((cat) => {
+                        const hasSub = cat.subcategories && cat.subcategories.length > 0;
+                        const isExpanded = Boolean(expandedCats[cat.id || cat.slug]);
+                        const catUrl = `/shop?category=${encodeURIComponent(cat.slug || cat.id)}`;
+
+                        return (
+                          <div key={cat.id || cat.slug} className="group">
+                            <div className="flex items-center justify-between px-6 py-2.5 hover:bg-[#F7F4EE]/80 transition-colors">
+                              <Link
+                                href={catUrl}
+                                onClick={() => setMobileOpen(false)}
+                                className="flex items-center gap-3 flex-1 min-w-0"
+                              >
+                                {cat.image_url ? (
+                                  <img
+                                    src={cat.image_url}
+                                    alt={cat.name}
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                    className="w-8 h-8 rounded-lg object-cover border border-[#E9E2D2] shrink-0"
+                                  />
+                                ) : (
+                                  <span className="w-2 h-2 rounded-full bg-[#C5A880] group-hover:bg-[#FF5533] transition-colors shrink-0" />
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-serif text-xs font-black tracking-wider text-[#1C1613] group-hover:text-[#FF5533] transition-colors uppercase truncate">
+                                    {cat.name}
+                                  </p>
+                                  {cat.description && (
+                                    <p className="text-[10px] text-gray-400 truncate font-normal">
+                                      {cat.description}
+                                    </p>
+                                  )}
+                                </div>
+                              </Link>
+
+                              {hasSub ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => toggleCatExpand(cat.id || cat.slug, e)}
+                                  className="p-1.5 rounded-md hover:bg-[#E9E2D2]/60 text-[#1C1613] transition-colors ml-2 shrink-0 cursor-pointer"
+                                  aria-label={`Toggle ${cat.name} subcategories`}
+                                >
+                                  <ChevronDown size={14} className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                                </button>
+                              ) : (
+                                <Link
+                                  href={catUrl}
+                                  onClick={() => setMobileOpen(false)}
+                                  className="text-[#C5A880]/60 group-hover:text-[#FF5533] group-hover:translate-x-1 transition-all ml-2 shrink-0"
+                                >
+                                  <ArrowRight size={13} />
+                                </Link>
+                              )}
+                            </div>
+
+                            {/* Subcategories (if present) */}
+                            {hasSub && isExpanded && (
+                              <div className="bg-[#F7F4EE]/40 border-y border-[#E9E2D2]/40 pl-14 pr-6 py-1.5 space-y-1">
+                                {cat.subcategories.map((sub: any) => (
+                                  <Link
+                                    key={sub.id || sub.slug}
+                                    href={`/shop?category=${encodeURIComponent(sub.slug || sub.id)}`}
+                                    onClick={() => setMobileOpen(false)}
+                                    className="block py-1.5 text-xs text-gray-600 hover:text-[#FF5533] font-medium transition-colors uppercase truncate"
+                                  >
+                                    • {sub.name}
+                                  </Link>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Customer Care & Info */}
+                <div className="py-2">
                   <Link
-                    key={idx}
-                    href={item.url || '/shop'}
+                    href="/track"
                     onClick={() => setMobileOpen(false)}
-                    className="block px-6 py-4 border-b border-[#E9E2D2]/60 font-serif text-xs font-black tracking-widest text-[#1C1613] hover:text-[#C5A880] hover:bg-[#F7F4EE]/50 transition-all uppercase"
+                    className="flex items-center justify-between px-6 py-3 font-serif text-xs font-black tracking-widest text-[#1C1613] hover:text-[#C5A880] hover:bg-[#F7F4EE]/60 transition-all uppercase"
                   >
-                    {item.label}
+                    <span>TRACK MY ORDER</span>
+                    <ArrowRight size={13} className="text-[#C5A880]/50" />
                   </Link>
-                ))}
+                  <Link
+                    href="/contact-us"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center justify-between px-6 py-3 font-serif text-xs font-black tracking-widest text-[#1C1613] hover:text-[#C5A880] hover:bg-[#F7F4EE]/60 transition-all uppercase"
+                  >
+                    <span>CONTACT & HELP</span>
+                    <ArrowRight size={13} className="text-[#C5A880]/50" />
+                  </Link>
+                </div>
               </div>
 
               {/* Bottom Action Buttons */}
-              <div className="p-6 border-t border-[#E9E2D2] bg-white space-y-3">
+              <div className="p-6 border-t border-[#E9E2D2] bg-white space-y-3 shrink-0">
                 <Link
                   href="/track"
                   onClick={() => setMobileOpen(false)}

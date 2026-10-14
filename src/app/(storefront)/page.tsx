@@ -16,14 +16,14 @@ async function getServerData() {
 
   const sb = createClient(supabaseUrl, supabaseKey);
 
-  const [siteSettingsRes, cbSettingsRes, productsRes, categoriesRes] = await Promise.all([
-    sb.from('site_settings').select('data').eq('id', 'home_page').maybeSingle(),
+  const [cbSettingsRes, siteSettingsRes, productsRes, categoriesRes] = await Promise.all([
     sb.from('cb_settings').select('data').eq('id', 'home_page').maybeSingle(),
+    sb.from('site_settings').select('data').eq('id', 'home_page').maybeSingle(),
     sb.from('cb_products').select('id, data, created_at').order('created_at', { ascending: false }).limit(50),
     sb.from('cb_categories').select('id, data, created_at').order('created_at', { ascending: true }).limit(100),
   ]);
 
-  const settings = siteSettingsRes.data?.data || cbSettingsRes.data?.data || null;
+  const settings = cbSettingsRes.data?.data || siteSettingsRes.data?.data || null;
 
   const products = (productsRes.data || []).map(row => normalizeProduct({
     id: row.id,
@@ -44,6 +44,7 @@ async function getServerData() {
 export default async function Page() {
   const { settings, products, categories } = await getServerData();
   const heroImage = cleanImageUrl(settings?.heroBgImage) || '/api/media/uploads/img_1786604752550_8584.webp';
+  const heroMobileImage = cleanImageUrl(settings?.heroMobileBgImage);
 
   return (
     <>
@@ -53,6 +54,16 @@ export default async function Page() {
           rel="preload"
           as="image"
           href={heroImage}
+          // @ts-ignore
+          fetchPriority="high"
+        />
+      )}
+      {heroMobileImage && (
+        <link
+          rel="preload"
+          as="image"
+          href={heroMobileImage}
+          media="(max-width: 639px)"
           // @ts-ignore
           fetchPriority="high"
         />

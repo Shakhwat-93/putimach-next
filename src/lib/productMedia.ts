@@ -310,6 +310,10 @@ export function normalizeProduct(raw: any): any {
     description: base.description || base.long_description || base.longDescription || '',
     long_description: base.description || base.long_description || base.longDescription || '',
     longDescription: base.description || base.long_description || base.longDescription || '',
+    features: parseProductFeatures(base.features),
+    show_size_chart: base.show_size_chart !== undefined ? Boolean(base.show_size_chart) : (base.has_size_chart !== undefined ? Boolean(base.has_size_chart) : undefined),
+    has_size_chart: base.has_size_chart !== undefined ? Boolean(base.has_size_chart) : (base.show_size_chart !== undefined ? Boolean(base.show_size_chart) : undefined),
+    size_chart_image: base.size_chart_image || base.size_guide?.image_url || null,
   };
 }
 

@@ -188,10 +188,7 @@ export default function ProductDetailView() {
 
   // Guaranteed uniform hook order: features parsed and memoized at top level
   const featuresList = useMemo(() => {
-    const parsed = parseProductFeatures(product?.features);
-    return parsed.length > 0 
-      ? parsed 
-      : ['100% Premium Material', 'Custom Oversized Fit', 'Garment Washed Finish', 'Breathable & Durable'];
+    return parseProductFeatures(product?.features);
   }, [product?.features]);
 
   const sliderRef = useRef(null);
@@ -461,6 +458,12 @@ export default function ProductDetailView() {
   const productReviews = reviews.filter((r) => r.productId === product.id || r.productId === String(product.id));
   const sizeGuide = product?.size_guide;
   const sizeChartImageUrl = sizeGuide?.image_url || sizeGuide?.chart_image || product?.size_chart_image || null;
+  const isSizeChartEnabled = product?.show_size_chart !== undefined 
+    ? Boolean(product.show_size_chart) 
+    : (product?.has_size_chart !== undefined 
+        ? Boolean(product.has_size_chart) 
+        : (sizeGuide?.enabled !== undefined ? Boolean(sizeGuide.enabled) : Boolean(sizeChartImageUrl)));
+  const hasValidSizeChart = Boolean(isSizeChartEnabled && (sizeChartImageUrl || (sizeGuide?.rows && sizeGuide.rows.length > 0)));
 
   const handleAddToCart = (e) => {
     if (!inStock) return;
@@ -792,14 +795,16 @@ export default function ProductDetailView() {
                   <p className="font-serif font-bold text-[11px] uppercase tracking-wider text-[#1C1613]">
                     Select Size
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => setSizeGuideOpen(true)}
-                    className="text-[10px] sm:text-[11px] font-bold text-[#C5A880] hover:text-[#1C1613] transition-colors flex items-center gap-1 bg-white border border-[#E9E2D2] px-2.5 py-1 rounded-full active:scale-95 shadow-2xs shrink-0 cursor-pointer"
-                  >
-                    <Ruler size={11} className="text-[#C5A880]" />
-                    <span>Size Guide & Chart</span>
-                  </button>
+                  {hasValidSizeChart && (
+                    <button
+                      type="button"
+                      onClick={() => setSizeGuideOpen(true)}
+                      className="text-[10px] sm:text-[11px] font-bold text-[#C5A880] hover:text-[#1C1613] transition-colors flex items-center gap-1 bg-white border border-[#E9E2D2] px-2.5 py-1 rounded-full active:scale-95 shadow-2xs shrink-0 cursor-pointer"
+                    >
+                      <Ruler size={11} className="text-[#C5A880]" />
+                      <span>Size Guide & Chart</span>
+                    </button>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap gap-2">
@@ -930,34 +935,36 @@ export default function ProductDetailView() {
                 </AnimatePresence>
               </div>
 
-              <div className="rounded-xl border border-[#E9E2D2] bg-white overflow-hidden">
-                <button
-                  onClick={() => setFeatOpen(!featOpen)}
-                  className="w-full flex items-center justify-between px-4 py-3 font-serif font-bold text-xs uppercase tracking-wider text-[#1C1613]"
-                >
-                  Features & Details
-                  <ChevronDown size={15} className={`transition-transform duration-200 ${featOpen ? 'rotate-180' : ''}`} />
-                </button>
-                <AnimatePresence>
-                  {featOpen && (
-                    <motion.div
-                      initial={{ height: 0 }}
-                      animate={{ height: 'auto' }}
-                      exit={{ height: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <ul className="px-4 pb-4 space-y-2 border-t border-[#E9E2D2]/50 pt-2.5">
-                        {featuresList.map((f, idx) => (
-                          <li key={idx} className="flex items-start gap-2.5 text-xs text-gray-600 leading-relaxed">
-                            <Check size={14} className="text-[#C5A880] flex-shrink-0 mt-0.5" />
-                            <span>{f}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+              {featuresList.length > 0 && (
+                <div className="rounded-xl border border-[#E9E2D2] bg-white overflow-hidden">
+                  <button
+                    onClick={() => setFeatOpen(!featOpen)}
+                    className="w-full flex items-center justify-between px-4 py-3 font-serif font-bold text-xs uppercase tracking-wider text-[#1C1613]"
+                  >
+                    Features & Details
+                    <ChevronDown size={15} className={`transition-transform duration-200 ${featOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  <AnimatePresence>
+                    {featOpen && (
+                      <motion.div
+                        initial={{ height: 0 }}
+                        animate={{ height: 'auto' }}
+                        exit={{ height: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <ul className="px-4 pb-4 space-y-2 border-t border-[#E9E2D2]/50 pt-2.5">
+                          {featuresList.map((f, idx) => (
+                            <li key={idx} className="flex items-start gap-2.5 text-xs text-gray-600 leading-relaxed">
+                              <Check size={14} className="text-[#C5A880] flex-shrink-0 mt-0.5" />
+                              <span>{f}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
             </div>
 
           </div>
@@ -1082,7 +1089,7 @@ export default function ProductDetailView() {
 
       {/* Size Guide Modal */}
       <AnimatePresence>
-        {sizeGuideOpen && (
+        {hasValidSizeChart && sizeGuideOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
             {/* Backdrop */}
             <motion.div

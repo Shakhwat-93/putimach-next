@@ -6,14 +6,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 export function ShopHeaderSkeleton() {
   return (
     <div aria-busy="true" className="space-y-6 mb-8">
-      {/* Title & Banner Skeleton */}
-      <div className="relative rounded-3xl bg-white p-6 sm:p-8 border border-[#E9E2D2] overflow-hidden">
-        <div className="max-w-md space-y-3">
-          <Skeleton className="h-4 w-28 bg-slate-200" />
-          <Skeleton className="h-8 w-64 bg-slate-300" />
-          <Skeleton className="h-4 w-80 bg-slate-200" />
-        </div>
-      </div>
+      {/* Banner Skeleton */}
+      <div className="relative w-full rounded-2xl sm:rounded-3xl bg-slate-200 border border-[#E9E2D2] overflow-hidden aspect-[16/7] sm:aspect-[2.2/1] lg:aspect-[2.3/1]" />
 
       {/* Toolbar & Filter Bar Skeleton */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white p-3 rounded-2xl border border-[#E9E2D2]">

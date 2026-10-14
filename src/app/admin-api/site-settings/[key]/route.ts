@@ -64,6 +64,13 @@ export async function POST(request: Request, props: { params: Promise<{ key: str
       }
     }
 
+    // Dual-sync to site_settings so both tables stay 100% in sync
+    try {
+      await supabaseOthers
+        .from('site_settings')
+        .upsert({ id: key, data: newData, created_at: new Date().toISOString() });
+    } catch {}
+
     const { data: verified } = await supabaseOthers
       .from('cb_settings')
       .select('data')

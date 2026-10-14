@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   SlidersHorizontal, Search, ChevronDown, Grid2X2, Grid3X3, 
-  Loader2, ChevronLeft, ChevronRight, X, Check, RotateCcw, Sparkles 
+  Loader2, ChevronLeft, ChevronRight, X, Check, RotateCcw 
 } from 'lucide-react';
 import { getProducts, getCategories } from '../lib/api';
 import ProductCard from '../components/shop/ProductCard';
@@ -438,28 +438,10 @@ export default function Shop() {
   const currentPriceLabel = priceRanges.find((p) => p.val === activePrice)?.label || activePrice;
 
   return (
-    <div className="min-h-screen pt-20 pb-20 bg-[#FDFBF7]">
-      {/* ─── Page Header ─── */}
-      <div className="container-site py-8 lg:py-12">
-        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles size={14} className="text-[#C5A880]" />
-            <p className="text-xs font-bold text-[#C5A880] uppercase tracking-[0.25em] font-serif">
-              {shopSettings.subtitle}
-            </p>
-          </div>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-black text-[#1C1613] tracking-tight mb-2">
-            {shopSettings.title}
-          </h1>
-          <p className="text-sm text-[#1C1613]/60">
-            {loading ? 'Curating catalog...' : `${filteredProducts.length} ${filteredProducts.length === 1 ? 'piece' : 'pieces'} available`}
-          </p>
-        </motion.div>
-      </div>
-
+    <div className="min-h-screen pt-24 sm:pt-28 pb-20 bg-[#FDFBF7]">
       {/* ─── Shop Banner Slider ─── */}
       {shopSlider.length > 0 && (
-        <div className="container-site mb-8">
+        <div className="container-site mb-6 sm:mb-8 pt-1 sm:pt-2">
           <ShopBannerSlider slides={shopSlider} />
         </div>
       )}

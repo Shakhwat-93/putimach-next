@@ -552,11 +552,13 @@ const defaultNavMenu = [
 
 const defaultHome = {
   heroBgImage: "/images/hero-banner.webp",
+  heroMobileBgImage: "",
   heroBadge: "",
   heroSubBadge: "",
   heroHeading: "",
   heroSubtext: "",
   heroButtonText: "",
+  heroButtonLink: "/shop",
 
   collectionsLabel: "",
   collectionsTitle: "",
@@ -1666,6 +1668,13 @@ export const StorefrontManagement = () => {
         .upsert({ id: settingId, data: settingData, created_at: new Date().toISOString() });
       if (error) throw error;
 
+      // Also dual-sync to site_settings table
+      try {
+        await supabase
+          .from('site_settings')
+          .upsert({ id: settingId, data: settingData, created_at: new Date().toISOString() });
+      } catch {}
+
       await fetch(`/admin-api/site-settings/${settingId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2094,16 +2103,70 @@ export const StorefrontManagement = () => {
 
                   {/* Hero banner section */}
                   {bannerSection === 'hero' && (
-                    <div className="space-y-4">
-                      <h2 className="text-h3 font-black border-b border-base-800 pb-2">Hero Section Banner</h2>
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between border-b border-base-800 pb-3 flex-wrap gap-3">
+                        <div>
+                          <h2 className="text-h3 font-black">Hero Section Banner</h2>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Manage the main homepage hero banner, dedicated mobile image, CTA button text, and link.
+                          </p>
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={saveLoading}
+                          className="action-btn-primary"
+                          style={{ padding: '8px 20px', fontSize: '12px', borderRadius: '6px', height: 'auto', boxShadow: 'none' }}
+                        >
+                          {saveLoading ? 'Saving...' : '💾 Save Hero Settings'}
+                        </button>
+                      </div>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <ImageUploadInput
+                          label="Hero Background Image (Desktop & Default)"
+                          value={homeSettings.heroBgImage || ''}
+                          onChange={(val) => setHomeSettings({ ...homeSettings, heroBgImage: val })}
+                          placeholder="Upload desktop 16:9 banner or paste image URL"
+                        />
+                        <ImageUploadInput
+                          label="Hero Mobile Background Image (Optional)"
+                          value={homeSettings.heroMobileBgImage || ''}
+                          onChange={(val) => setHomeSettings({ ...homeSettings, heroMobileBgImage: val })}
+                          placeholder="Upload portrait/vertical image for phones, or leave empty"
+                        />
+
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Hero Button Text</label>
+                          <input 
+                            type="text" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
+                            value={homeSettings.heroButtonText ?? ''}
+                            onChange={(e) => setHomeSettings({ ...homeSettings, heroButtonText: e.target.value })}
+                            placeholder="e.g. Shop Now, Explore Collection, Shop Archive"
+                          />
+                          <p className="text-[11px] text-muted-foreground">Label displayed on the hero CTA button. Defaults to 'Shop Now' if empty.</p>
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Hero Button Link (URL)</label>
+                          <input 
+                            type="text" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
+                            value={homeSettings.heroButtonLink ?? ''}
+                            onChange={(e) => setHomeSettings({ ...homeSettings, heroButtonLink: e.target.value })}
+                            placeholder="/shop or /shop?category=men"
+                          />
+                          <p className="text-[11px] text-muted-foreground">Destination route when the button is clicked. Defaults to '/shop'.</p>
+                        </div>
+
                         <div className="flex flex-col gap-2">
                           <label className="text-sm font-medium text-foreground">Hero Badge</label>
                           <input 
                             type="text" 
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                            value={homeSettings.heroBadge}
+                            value={homeSettings.heroBadge || ''}
                             onChange={(e) => setHomeSettings({ ...homeSettings, heroBadge: e.target.value })}
+                            placeholder="Vintage Weaves"
                           />
                         </div>
                         <div className="flex flex-col gap-2">
@@ -2111,21 +2174,16 @@ export const StorefrontManagement = () => {
                           <input 
                             type="text" 
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                            value={homeSettings.heroSubBadge}
+                            value={homeSettings.heroSubBadge || ''}
                             onChange={(e) => setHomeSettings({ ...homeSettings, heroSubBadge: e.target.value })}
+                            placeholder="EST 2026"
                           />
                         </div>
-                        <ImageUploadInput
-                          label="Hero Background Image URL"
-                          value={homeSettings.heroBgImage}
-                          onChange={(val) => setHomeSettings({ ...homeSettings, heroBgImage: val })}
-                          placeholder="Upload image or paste Cloudflare CDN URL"
-                        />
                         <div className="flex flex-col gap-2 md:col-span-2">
                           <label className="text-sm font-medium text-foreground">Hero Main Heading</label>
                           <textarea 
                             className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                            value={homeSettings.heroHeading}
+                            value={homeSettings.heroHeading || ''}
                             onChange={(e) => setHomeSettings({ ...homeSettings, heroHeading: e.target.value })}
                           />
                         </div>
@@ -2133,17 +2191,8 @@ export const StorefrontManagement = () => {
                           <label className="text-sm font-medium text-foreground">Hero Subtext description</label>
                           <textarea 
                             className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                            value={homeSettings.heroSubtext}
+                            value={homeSettings.heroSubtext || ''}
                             onChange={(e) => setHomeSettings({ ...homeSettings, heroSubtext: e.target.value })}
-                          />
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <label className="text-sm font-medium text-foreground">Hero Button CTA text</label>
-                          <input 
-                            type="text" 
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                            value={homeSettings.heroButtonText}
-                            onChange={(e) => setHomeSettings({ ...homeSettings, heroButtonText: e.target.value })}
                           />
                         </div>
                       </div>

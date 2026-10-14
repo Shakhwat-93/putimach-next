@@ -103,6 +103,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
   const [customSizeInput, setCustomSizeInput] = useState('');
   const [sizeGuide, setSizeGuide] = useState(defaultSizeGuide);
   const [sizeChartImageUrl, setSizeChartImageUrl] = useState('');
+  const [showSizeChart, setShowSizeChart] = useState<boolean>(false);
   const [isUploadingSizeChart, setIsUploadingSizeChart] = useState(false);
   const [sizeChartMediaModalOpen, setSizeChartMediaModalOpen] = useState(false);
   const sizeChartFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -110,7 +111,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
   // 6. Description & Story
   const [description, setDescription] = useState('');
   const [longDescription, setLongDescription] = useState('');
-  const [features, setFeatures] = useState<string[]>(['100% Handloom Weave', 'Organic Dyes', 'Tailored Comfort Fit']);
+  const [features, setFeatures] = useState<string[]>([]);
   const [material, setMaterial] = useState('Cotton 100%');
 
   // 7. Advanced Collapsible
@@ -216,7 +217,18 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
       setSizes(normalizedInitialSizes.length > 0 ? normalizedInitialSizes : ['Free Size']);
 
       setSizeGuide(initialProduct.size_guide || defaultSizeGuide);
-      setSizeChartImageUrl(initialProduct.size_guide?.image_url || initialProduct.size_chart_image || '');
+      const rawChartImg = initialProduct.size_guide?.image_url || initialProduct.size_chart_image || '';
+      setSizeChartImageUrl(rawChartImg);
+
+      // Explicit Show Size Chart flag:
+      // If product has show_size_chart or has_size_chart, respect it.
+      // Otherwise, default to whether it already has a size chart image/table so existing products keep their behavior.
+      const initialShowChart = initialProduct.show_size_chart !== undefined
+        ? Boolean(initialProduct.show_size_chart)
+        : (initialProduct.has_size_chart !== undefined
+            ? Boolean(initialProduct.has_size_chart)
+            : Boolean(rawChartImg || initialProduct.size_guide?.rows?.length > 0));
+      setShowSizeChart(initialShowChart);
 
       const initialDesc = initialProduct.description || initialProduct.long_description || initialProduct.longDescription || '';
       setDescription(initialDesc);
@@ -239,7 +251,9 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
       setColors(['Black']);
       setColorGalleries({ 'Black': [] });
       setSizes(['Free Size', 'M', 'L', 'XL']);
-      setFeatures(['100% Handloom Weave', 'Organic Dyes', 'Tailored Comfort Fit']);
+      setShowSizeChart(false);
+      setSizeChartImageUrl('');
+      setFeatures([]);
     }
   }, [initialProduct, currentInitialId]);
 
@@ -478,11 +492,14 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
       longDescription: description || title,
       features: Array.isArray(features) ? features.map(f => String(f || '').trim()).filter(Boolean) : [],
       material: material || 'Cotton 100%',
+      show_size_chart: Boolean(showSizeChart),
+      has_size_chart: Boolean(showSizeChart),
       size_guide: {
         ...sizeGuide,
-        image_url: sizeChartImageUrl || sizeGuide?.image_url || null
+        enabled: Boolean(showSizeChart),
+        image_url: showSizeChart ? (sizeChartImageUrl || sizeGuide?.image_url || null) : null
       },
-      size_chart_image: sizeChartImageUrl || null,
+      size_chart_image: showSizeChart ? (sizeChartImageUrl || null) : null,
 
       // Status & Settings
       in_stock: finalStatus === 'active' && (
@@ -827,29 +844,48 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
             </div>
 
             {/* Size Chart Image Upload Section */}
-            <div className="pt-3.5 border-t border-border/70 space-y-2.5">
-              <div className="flex items-center justify-between">
+            <div className="pt-3.5 border-t border-border/70 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl bg-muted/40 border border-border">
                 <div>
-                  <h3 className="text-xs sm:text-sm font-bold text-foreground flex items-center gap-1.5">
-                    <ImageIcon size={14} className="text-brand shrink-0" />
-                    <span>Size Chart / Measurement Guide Image</span>
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs sm:text-sm font-bold text-foreground flex items-center gap-1.5">
+                      <ImageIcon size={14} className="text-brand shrink-0" />
+                      <span>Show Size Chart</span>
+                    </h3>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-colors ${
+                      showSizeChart 
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' 
+                        : 'bg-muted text-muted-foreground border-border'
+                    }`}>
+                      {showSizeChart ? 'Enabled' : 'Disabled'}
+                    </span>
+                  </div>
                   <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5">
-                    Upload a size guide chart or measurement diagram. Shown in the "Size Guide" popup on the storefront.
+                    Toggle whether the "Size Guide & Chart" button appears on the product page.
                   </p>
                 </div>
-                {sizeChartImageUrl && (
+
+                <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
                   <button
                     type="button"
-                    onClick={() => {
-                      setSizeChartImageUrl('');
-                      setSizeGuide(prev => ({ ...(prev || defaultSizeGuide), image_url: null }));
-                    }}
-                    className="text-[11px] text-destructive hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                    role="switch"
+                    aria-checked={showSizeChart}
+                    onClick={() => setShowSizeChart(prev => !prev)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      showSizeChart ? 'bg-brand' : 'bg-muted-foreground/30'
+                    }`}
                   >
-                    <Trash2 size={12} /> Remove
+                    <span
+                      aria-hidden="true"
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                        showSizeChart ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
                   </button>
-                )}
+                  <span className="text-xs font-semibold text-foreground select-none">
+                    {showSizeChart ? 'Active' : 'Off'}
+                  </span>
+                </div>
               </div>
 
               <input
@@ -865,90 +901,112 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                 className="hidden"
               />
 
-              {sizeChartImageUrl ? (
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 rounded-xl border border-emerald-500/30 bg-emerald-50/10 dark:bg-emerald-950/10">
-                  <div className="relative w-28 h-20 sm:w-36 sm:h-24 rounded-lg overflow-hidden border border-border bg-muted/40 shrink-0">
-                    <img
-                      src={sizeChartImageUrl}
-                      alt="Size chart preview"
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0 space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
-                      <CheckCircle2 size={14} />
-                      <span>Size Chart Image Attached</span>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground truncate max-w-md font-mono">
-                      {sizeChartImageUrl}
-                    </p>
-                    <div className="flex items-center gap-2 pt-0.5 flex-wrap">
-                      <button
-                        type="button"
-                        onClick={() => setSizeChartMediaModalOpen(true)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-background border border-border hover:bg-muted text-foreground transition-all cursor-pointer"
-                      >
-                        <FolderOpen size={12} className="text-primary" />
-                        <span>Select from Media</span>
-                      </button>
-                      <button
-                        type="button"
-                        disabled={isUploadingSizeChart}
-                        onClick={() => sizeChartFileInputRef.current?.click()}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-all cursor-pointer disabled:opacity-50"
-                      >
-                        {isUploadingSizeChart ? <Loader2 size={12} className="animate-spin" /> : <UploadCloud size={12} />}
-                        <span>Upload New</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => window.open(sizeChartImageUrl, '_blank')}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-all cursor-pointer"
-                      >
-                        <ExternalLink size={12} />
-                        <span>View Full</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="py-5 px-3 text-center rounded-xl border-2 border-dashed border-border/80 bg-muted/20 flex flex-col items-center justify-center gap-2">
-                  {isUploadingSizeChart ? (
-                    <div className="flex flex-col items-center justify-center gap-1.5 py-2">
-                      <Loader2 className="w-6 h-6 text-brand animate-spin" />
-                      <p className="text-xs font-bold text-foreground">Uploading Size Chart...</p>
+              {showSizeChart ? (
+                <>
+                  {sizeChartImageUrl ? (
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 rounded-xl border border-emerald-500/30 bg-emerald-50/10 dark:bg-emerald-950/10">
+                      <div className="relative w-28 h-20 sm:w-36 sm:h-24 rounded-lg overflow-hidden border border-border bg-muted/40 shrink-0">
+                        <img
+                          src={sizeChartImageUrl}
+                          alt="Size chart preview"
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0 space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
+                            <CheckCircle2 size={14} />
+                            <span>Size Chart Image Attached</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSizeChartImageUrl('');
+                              setSizeGuide(prev => ({ ...(prev || defaultSizeGuide), image_url: null }));
+                            }}
+                            className="text-[11px] text-destructive hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                          >
+                            <Trash2 size={12} /> Remove
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground truncate max-w-md font-mono">
+                          {sizeChartImageUrl}
+                        </p>
+                        <div className="flex items-center gap-2 pt-0.5 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => setSizeChartMediaModalOpen(true)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-background border border-border hover:bg-muted text-foreground transition-all cursor-pointer"
+                          >
+                            <FolderOpen size={12} className="text-primary" />
+                            <span>Select from Media</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isUploadingSizeChart}
+                            onClick={() => sizeChartFileInputRef.current?.click()}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            {isUploadingSizeChart ? <Loader2 size={12} className="animate-spin" /> : <UploadCloud size={12} />}
+                            <span>Upload New</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => window.open(sizeChartImageUrl, '_blank')}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                          >
+                            <ExternalLink size={12} />
+                            <span>View Full</span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   ) : (
-                    <>
-                      <UploadCloud className="w-6 h-6 text-muted-foreground/60 mx-auto mb-0.5" />
-                      <div>
-                        <p className="text-xs font-bold text-foreground">
-                          Add Size Chart / Measurement Guide Image
-                        </p>
-                        <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5">
-                          Select existing image from Media Library or upload a new diagram
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap justify-center">
-                        <button
-                          type="button"
-                          onClick={() => setSizeChartMediaModalOpen(true)}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-secondary hover:bg-secondary/80 text-foreground border border-border shadow-2xs transition-colors cursor-pointer"
-                        >
-                          <FolderOpen size={13} className="text-primary" />
-                          <span>Select from Media</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => sizeChartFileInputRef.current?.click()}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs transition-colors cursor-pointer"
-                        >
-                          <UploadCloud size={13} />
-                          <span>Upload New</span>
-                        </button>
-                      </div>
-                    </>
+                    <div className="py-5 px-3 text-center rounded-xl border-2 border-dashed border-border/80 bg-muted/20 flex flex-col items-center justify-center gap-2">
+                      {isUploadingSizeChart ? (
+                        <div className="flex flex-col items-center justify-center gap-1.5 py-2">
+                          <Loader2 className="w-6 h-6 text-brand animate-spin" />
+                          <p className="text-xs font-bold text-foreground">Uploading Size Chart...</p>
+                        </div>
+                      ) : (
+                        <>
+                          <UploadCloud className="w-6 h-6 text-muted-foreground/60 mx-auto mb-0.5" />
+                          <div>
+                            <p className="text-xs font-bold text-foreground">
+                              Add Size Chart / Measurement Guide Image
+                            </p>
+                            <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5">
+                              Select existing image from Media Library or upload a new diagram
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap justify-center">
+                            <button
+                              type="button"
+                              onClick={() => setSizeChartMediaModalOpen(true)}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-secondary hover:bg-secondary/80 text-foreground border border-border shadow-2xs transition-colors cursor-pointer"
+                            >
+                              <FolderOpen size={13} className="text-primary" />
+                              <span>Select from Media</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => sizeChartFileInputRef.current?.click()}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs transition-colors cursor-pointer"
+                            >
+                              <UploadCloud size={13} />
+                              <span>Upload New</span>
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   )}
+                </>
+              ) : (
+                <div className="p-3.5 rounded-xl border border-dashed border-border/70 bg-muted/20 text-center">
+                  <p className="text-xs text-muted-foreground">
+                    Size Chart is disabled for this product. You can save without uploading a size chart image, and the storefront will not show any size guide button or popup.
+                  </p>
                 </div>
               )}
 
@@ -1008,35 +1066,58 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
 
             {/* Dynamic Features & Details (Bullet Point System) */}
             <div className="pt-3 border-t border-border/60">
-              <div className="flex items-center justify-between gap-2 mb-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
                 <div>
-                  <label className="block text-[11px] sm:text-xs font-bold text-foreground">
-                    Features & Details (Bullet Points)
-                  </label>
+                  <div className="flex items-center gap-2">
+                    <label className="block text-[11px] sm:text-xs font-bold text-foreground">
+                      Features & Details (Bullet Points)
+                    </label>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">
+                      {features.length} {features.length === 1 ? 'Point' : 'Points'}
+                    </span>
+                  </div>
                   <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5">
-                    Rendered as individual bullet points with checkmark icons on the storefront.
+                    Rendered as separate bullet points on the storefront. Leave empty to hide this section completely.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setFeatures(prev => [...prev, ''])}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand/10 text-brand hover:bg-brand/20 text-xs font-semibold transition-colors shrink-0"
-                >
-                  <Plus size={13} />
-                  <span>Add Feature</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  {features.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setFeatures([])}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-muted-foreground hover:text-destructive hover:bg-destructive/10 border border-transparent hover:border-destructive/20 transition-colors cursor-pointer"
+                      title="Clear all features"
+                    >
+                      <Trash2 size={12} />
+                      <span>Clear All</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setFeatures(prev => [...prev, ''])}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand/10 text-brand hover:bg-brand/20 text-xs font-semibold transition-colors shrink-0 cursor-pointer"
+                  >
+                    <Plus size={13} />
+                    <span>Add Feature</span>
+                  </button>
+                </div>
               </div>
 
               {features.length === 0 ? (
-                <div className="p-4 rounded-xl border border-dashed border-border text-center bg-muted/20">
-                  <p className="text-xs text-muted-foreground mb-2">No custom features added yet.</p>
-                  <button
-                    type="button"
-                    onClick={() => setFeatures(['100% Premium Material', 'Custom Oversized Fit', 'Garment Washed Finish', 'Breathable & Durable'])}
-                    className="text-xs font-semibold text-brand hover:underline"
-                  >
-                    + Add standard apparel highlights
-                  </button>
+                <div className="p-4 rounded-xl border border-dashed border-border/80 text-center bg-muted/20 space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    No features added. The Features & Details section will be hidden on the storefront for this product.
+                  </p>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setFeatures([''])}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors cursor-pointer"
+                    >
+                      <Plus size={13} />
+                      <span>Add First Feature</span>
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -1073,7 +1154,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                             return copy;
                           });
                         }}
-                        className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
                         title="Move Up"
                       >
                         <ArrowUp size={13} />
@@ -1092,7 +1173,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                             return copy;
                           });
                         }}
-                        className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
                         title="Move Down"
                       >
                         <ArrowDown size={13} />
@@ -1103,7 +1184,7 @@ export const ShopifyProductEditor: React.FC<ShopifyProductEditorProps> = ({
                         onClick={() => {
                           setFeatures(prev => prev.filter((_, i) => i !== idx));
                         }}
-                        className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
                         title="Remove feature"
                       >
                         <Trash2 size={13} />

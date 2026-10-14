@@ -22,11 +22,13 @@ const formatPrice = (p) => `৳${Number(p).toLocaleString('en-BD')}`;
 
 const defaultHome = {
   heroBgImage: "/api/media/uploads/img_1786604752550_8584.webp",
+  heroMobileBgImage: "",
   heroBadge: "Vintage Weaves",
   heroSubBadge: "EST 2026",
   heroHeading: "WOVEN IN NOSTALGIA.\nTAILORED FOR TODAY.",
   heroSubtext: "Premium vintage fashion and heritage crafts. Handloomed yarns and organic dyes that whisper stories of the past.",
   heroButtonText: "Shop Now",
+  heroButtonLink: "/shop",
 
   collectionsLabel: "THE SECTIONS",
   collectionsTitle: "Browse Curated Archives",
@@ -76,7 +78,8 @@ function Reveal({ children, delay = 0, className = '' }) {
 function Hero({ settings }) {
   const ref = useRef(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] });
-  const y = useTransform(scrollYProgress, [0, 1], ['0%', '30%']);
+  // Subtle parallax on scroll without shifting composition out of view
+  const y = useTransform(scrollYProgress, [0, 1], ['0%', '10%']);
   const opacity = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
 
   const fallbackImg = "/api/media/uploads/img_1786604752550_8584.webp";
@@ -84,40 +87,66 @@ function Hero({ settings }) {
   const [activeHeroBg, setActiveHeroBg] = useState(() => {
     return settings?.heroBgImage || fallbackImg;
   });
+  const [activeHeroMobileBg, setActiveHeroMobileBg] = useState(() => {
+    return settings?.heroMobileBgImage || '';
+  });
 
   useEffect(() => {
     if (settings?.heroBgImage) {
       setActiveHeroBg(settings.heroBgImage);
     }
-  }, [settings?.heroBgImage]);
+    if (settings?.heroMobileBgImage !== undefined) {
+      setActiveHeroMobileBg(settings.heroMobileBgImage || '');
+    }
+  }, [settings?.heroBgImage, settings?.heroMobileBgImage]);
+
+  const buttonText = (settings?.heroButtonText || '').trim() || 'Shop Now';
+  const buttonLink = (settings?.heroButtonLink || '').trim() || '/shop';
+  const hasMobileBg = Boolean(activeHeroMobileBg);
 
   return (
-    <section ref={ref} className="relative h-screen flex items-center justify-center bg-[#1C1613] overflow-hidden border-b border-[#E9E2D2]" style={{ height: '100vh', minHeight: '100vh' }}>
-      <motion.div style={{ y }} className="absolute inset-0 z-0 bg-[#1C1613]">
-        <img
-          src={activeHeroBg}
-          alt="Hero Banner"
-          className="w-full h-full object-cover opacity-100"
-          draggable="false"
-          fetchPriority="high"
-          loading="eager"
-          decoding="sync"
-          onError={() => {
-            if (activeHeroBg !== fallbackImg) {
-              setActiveHeroBg(fallbackImg);
-            }
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#1C1613]/40 via-transparent to-[#1C1613]/40"></div>
+    <section 
+      ref={ref} 
+      className={`relative w-full overflow-hidden flex items-end justify-center bg-[#1C1613] border-b border-[#E9E2D2] select-none ${
+        hasMobileBg 
+          ? 'aspect-[4/5] sm:aspect-[16/9] lg:h-[calc(100vh-5rem)] lg:max-h-[860px]' 
+          : 'aspect-[16/11] sm:aspect-[16/9] lg:h-[calc(100vh-5rem)] lg:max-h-[860px]'
+      }`}
+    >
+      <motion.div style={{ y }} className="absolute inset-0 z-0 bg-[#1C1613] pointer-events-none">
+        <picture className="w-full h-full block">
+          {activeHeroMobileBg && (
+            <source media="(max-width: 639px)" srcSet={activeHeroMobileBg} />
+          )}
+          <img
+            src={activeHeroBg}
+            alt="PutiMach Hero Banner"
+            className="w-full h-full object-cover object-center opacity-100"
+            draggable="false"
+            fetchPriority="high"
+            loading="eager"
+            decoding="sync"
+            onError={() => {
+              if (activeHeroBg !== fallbackImg) {
+                setActiveHeroBg(fallbackImg);
+              }
+            }}
+          />
+        </picture>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/25 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/25 via-transparent to-black/25 pointer-events-none" />
       </motion.div>
       
-      <motion.div style={{ opacity }} className="relative z-10 text-center px-4 max-w-3xl mx-auto -translate-y-20">
+      <motion.div 
+        style={{ opacity }} 
+        className="relative z-10 text-center px-4 max-w-3xl mx-auto pb-6 sm:pb-10 md:pb-12"
+      >
         <div className="animate-fade-in-up">
           <Link 
-            href="/shop" 
-            className="border border-[#1C1613]/30 bg-[#9C8975]/35 backdrop-blur-sm text-[#1C1613] hover:bg-[#1C1613] hover:text-[#FDFBF7] hover:border-[#1C1613] font-black tracking-[0.25em] text-sm uppercase px-8 py-4 transition-all duration-300 inline-block cursor-pointer"
+            href={buttonLink} 
+            className="border border-[#1C1613]/30 bg-[#9C8975]/35 hover:bg-[#1C1613] text-[#1C1613] hover:text-[#FDFBF7] hover:border-[#1C1613] backdrop-blur-md font-black tracking-[0.25em] text-xs sm:text-sm uppercase px-8 py-3.5 sm:py-4 transition-all duration-300 inline-block cursor-pointer shadow-md hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
           >
-            {settings.heroButtonText || 'Shop Now'}
+            {buttonText}
           </Link>
         </div>
       </motion.div>
@@ -336,23 +365,11 @@ export default function Home({ initialSettings = null, initialProducts = [], ini
   useEffect(() => {
     async function backgroundSync() {
       try {
-        let siteData = null;
-        const { data: sData } = await supabase
-          .from('site_settings')
-          .select('data')
-          .eq('id', 'home_page')
-          .maybeSingle();
-
-        if (sData?.data) {
-          siteData = sData.data;
-        } else {
-          const { data: cbData } = await supabase
-            .from('cb_settings')
-            .select('data')
-            .eq('id', 'home_page')
-            .maybeSingle();
-          siteData = cbData?.data;
-        }
+        const [cbRes, sRes] = await Promise.all([
+          supabase.from('cb_settings').select('data').eq('id', 'home_page').maybeSingle(),
+          supabase.from('site_settings').select('data').eq('id', 'home_page').maybeSingle(),
+        ]);
+        const siteData = cbRes.data?.data || sRes.data?.data || null;
 
         if (siteData && typeof siteData === 'object') {
           const freshSettings = mergeSettings(siteData);
