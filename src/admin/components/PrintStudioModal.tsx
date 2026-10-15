@@ -42,6 +42,28 @@ export const PrintStudioModal = ({
     }
   }, [initialFormat, isOpen]);
 
+  // Lock body scroll while modal is open
+  useEffect(() => {
+    if (isOpen) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+  }, [isOpen]);
+
+  // Support closing via Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen && !isPrinting) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isPrinting, onClose]);
+
   const handleFormatChange = (fmt) => {
     setPrintFormat(fmt);
     if (typeof window !== 'undefined') {
@@ -129,7 +151,7 @@ export const PrintStudioModal = ({
   /**
    * Enterprise Isolated Print Engine
    * Eliminates popup-blocker issues, prevents dark-mode/dashboard leaks,
-   * ensures exact millimetre sizing and decodes images before calling print().
+   * ensures exact millimetre sizing and decodes images & fonts before calling print().
    */
   const handlePrint = () => {
     const printContent = printWorkspaceRef.current;
@@ -164,7 +186,6 @@ export const PrintStudioModal = ({
 
     if (!frameDoc || !frameWin) {
       setIsPrinting(false);
-      // Fallback to popup if iframe access fails
       openPopupPrint(contentHtml, isolatedCss);
       return;
     }
@@ -192,7 +213,6 @@ export const PrintStudioModal = ({
     `);
     frameDoc.close();
 
-    // Wait for all images to decode and fonts to load before triggering print
     const executePrint = () => {
       const imgs = Array.from(frameDoc.images || []);
       const imgPromises = imgs.map(img => {
@@ -203,7 +223,6 @@ export const PrintStudioModal = ({
         });
       });
 
-      // Ensure Bengali and Unicode web fonts are fully rasterized
       const fontPromise = frameDoc.fonts && frameDoc.fonts.ready
         ? Promise.race([
             frameDoc.fonts.ready,
@@ -221,7 +240,6 @@ export const PrintStudioModal = ({
             openPopupPrint(contentHtml, isolatedCss);
           } finally {
             setIsPrinting(false);
-            // Delay cleanup to allow print dialog to finish
             setTimeout(() => {
               if (document.body.contains(iframe)) {
                 document.body.removeChild(iframe);
@@ -232,7 +250,6 @@ export const PrintStudioModal = ({
       });
     };
 
-    // Execute when DOM in iframe is ready
     if (frameDoc.readyState === 'complete') {
       executePrint();
     } else {
@@ -299,43 +316,58 @@ export const PrintStudioModal = ({
     }
   };
 
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget && !isPrinting) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="print-studio-overlay">
-      <div className="print-studio-container">
+    <div className="print-studio-overlay" onClick={handleOverlayClick} role="dialog" aria-modal="true">
+      <div className="print-studio-container" onClick={e => e.stopPropagation()}>
         
-        {/* ── Control Header ── */}
+        {/* ── 1. Header ── */}
         <div className="print-studio-header">
           <div className="print-studio-title">
-            <Printer size={22} className="text-teal-400" />
-            <div>
-              <h2>Enterprise Invoice & Receipt Studio</h2>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="print-badge">{activeOrders.length} Order{activeOrders.length > 1 ? 's' : ''} Selected</span>
-                <span className="text-xs text-slate-400">Ready for Standard A4 & 58mm / 80mm Thermal POS Printers</span>
+            <div className="print-studio-icon-wrap">
+              <Printer size={18} className="text-[#239C85]" />
+            </div>
+            <div className="print-title-meta">
+              <div className="print-title-row">
+                <h2 className="print-title-text">Invoice & Receipt Studio</h2>
+                <span className="print-badge">
+                  {activeOrders.length} Order{activeOrders.length > 1 ? 's' : ''}
+                </span>
               </div>
+              <p className="print-subtitle-text">
+                Standard A4, 58mm & 80mm Thermal POS Printers
+              </p>
             </div>
           </div>
           <button 
-            className="p-1.5 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+            type="button"
+            className="print-close-btn"
             onClick={onClose}
-            title="Close Print Studio"
+            title="Close Print Studio (Esc)"
+            aria-label="Close Print Studio"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
-        {/* ── Format & Action Toolbar ── */}
+        {/* ── 2. Format & Action Toolbar ── */}
         <div className="print-studio-toolbar">
-          <div className="print-format-selector">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">Print Layout:</span>
-            
+          <div className="print-format-selector" role="tablist">
             {/* 1. Standard / A4 Invoice */}
             <button 
               type="button"
               className={`format-btn ${printFormat === 'a4-invoice' ? 'active' : ''}`}
               onClick={() => handleFormatChange('a4-invoice')}
+              role="tab"
+              aria-selected={printFormat === 'a4-invoice'}
             >
-              <FileText size={15} /> 1. Standard / A4 Invoice
+              <FileText size={15} />
+              <span>A4 Invoice</span>
             </button>
 
             {/* 2. 58mm Thermal Receipt */}
@@ -343,8 +375,11 @@ export const PrintStudioModal = ({
               type="button"
               className={`format-btn ${printFormat === 'thermal-pos-58mm' ? 'active' : ''}`}
               onClick={() => handleFormatChange('thermal-pos-58mm')}
+              role="tab"
+              aria-selected={printFormat === 'thermal-pos-58mm'}
             >
-              <Receipt size={15} /> 2. 58mm Thermal Receipt
+              <Receipt size={15} />
+              <span>58mm Thermal</span>
             </button>
 
             {/* 3. 80mm Thermal Receipt */}
@@ -352,8 +387,11 @@ export const PrintStudioModal = ({
               type="button"
               className={`format-btn ${printFormat === 'thermal-pos-80mm' ? 'active' : ''}`}
               onClick={() => handleFormatChange('thermal-pos-80mm')}
+              role="tab"
+              aria-selected={printFormat === 'thermal-pos-80mm'}
             >
-              <Receipt size={15} /> 3. 80mm Thermal Receipt
+              <Receipt size={15} />
+              <span>80mm Thermal</span>
             </button>
 
             {/* 4. 4"x6" Thermal Sticker */}
@@ -361,8 +399,11 @@ export const PrintStudioModal = ({
               type="button"
               className={`format-btn ${printFormat === 'thermal-sticker-4x6' ? 'active' : ''}`}
               onClick={() => handleFormatChange('thermal-sticker-4x6')}
+              role="tab"
+              aria-selected={printFormat === 'thermal-sticker-4x6'}
             >
-              <Tag size={15} /> 4"x6" Thermal Sticker
+              <Tag size={15} />
+              <span>4"×6" Sticker</span>
             </button>
 
             {/* 5. A4 2-Up (2/Page) */}
@@ -370,75 +411,75 @@ export const PrintStudioModal = ({
               type="button"
               className={`format-btn ${printFormat === 'a4-grid-2up' ? 'active' : ''}`}
               onClick={() => handleFormatChange('a4-grid-2up')}
+              role="tab"
+              aria-selected={printFormat === 'a4-grid-2up'}
             >
-              <Grid size={15} /> A4 2-Up (2/Page)
+              <Grid size={15} />
+              <span>A4 2-Up</span>
             </button>
           </div>
 
           <div className="print-action-group">
             <button 
               type="button"
-              className="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 flex items-center gap-1.5 border border-slate-700 cursor-pointer"
+              className={`btn-brand-toggle ${showBrandEditor ? 'active' : ''}`}
               onClick={() => setShowBrandEditor(!showBrandEditor)}
             >
-              <Edit3 size={14} /> {showBrandEditor ? 'Hide Brand Config' : 'Customize Identity'}
+              <Edit3 size={14} />
+              <span>{showBrandEditor ? 'Hide Identity' : 'Customize Identity'}</span>
             </button>
 
             <button 
               type="button" 
-              className="btn-print-now cursor-pointer disabled:opacity-50" 
+              className="btn-print-now" 
               onClick={handlePrint}
               disabled={isPrinting}
             >
-              <Printer size={18} /> {isPrinting ? 'Preparing Print...' : `Print Now (${activeOrders.length})`}
+              <Printer size={16} />
+              <span>{isPrinting ? 'Preparing...' : `Print Now (${activeOrders.length})`}</span>
             </button>
           </div>
         </div>
 
-        {/* ── Brand Config Editor (Collapsible) ── */}
+        {/* ── 3. Brand Config Editor (Collapsible) ── */}
         {showBrandEditor && (
-          <div className="p-4 bg-slate-950 border-b border-slate-800 text-xs text-slate-300 grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-slate-400 font-semibold mb-1">Company / Brand Name</label>
+          <div className="print-brand-editor">
+            <div className="brand-field">
+              <label>Company / Brand Name</label>
               <input 
                 type="text" 
-                className="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white"
                 value={brandInfo.name}
                 onChange={e => setBrandInfo({ ...brandInfo, name: e.target.value })}
               />
             </div>
-            <div>
-              <label className="block text-slate-400 font-semibold mb-1">Logo URL</label>
+            <div className="brand-field">
+              <label>Logo URL</label>
               <input 
                 type="text" 
-                className="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white"
                 value={brandInfo.logo}
                 onChange={e => setBrandInfo({ ...brandInfo, logo: e.target.value })}
               />
             </div>
-            <div>
-              <label className="block text-slate-400 font-semibold mb-1">Hotline / Contact</label>
+            <div className="brand-field">
+              <label>Hotline / Contact</label>
               <input 
                 type="text" 
-                className="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white"
                 value={brandInfo.phone}
                 onChange={e => setBrandInfo({ ...brandInfo, phone: e.target.value })}
               />
             </div>
-            <div className="md:col-span-2">
-              <label className="block text-slate-400 font-semibold mb-1">Store / Warehouse Address</label>
+            <div className="brand-field brand-field-span-2">
+              <label>Store / Warehouse Address</label>
               <input 
                 type="text" 
-                className="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white"
                 value={brandInfo.address}
                 onChange={e => setBrandInfo({ ...brandInfo, address: e.target.value })}
               />
             </div>
-            <div>
-              <label className="block text-slate-400 font-semibold mb-1">Website URL</label>
+            <div className="brand-field">
+              <label>Website URL</label>
               <input 
                 type="text" 
-                className="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white"
                 value={brandInfo.website}
                 onChange={e => setBrandInfo({ ...brandInfo, website: e.target.value })}
               />
@@ -446,9 +487,9 @@ export const PrintStudioModal = ({
           </div>
         )}
 
-        {/* ── Settings & Toggles Bar ── */}
+        {/* ── 4. Settings & Toggles Bar ── */}
         <div className="print-options-panel">
-          <span className="font-bold text-slate-400">Display Options:</span>
+          <span className="options-panel-label">Options:</span>
           
           <label className="option-toggle">
             <input 
@@ -456,7 +497,7 @@ export const PrintStudioModal = ({
               checked={toggles.showLogo} 
               onChange={() => handleToggle('showLogo')} 
             />
-            Show Logo
+            <span>Logo</span>
           </label>
 
           {printFormat === 'a4-invoice' && (
@@ -466,7 +507,7 @@ export const PrintStudioModal = ({
                 checked={toggles.showImages} 
                 onChange={() => handleToggle('showImages')} 
               />
-              Product Images (A4)
+              <span>Images</span>
             </label>
           )}
 
@@ -476,7 +517,7 @@ export const PrintStudioModal = ({
               checked={toggles.showPrices} 
               onChange={() => handleToggle('showPrices')} 
             />
-            Prices & Financials
+            <span>Prices</span>
           </label>
 
           <label className="option-toggle">
@@ -485,7 +526,7 @@ export const PrintStudioModal = ({
               checked={toggles.showBarcode} 
               onChange={() => handleToggle('showBarcode')} 
             />
-            Barcode & QR Code
+            <span>Barcode & QR</span>
           </label>
 
           <label className="option-toggle">
@@ -494,7 +535,7 @@ export const PrintStudioModal = ({
               checked={toggles.showTerms} 
               onChange={() => handleToggle('showTerms')} 
             />
-            Return Terms
+            <span>Terms</span>
           </label>
 
           {printFormat === 'a4-invoice' && (
@@ -504,12 +545,12 @@ export const PrintStudioModal = ({
                 checked={toggles.showSignature} 
                 onChange={() => handleToggle('showSignature')} 
               />
-              Signature Box
+              <span>Signature</span>
             </label>
           )}
         </div>
 
-        {/* ── Live Preview Sheet Workspace ── */}
+        {/* ── 5. Live Preview Sheet Workspace ── */}
         <div className="print-workspace" ref={printWorkspaceRef}>
           {activeOrders.map((order, idx) => {
             const mappedData = mapOrderToInvoiceData(order);
@@ -559,7 +600,7 @@ export const PrintStudioModal = ({
                 {printFormat === 'a4-grid-2up' && (
                   <div className="h-full flex flex-col justify-between">
                     <StandardInvoice data={mappedData} brand={brandInfo} toggles={{ ...toggles, showImages: false }} compact />
-                    <div className="border-b-2 border-dashed border-slate-300 my-4" />
+                    <div className="border-b-2 border-dashed border-[#E8E0D7] my-4" />
                     <StandardInvoice data={mappedData} brand={brandInfo} toggles={{ ...toggles, showImages: false }} compact />
                   </div>
                 )}
