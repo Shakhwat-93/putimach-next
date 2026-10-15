@@ -37,19 +37,7 @@ export const ThermalReceipt80: React.FC<ThermalReceipt80Props> = ({
   }, [data.orderNumber, data.customerPhone, data.grandTotal, toggles.showBarcode]);
 
   return (
-    <div
-      className="thermal-receipt-80"
-      style={{
-        width: '80mm',
-        maxWidth: '80mm',
-        minWidth: '80mm',
-        boxSizing: 'border-box',
-        overflow: 'hidden',
-        wordBreak: 'break-word',
-        overflowWrap: 'anywhere',
-        margin: '0 auto',
-      }}
-    >
+    <div className="thermal-receipt-80">
       {/* ── 1. Brand Header ── */}
       <div style={{ textAlign: 'center' }}>
         {toggles.showLogo && brand.logo && (
@@ -100,7 +88,7 @@ export const ThermalReceipt80: React.FC<ThermalReceipt80Props> = ({
 
         <div style={{ fontSize: '9pt', fontWeight: '900' }}>{data.customerName}</div>
         <div style={{ fontWeight: 'bold', marginTop: '0.8mm' }}>📞 {data.customerPhone}</div>
-        <div style={{ marginTop: '0.8mm', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+        <div style={{ marginTop: '0.8mm', wordBreak: 'normal', overflowWrap: 'break-word' }}>
           📍 {data.deliveryAddress}
         </div>
         {data.deliveryArea && (

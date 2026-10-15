@@ -2,7 +2,7 @@
 // @ts-nocheck
 import React, { useMemo } from 'react';
 import { MappedInvoiceData, BrandInfo, InvoicePrintToggles } from './types';
-import { generateBarcodeSVG, generateQRCodeSVG } from '../../utils/barcode';
+import { generateBarcodeSVG } from '../../utils/barcode';
 
 interface ThermalReceipt58Props {
   data: MappedInvoiceData;
@@ -20,122 +20,86 @@ export const ThermalReceipt58: React.FC<ThermalReceipt58Props> = ({
     showTerms: true,
   }
 }) => {
+  // Ultra-compact barcode for 58mm (height: 16px, moduleWidth: 0.95)
   const barcodeSvg = useMemo(() => {
     if (!toggles.showBarcode) return '';
     return generateBarcodeSVG(String(data.orderNumber || data.orderId || 'ORD').slice(-12), {
-      height: 22,
-      moduleWidth: 1.05,
+      height: 16,
+      moduleWidth: 0.95,
       showText: true,
     });
   }, [data.orderNumber, data.orderId, toggles.showBarcode]);
 
-  const qrSvg = useMemo(() => {
-    if (!toggles.showBarcode) return '';
-    return generateQRCodeSVG(`ORDER:${data.orderNumber}|TEL:${data.customerPhone}|TOTAL:${data.grandTotal}`, {
-      size: 46,
-    });
-  }, [data.orderNumber, data.customerPhone, data.grandTotal, toggles.showBarcode]);
+  const payableAmount = data.isPaid ? data.grandTotal : data.cashToCollect;
 
   return (
-    <div
-      className="thermal-receipt-58"
-      style={{
-        width: '58mm',
-        maxWidth: '58mm',
-        minWidth: '58mm',
-        boxSizing: 'border-box',
-        overflow: 'hidden',
-        wordBreak: 'break-word',
-        overflowWrap: 'anywhere',
-        margin: '0 auto',
-      }}
-    >
-      {/* ── 1. Store / Brand Header ── */}
-      <div style={{ textAlign: 'center' }}>
+    <div className="thermal-receipt-58">
+      {/* ── 1. Compact Brand / Store Header ── */}
+      <div className="thermal-58-header">
         {toggles.showLogo && brand.logo && (
           <img
             src={brand.logo}
-            alt={brand.name}
-            style={{
-              maxHeight: '26px',
-              maxWidth: '80%',
-              objectFit: 'contain',
-              margin: '0 auto 1.5mm auto',
-              display: 'block',
-              filter: 'grayscale(100%) contrast(150%)',
-            }}
+            alt={brand.name || 'Store Logo'}
+            className="thermal-58-logo"
           />
         )}
         <div className="thermal-58-brand-title">{brand.name || 'PUTIMACH'}</div>
-        {brand.slogan && <div className="thermal-58-brand-sub" style={{ fontStyle: 'italic' }}>{brand.slogan}</div>}
-        {brand.address && <div className="thermal-58-brand-sub" style={{ marginTop: '0.5mm' }}>{brand.address}</div>}
-        <div className="thermal-58-brand-sub" style={{ fontWeight: 'bold', marginTop: '0.5mm' }}>
-          Hotline: {brand.phone}
+        <div className="thermal-58-brand-contact">
+          Hotline: {brand.phone || '+880 1700-000000'}
         </div>
-        {brand.website && <div className="thermal-58-brand-sub">{brand.website}</div>}
-      </div>
-
-      <div className="thermal-58-divider" />
-
-      {/* ── 2. Order Reference & Customer ── */}
-      <div style={{ fontSize: '7.5pt', lineHeight: 1.25 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-          <span>ORDER REF:</span>
-          <span style={{ fontSize: '8.5pt' }}>#{data.orderNumber}</span>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#111' }}>
-          <span>Date:</span>
-          <span>{data.dateFormatted}</span>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#111' }}>
-          <span>Time:</span>
-          <span>{data.timeFormatted}</span>
-        </div>
-      </div>
-
-      {/* Customer Box */}
-      <div className="thermal-58-customer-box">
-        <div className="thermal-58-customer-title">CUSTOMER / DELIVERY INFO</div>
-        <div className="thermal-58-customer-name">{data.customerName}</div>
-        <div style={{ fontWeight: 'bold', marginTop: '0.5mm' }}>Tel: {data.customerPhone}</div>
-        <div style={{ marginTop: '0.5mm', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-          Address: {data.deliveryAddress}
-        </div>
-        {data.deliveryArea && (
-          <div style={{ fontWeight: 'bold', marginTop: '0.5mm' }}>Zone: {data.deliveryArea}</div>
-        )}
-        {data.courierName && (
-          <div style={{ fontSize: '7pt', color: '#222', marginTop: '0.5mm' }}>
-            Courier: {data.courierName} {data.trackingId ? `(#${data.trackingId})` : ''}
-          </div>
+        {brand.address && (
+          <div className="thermal-58-brand-address">{brand.address}</div>
         )}
       </div>
 
       <div className="thermal-58-divider" />
 
-      {/* ── 3. Products List (Specialized 2-Line Layout for 58mm) ── */}
-      <div style={{ margin: '1mm 0' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '7.5pt', fontWeight: '900', borderBottom: '1px solid #000', paddingBottom: '0.5mm', marginBottom: '1mm' }}>
+      {/* ── 2. Order Reference & Customer Information ── */}
+      <div className="thermal-58-meta-section">
+        <div className="thermal-58-row-bold">
+          <span>Order: #{data.orderNumber}</span>
+          <span className="thermal-58-datetime">{data.dateFormatted} {data.timeFormatted}</span>
+        </div>
+        <div className="thermal-58-customer-info">
+          <div className="thermal-58-cust-name">{data.customerName}</div>
+          <div className="thermal-58-cust-phone">Phone: {data.customerPhone}</div>
+          <div className="thermal-58-cust-address">Address: {data.deliveryAddress}</div>
+          {(data.deliveryArea || data.courierName) && (
+            <div className="thermal-58-cust-courier">
+              {data.deliveryArea ? `Zone: ${data.deliveryArea}` : ''}
+              {data.deliveryArea && data.courierName ? ' • ' : ''}
+              {data.courierName ? `Courier: ${data.courierName}` : ''}
+              {data.trackingId ? ` (#${data.trackingId})` : ''}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="thermal-58-divider" />
+
+      {/* ── 3. Products List (Specialized 2/3-Line Compact Layout) ── */}
+      <div className="thermal-58-items-section">
+        <div className="thermal-58-items-header">
           <span>ITEM DESCRIPTION</span>
           <span>TOTAL</span>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5mm' }}>
+        <div className="thermal-58-items-list">
           {data.items.map((item, idx) => (
-            <div key={item.id || idx} className="thermal-58-product-row">
-              <div className="thermal-58-product-title">
+            <div key={item.id || idx} className="thermal-58-item-row">
+              <div className="thermal-58-item-title">
                 {idx + 1}. {item.name}
               </div>
               {(item.size || item.color) && (
-                <div className="thermal-58-product-variant">
+                <div className="thermal-58-item-variant">
                   {item.size ? `Size: ${item.size}` : ''}
                   {item.size && item.color ? ' | ' : ''}
                   {item.color ? `Color: ${item.color}` : ''}
                 </div>
               )}
-              <div className="thermal-58-product-calc">
-                <span>{item.quantity} × ৳{Number(item.unitPrice).toLocaleString()}</span>
-                <span style={{ fontWeight: '900' }}>৳{Number(item.lineTotal).toLocaleString()}</span>
+              <div className="thermal-58-item-calc">
+                <span>{item.quantity} × ৳{Number(item.unitPrice).toLocaleString('en-US')}</span>
+                <span className="thermal-58-item-total">৳{Number(item.lineTotal).toLocaleString('en-US')}</span>
               </div>
             </div>
           ))}
@@ -146,94 +110,77 @@ export const ThermalReceipt58: React.FC<ThermalReceipt58Props> = ({
 
       {/* ── 4. Financial Totals ── */}
       {toggles.showPrices && (
-        <div style={{ fontSize: '7.5pt', lineHeight: 1.3 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span>Subtotal ({data.itemCount} items):</span>
-            <span>৳{data.subtotal.toLocaleString()}</span>
+        <div className="thermal-58-financials">
+          <div className="thermal-58-fin-row">
+            <span>Subtotal ({data.itemCount} item{data.itemCount > 1 ? 's' : ''}):</span>
+            <span>৳{data.subtotal.toLocaleString('en-US')}</span>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span>Delivery Charge:</span>
-            <span>৳{data.deliveryCharge.toLocaleString()}</span>
+          <div className="thermal-58-fin-row">
+            <span>Delivery Fee:</span>
+            <span>৳{data.deliveryCharge.toLocaleString('en-US')}</span>
           </div>
 
           {data.discount > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
+            <div className="thermal-58-fin-row thermal-58-discount">
               <span>Discount:</span>
-              <span>-৳{data.discount.toLocaleString()}</span>
+              <span>-৳{data.discount.toLocaleString('en-US')}</span>
             </div>
           )}
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', borderTop: '1px dotted #000', paddingTop: '0.8mm', marginTop: '0.8mm' }}>
-            <span>Total Order Amount:</span>
-            <span>৳{data.grandTotal.toLocaleString()}</span>
-          </div>
 
           {data.advancePaid > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
+            <div className="thermal-58-fin-row thermal-58-advance">
               <span>Advance Paid:</span>
-              <span>-৳{data.advancePaid.toLocaleString()}</span>
+              <span>-৳{data.advancePaid.toLocaleString('en-US')}</span>
             </div>
           )}
 
-          {/* Prominent High-Contrast Cash to Collect Banner */}
+          {(data.discount > 0 || data.advancePaid > 0) && (
+            <div className="thermal-58-fin-row thermal-58-sub-grand">
+              <span>Total Order Value:</span>
+              <span>৳{data.grandTotal.toLocaleString('en-US')}</span>
+            </div>
+          )}
+
+          {/* High-Contrast Cash to Collect Banner (Compact, non-smearing) */}
           <div className="thermal-58-total-banner">
             <div className="thermal-58-total-banner-label">
               {data.isPaid ? 'TOTAL PAID AMOUNT' : 'CASH TO COLLECT (COD)'}
             </div>
             <div className="thermal-58-total-banner-amount">
-              ৳{(data.isPaid ? data.grandTotal : data.cashToCollect).toLocaleString()}
+              ৳{payableAmount.toLocaleString('en-US')}
             </div>
           </div>
         </div>
       )}
 
       {/* ── 5. Payment Method & Status ── */}
-      <div style={{ fontSize: '7.5pt', lineHeight: 1.25, marginTop: '1mm' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontWeight: 'bold' }}>Payment Method:</span>
-          <span>{data.paymentMethod}</span>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontWeight: 'bold' }}>Payment Status:</span>
-          <span style={{ fontWeight: '900' }}>{data.paymentStatus}</span>
-        </div>
+      <div className="thermal-58-payment-row">
+        <span>Payment: {data.paymentMethod}</span>
+        <span className="thermal-58-payment-status">[{data.paymentStatus}]</span>
       </div>
 
       {/* ── 6. Order Note (if available) ── */}
       {data.orderNote && (
-        <div style={{ margin: '1.5mm 0', padding: '1mm', border: '1px dashed #444', fontSize: '7pt', lineHeight: 1.2 }}>
-          <strong>Order Note:</strong> {data.orderNote}
+        <div className="thermal-58-note-box">
+          <strong>Note:</strong> {data.orderNote}
         </div>
       )}
 
-      {/* ── 7. Barcode & QR Code Section ── */}
-      {toggles.showBarcode && (
-        <div style={{ marginTop: '2mm', paddingTop: '1.5mm', borderTop: '1px dashed #000', textAlign: 'center' }}>
-          {barcodeSvg && (
-            <div
-              style={{ width: '100%', overflow: 'hidden', display: 'flex', justifyContent: 'center', marginBottom: '1.5mm' }}
-              dangerouslySetInnerHTML={{ __html: barcodeSvg }}
-            />
-          )}
-          {qrSvg && (
-            <div
-              style={{ display: 'flex', justifyContent: 'center' }}
-              dangerouslySetInnerHTML={{ __html: qrSvg }}
-            />
-          )}
-        </div>
+      {/* ── 7. Barcode (Compact) ── */}
+      {toggles.showBarcode && barcodeSvg && (
+        <div className="thermal-58-barcode-wrap" dangerouslySetInnerHTML={{ __html: barcodeSvg }} />
       )}
 
       {/* ── 8. Return Terms / Policy ── */}
       {toggles.showTerms && brand.terms && (
-        <div style={{ fontSize: '6.5pt', textAlign: 'center', color: '#222', lineHeight: 1.2, marginTop: '2mm', padding: '0 1mm' }}>
-          {brand.terms}
+        <div className="thermal-58-terms">
+          Policy: {brand.terms}
         </div>
       )}
 
-      {/* ── 9. Thank You Message ── */}
-      <div className="thermal-58-footer-msg">
+      {/* ── 9. Compact Thank You ── */}
+      <div className="thermal-58-footer">
         *** THANK YOU FOR SHOPPING ***
       </div>
     </div>

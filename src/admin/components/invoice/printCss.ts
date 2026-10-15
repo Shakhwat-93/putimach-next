@@ -1,8 +1,11 @@
 /**
  * Isolated Self-Contained Print CSS Generator
  * Guarantees zero leakage from dashboard/dark-mode styles and applies
- * exact physical millimetre paper dimensions and @page directives.
+ * exact physical millimetre paper dimensions, Unicode/Bengali font support,
+ * and @page directives for 58mm & 80mm thermal printers.
  */
+
+const THERMAL_FONT_STACK = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Bengali', 'Kalpurush', 'Siyam Rupali', 'SolaimanLipi', 'Nirmala UI', Arial, sans-serif";
 
 export function getIsolatedPrintCss(format: string): string {
   let pageRule = '';
@@ -12,7 +15,7 @@ export function getIsolatedPrintCss(format: string): string {
     pageRule = `
       @page {
         size: 58mm auto;
-        margin: 0;
+        margin: 0mm;
       }
     `;
     containerRule = `
@@ -22,16 +25,22 @@ export function getIsolatedPrintCss(format: string): string {
         max-width: 58mm !important;
         margin: 0 auto !important;
         padding: 0 !important;
+        height: auto !important;
+        min-height: 0 !important;
         background: #ffffff !important;
         color: #000000 !important;
-        overflow-x: hidden !important;
-        font-family: 'Courier New', Courier, Consolas, Monaco, monospace;
+        overflow: visible !important;
+        font-family: ${THERMAL_FONT_STACK} !important;
+        -webkit-font-smoothing: antialiased !important;
+        text-rendering: optimizeLegibility !important;
       }
       .print-document-sheet,
       .sheet-thermal-pos-58mm {
         width: 58mm !important;
         min-width: 58mm !important;
         max-width: 58mm !important;
+        height: auto !important;
+        min-height: 0 !important;
         margin: 0 auto !important;
         padding: 0 !important;
         border: none !important;
@@ -39,13 +48,15 @@ export function getIsolatedPrintCss(format: string): string {
         background: #ffffff !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
+        page-break-after: avoid !important;
+        break-after: avoid !important;
       }
     `;
   } else if (format === 'thermal-pos-80mm') {
     pageRule = `
       @page {
         size: 80mm auto;
-        margin: 0;
+        margin: 0mm;
       }
     `;
     containerRule = `
@@ -55,16 +66,22 @@ export function getIsolatedPrintCss(format: string): string {
         max-width: 80mm !important;
         margin: 0 auto !important;
         padding: 0 !important;
+        height: auto !important;
+        min-height: 0 !important;
         background: #ffffff !important;
         color: #000000 !important;
-        overflow-x: hidden !important;
-        font-family: 'Courier New', Courier, Consolas, Monaco, monospace;
+        overflow: visible !important;
+        font-family: ${THERMAL_FONT_STACK} !important;
+        -webkit-font-smoothing: antialiased !important;
+        text-rendering: optimizeLegibility !important;
       }
       .print-document-sheet,
       .sheet-thermal-pos-80mm {
         width: 80mm !important;
         min-width: 80mm !important;
         max-width: 80mm !important;
+        height: auto !important;
+        min-height: 0 !important;
         margin: 0 auto !important;
         padding: 0 !important;
         border: none !important;
@@ -72,6 +89,8 @@ export function getIsolatedPrintCss(format: string): string {
         background: #ffffff !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
+        page-break-after: avoid !important;
+        break-after: avoid !important;
       }
     `;
   } else if (format === 'thermal-sticker-4x6') {
@@ -90,6 +109,7 @@ export function getIsolatedPrintCss(format: string): string {
         padding: 0 !important;
         background: #ffffff !important;
         color: #000000 !important;
+        font-family: ${THERMAL_FONT_STACK} !important;
       }
       .print-document-sheet,
       .sheet-thermal-sticker-4x6 {
@@ -135,7 +155,9 @@ export function getIsolatedPrintCss(format: string): string {
   }
 
   return `
-    /* Universal Reset */
+    /* Universal Reset & Google Fonts Fallback */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+Bengali:wght@400;500;600;700;800;900&display=swap');
+
     *, *::before, *::after {
       box-sizing: border-box !important;
       -webkit-print-color-adjust: exact !important;
@@ -155,117 +177,217 @@ export function getIsolatedPrintCss(format: string): string {
     }
 
     /* ════════════════════════════════════════════════════════════════
-       1. 58mm DEDICATED THERMAL RECEIPT STYLES
+       1. 58mm DEDICATED COMPACT THERMAL RECEIPT STYLES
        ════════════════════════════════════════════════════════════════ */
     .thermal-receipt-58 {
       width: 58mm !important;
-      min-width: 58mm !important;
       max-width: 58mm !important;
+      height: auto !important;
+      min-height: 0 !important;
       box-sizing: border-box !important;
       margin: 0 auto !important;
-      padding: 2.5mm 4mm !important;
+      padding: 1.5mm 4.5mm !important; /* Calibrated for standard 48mm-50mm printable head */
       background: #ffffff !important;
       color: #000000 !important;
-      font-family: 'Courier New', Courier, Consolas, Monaco, monospace !important;
-      font-size: 8pt !important;
+      font-family: ${THERMAL_FONT_STACK} !important;
+      font-size: 7.5pt !important;
       line-height: 1.25 !important;
-      overflow: hidden !important;
-      word-break: break-word !important;
-      overflow-wrap: anywhere !important;
+      overflow: visible !important;
+      word-break: normal !important;
+      overflow-wrap: break-word !important;
+      -webkit-font-smoothing: antialiased !important;
+      text-rendering: optimizeLegibility !important;
     }
 
     .thermal-receipt-58 * {
       box-sizing: border-box !important;
       color: #000000 !important;
+      font-family: inherit !important;
+    }
+
+    .thermal-58-header {
+      text-align: center !important;
+      margin-bottom: 0.8mm !important;
+    }
+
+    .thermal-58-logo {
+      max-height: 20px !important;
+      max-width: 75% !important;
+      object-fit: contain !important;
+      margin: 0 auto 1mm auto !important;
+      display: block !important;
+      filter: grayscale(100%) contrast(160%) !important;
     }
 
     .thermal-58-brand-title {
-      font-size: 11pt !important;
+      font-size: 9pt !important;
       font-weight: 900 !important;
       text-transform: uppercase !important;
-      text-align: center !important;
-      letter-spacing: 0.5px !important;
+      letter-spacing: 0.3px !important;
       line-height: 1.15 !important;
-      margin-bottom: 1.5mm !important;
+      margin-bottom: 0.4mm !important;
     }
 
-    .thermal-58-brand-sub {
+    .thermal-58-brand-contact {
       font-size: 7pt !important;
-      text-align: center !important;
+      font-weight: 700 !important;
       line-height: 1.2 !important;
+    }
+
+    .thermal-58-brand-address {
+      font-size: 6.5pt !important;
+      color: #333333 !important;
+      line-height: 1.2 !important;
+      margin-top: 0.3mm !important;
+      word-break: normal !important;
+      overflow-wrap: break-word !important;
     }
 
     .thermal-58-divider {
       border: none !important;
       border-top: 1px dashed #000000 !important;
-      margin: 1.5mm 0 !important;
+      margin: 1.2mm 0 !important;
       width: 100% !important;
     }
 
-    .thermal-58-double-divider {
-      border: none !important;
-      border-top: 1px dashed #000000 !important;
-      border-bottom: 1px dashed #000000 !important;
-      height: 2px !important;
-      margin: 1.5mm 0 !important;
-      width: 100% !important;
-    }
-
-    .thermal-58-customer-box {
-      margin: 1.5mm 0 !important;
-      padding: 1.5mm !important;
-      border: 1px solid #000000 !important;
-      font-size: 7.5pt !important;
-      line-height: 1.2 !important;
-    }
-
-    .thermal-58-customer-title {
-      font-weight: 800 !important;
+    .thermal-58-meta-section {
       font-size: 7pt !important;
-      text-transform: uppercase !important;
-      border-bottom: 1px solid #000000 !important;
-      padding-bottom: 0.8mm !important;
-      margin-bottom: 1mm !important;
+      line-height: 1.25 !important;
     }
 
-    .thermal-58-customer-name {
-      font-size: 8.5pt !important;
-      font-weight: 900 !important;
-    }
-
-    .thermal-58-product-row {
-      margin-bottom: 1.5mm !important;
-      font-size: 8pt !important;
-      line-height: 1.2 !important;
-    }
-
-    .thermal-58-product-title {
-      font-weight: 800 !important;
-      font-size: 8pt !important;
-      word-break: break-word !important;
-      overflow-wrap: anywhere !important;
-    }
-
-    .thermal-58-product-variant {
-      font-size: 7pt !important;
-      color: #333333 !important;
-      margin-top: 0.5mm !important;
-    }
-
-    .thermal-58-product-calc {
+    .thermal-58-row-bold {
       display: flex !important;
       justify-content: space-between !important;
       align-items: baseline !important;
+      font-weight: 800 !important;
       font-size: 7.5pt !important;
+      margin-bottom: 0.6mm !important;
+    }
+
+    .thermal-58-datetime {
+      font-size: 6.5pt !important;
+      font-weight: normal !important;
+      color: #222222 !important;
+    }
+
+    .thermal-58-customer-info {
+      font-size: 7pt !important;
+      line-height: 1.25 !important;
+    }
+
+    .thermal-58-cust-name {
+      font-size: 8pt !important;
+      font-weight: 800 !important;
+      word-break: normal !important;
+      overflow-wrap: break-word !important;
+    }
+
+    .thermal-58-cust-phone {
+      font-weight: 700 !important;
+      margin-top: 0.4mm !important;
+    }
+
+    .thermal-58-cust-address {
+      margin-top: 0.4mm !important;
+      word-break: normal !important;
+      overflow-wrap: break-word !important;
+    }
+
+    .thermal-58-cust-courier {
+      font-size: 6.5pt !important;
+      color: #222222 !important;
+      font-weight: 600 !important;
+      margin-top: 0.4mm !important;
+    }
+
+    .thermal-58-items-section {
+      margin: 0.8mm 0 !important;
+    }
+
+    .thermal-58-items-header {
+      display: flex !important;
+      justify-content: space-between !important;
+      font-size: 7pt !important;
+      font-weight: 900 !important;
+      border-bottom: 1px solid #000000 !important;
+      padding-bottom: 0.4mm !important;
+      margin-bottom: 0.8mm !important;
+      letter-spacing: 0.3px !important;
+    }
+
+    .thermal-58-items-list {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 1mm !important;
+    }
+
+    .thermal-58-item-row {
+      font-size: 7.5pt !important;
+      line-height: 1.2 !important;
+    }
+
+    .thermal-58-item-title {
+      font-weight: 700 !important;
+      word-break: normal !important;
+      overflow-wrap: break-word !important;
+    }
+
+    .thermal-58-item-variant {
+      font-size: 6.5pt !important;
+      color: #333333 !important;
+      margin-top: 0.3mm !important;
+    }
+
+    .thermal-58-item-calc {
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: baseline !important;
+      font-size: 7pt !important;
+      margin-top: 0.3mm !important;
+      font-variant-numeric: tabular-nums !important;
+    }
+
+    .thermal-58-item-total {
+      font-weight: 800 !important;
+      font-size: 7.5pt !important;
+      font-variant-numeric: tabular-nums !important;
+    }
+
+    .thermal-58-financials {
+      font-size: 7pt !important;
+      line-height: 1.3 !important;
+    }
+
+    .thermal-58-fin-row {
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: baseline !important;
+      margin-bottom: 0.4mm !important;
+      font-variant-numeric: tabular-nums !important;
+    }
+
+    .thermal-58-discount {
+      font-weight: 700 !important;
+    }
+
+    .thermal-58-advance {
+      font-weight: 700 !important;
+    }
+
+    .thermal-58-sub-grand {
+      font-weight: 700 !important;
+      border-top: 1px dotted #000000 !important;
+      padding-top: 0.5mm !important;
       margin-top: 0.5mm !important;
     }
 
     .thermal-58-total-banner {
       background-color: #000000 !important;
       color: #ffffff !important;
-      padding: 2mm !important;
+      padding: 1.2mm 2mm !important;
       text-align: center !important;
-      margin: 2mm 0 !important;
+      margin: 1.5mm 0 !important;
+      border-radius: 2px !important;
     }
 
     .thermal-58-total-banner * {
@@ -273,25 +395,68 @@ export function getIsolatedPrintCss(format: string): string {
     }
 
     .thermal-58-total-banner-label {
-      font-size: 7pt !important;
+      font-size: 6.5pt !important;
       font-weight: 800 !important;
       text-transform: uppercase !important;
-      letter-spacing: 0.5px !important;
+      letter-spacing: 0.4px !important;
+      color: #ffffff !important;
     }
 
     .thermal-58-total-banner-amount {
-      font-size: 12pt !important;
+      font-size: 10pt !important;
       font-weight: 900 !important;
+      margin-top: 0.4mm !important;
+      font-variant-numeric: tabular-nums !important;
+      color: #ffffff !important;
+    }
+
+    .thermal-58-payment-row {
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: baseline !important;
+      font-size: 6.5pt !important;
+      line-height: 1.25 !important;
       margin-top: 0.8mm !important;
     }
 
-    .thermal-58-footer-msg {
+    .thermal-58-payment-status {
+      font-weight: 800 !important;
+    }
+
+    .thermal-58-note-box {
+      margin: 1.2mm 0 !important;
+      padding: 0.8mm 1.2mm !important;
+      border: 1px dashed #333333 !important;
+      font-size: 6.5pt !important;
+      line-height: 1.2 !important;
+      word-break: normal !important;
+      overflow-wrap: break-word !important;
+    }
+
+    .thermal-58-barcode-wrap {
+      width: 100% !important;
+      overflow: hidden !important;
+      display: flex !important;
+      justify-content: center !important;
+      margin: 1.5mm 0 !important;
+    }
+
+    .thermal-58-terms {
+      font-size: 6pt !important;
       text-align: center !important;
-      font-size: 7pt !important;
+      color: #222222 !important;
+      line-height: 1.2 !important;
+      margin-top: 1.2mm !important;
+      padding: 0 1mm !important;
+    }
+
+    .thermal-58-footer {
+      text-align: center !important;
+      font-size: 6.5pt !important;
       font-weight: 800 !important;
       text-transform: uppercase !important;
-      margin-top: 2mm !important;
-      letter-spacing: 0.5px !important;
+      margin-top: 1.5mm !important;
+      letter-spacing: 0.4px !important;
     }
 
     /* ════════════════════════════════════════════════════════════════
@@ -301,36 +466,41 @@ export function getIsolatedPrintCss(format: string): string {
       width: 80mm !important;
       min-width: 80mm !important;
       max-width: 80mm !important;
+      height: auto !important;
+      min-height: 0 !important;
       box-sizing: border-box !important;
       margin: 0 auto !important;
-      padding: 3mm 4mm !important;
+      padding: 2.5mm 4mm !important;
       background: #ffffff !important;
       color: #000000 !important;
-      font-family: 'Courier New', Courier, Consolas, Monaco, monospace !important;
-      font-size: 8.5pt !important;
+      font-family: ${THERMAL_FONT_STACK} !important;
+      font-size: 8pt !important;
       line-height: 1.3 !important;
-      overflow: hidden !important;
-      word-break: break-word !important;
-      overflow-wrap: anywhere !important;
+      overflow: visible !important;
+      word-break: normal !important;
+      overflow-wrap: break-word !important;
+      -webkit-font-smoothing: antialiased !important;
+      text-rendering: optimizeLegibility !important;
     }
 
     .thermal-receipt-80 * {
       box-sizing: border-box !important;
       color: #000000 !important;
+      font-family: inherit !important;
     }
 
     .thermal-80-brand-title {
-      font-size: 13pt !important;
+      font-size: 11pt !important;
       font-weight: 900 !important;
       text-transform: uppercase !important;
       text-align: center !important;
-      letter-spacing: 0.75px !important;
+      letter-spacing: 0.5px !important;
       line-height: 1.2 !important;
-      margin-bottom: 1.5mm !important;
+      margin-bottom: 1mm !important;
     }
 
     .thermal-80-brand-sub {
-      font-size: 8pt !important;
+      font-size: 7.5pt !important;
       text-align: center !important;
       line-height: 1.25 !important;
     }
@@ -338,7 +508,7 @@ export function getIsolatedPrintCss(format: string): string {
     .thermal-80-divider {
       border: none !important;
       border-top: 1px dashed #000000 !important;
-      margin: 2mm 0 !important;
+      margin: 1.8mm 0 !important;
       width: 100% !important;
     }
 
@@ -347,36 +517,39 @@ export function getIsolatedPrintCss(format: string): string {
       border-top: 1px dashed #000000 !important;
       border-bottom: 1px dashed #000000 !important;
       height: 2px !important;
-      margin: 2mm 0 !important;
+      margin: 1.8mm 0 !important;
       width: 100% !important;
     }
 
     .thermal-80-table {
       width: 100% !important;
       border-collapse: collapse !important;
-      margin: 1.5mm 0 !important;
+      margin: 1.2mm 0 !important;
+      font-size: 8pt !important;
     }
 
     .thermal-80-table th {
       border-bottom: 1px solid #000000 !important;
-      padding: 1.2mm 0.8mm !important;
-      font-size: 8pt !important;
+      padding: 1mm 0.8mm !important;
+      font-size: 7.5pt !important;
       font-weight: 900 !important;
       text-transform: uppercase !important;
     }
 
     .thermal-80-table td {
-      padding: 1.2mm 0.8mm !important;
+      padding: 1mm 0.8mm !important;
       vertical-align: top !important;
-      font-size: 8.5pt !important;
+      font-size: 8pt !important;
+      font-variant-numeric: tabular-nums !important;
     }
 
     .thermal-80-total-banner {
       background-color: #000000 !important;
       color: #ffffff !important;
-      padding: 2.5mm !important;
+      padding: 2mm !important;
       text-align: center !important;
-      margin: 2.5mm 0 !important;
+      margin: 2mm 0 !important;
+      border-radius: 2px !important;
     }
 
     .thermal-80-total-banner * {
@@ -384,16 +557,17 @@ export function getIsolatedPrintCss(format: string): string {
     }
 
     .thermal-80-total-banner-label {
-      font-size: 8pt !important;
+      font-size: 7.5pt !important;
       font-weight: 800 !important;
       text-transform: uppercase !important;
       letter-spacing: 0.5px !important;
     }
 
     .thermal-80-total-banner-amount {
-      font-size: 14pt !important;
+      font-size: 12pt !important;
       font-weight: 900 !important;
-      margin-top: 1mm !important;
+      margin-top: 0.8mm !important;
+      font-variant-numeric: tabular-nums !important;
     }
 
     /* ════════════════════════════════════════════════════════════════
@@ -403,7 +577,7 @@ export function getIsolatedPrintCss(format: string): string {
       width: 100% !important;
       background: #ffffff !important;
       color: #000000 !important;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Bengali', Helvetica, Arial, sans-serif !important;
     }
 
     .invoice-header {
@@ -560,6 +734,7 @@ export function getIsolatedPrintCss(format: string): string {
     .invoice-totals-table td {
       padding: 4px 8px !important;
       text-align: right !important;
+      font-variant-numeric: tabular-nums !important;
     }
 
     .invoice-totals-table .total-label {
@@ -620,6 +795,7 @@ export function getIsolatedPrintCss(format: string): string {
       box-sizing: border-box !important;
       padding: 8px !important;
       background: #ffffff !important;
+      font-family: ${THERMAL_FONT_STACK} !important;
     }
 
     .thermal-header {
@@ -680,6 +856,8 @@ export function getIsolatedPrintCss(format: string): string {
       font-size: 10.5px !important;
       line-height: 1.3 !important;
       margin-top: 2px !important;
+      word-break: normal !important;
+      overflow-wrap: break-word !important;
     }
 
     .thermal-items {

@@ -80,7 +80,7 @@ export function generateBarcodeSVG(text, options = {}) {
   const totalHeight = showText ? height + 18 : height;
 
   const textElement = showText
-    ? `<text x="${totalWidth / 2}" y="${height + 14}" text-anchor="middle" font-family="Courier, monospace" font-size="12" font-weight="bold" fill="${color}">${cleanText}</text>`
+    ? `<text x="${totalWidth / 2}" y="${height + 13}" text-anchor="middle" font-family="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="700" letter-spacing="1" fill="${color}">${cleanText}</text>`
     : '';
 
   return `

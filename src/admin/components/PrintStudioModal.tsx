@@ -175,8 +175,12 @@ export const PrintStudioModal = ({
       <html>
       <head>
         <meta charset="utf-8" />
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>PutiMach Invoice - ${printFormat}</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+Bengali:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
         <style>
           ${isolatedCss}
         </style>
@@ -199,7 +203,13 @@ export const PrintStudioModal = ({
         });
       });
 
-      const fontPromise = frameDoc.fonts && frameDoc.fonts.ready ? frameDoc.fonts.ready : Promise.resolve();
+      // Ensure Bengali and Unicode web fonts are fully rasterized
+      const fontPromise = frameDoc.fonts && frameDoc.fonts.ready
+        ? Promise.race([
+            frameDoc.fonts.ready,
+            new Promise(res => setTimeout(res, 1200))
+          ])
+        : Promise.resolve();
 
       Promise.all([...imgPromises, fontPromise]).then(() => {
         setTimeout(() => {
@@ -218,7 +228,7 @@ export const PrintStudioModal = ({
               }
             }, 3000);
           }
-        }, 120);
+        }, 180);
       });
     };
 
@@ -248,7 +258,11 @@ export const PrintStudioModal = ({
         <html>
         <head>
           <meta charset="utf-8" />
+          <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
           <title>Print - PutiMach</title>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+Bengali:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
           <style>
             ${isolatedCss}
           </style>
@@ -261,11 +275,24 @@ export const PrintStudioModal = ({
       printWindow.document.close();
       printWindow.focus();
 
-      setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-        setIsPrinting(false);
-      }, 500);
+      const trigger = () => {
+        const fontReady = printWindow.document.fonts && printWindow.document.fonts.ready
+          ? printWindow.document.fonts.ready
+          : Promise.resolve();
+        fontReady.then(() => {
+          setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+            setIsPrinting(false);
+          }, 200);
+        });
+      };
+
+      if (printWindow.document.readyState === 'complete') {
+        trigger();
+      } else {
+        printWindow.onload = trigger;
+      }
     } catch (e) {
       console.error('Popup print failed:', e);
       setIsPrinting(false);
