@@ -5,14 +5,13 @@
  * Centralized Enterprise Marketing Tracking & Analytics Engine
  * GTM + GA4 + Meta Pixel + Meta CAPI + TikTok Pixel + TikTok Events API
  * 
- * Features:
- *  • Strict Single Source of Truth architecture
- *  • Exact Event ID parity between Client Browser & Server APIs (Meta & TikTok deduplication)
- *  • Deterministic Purchase Event ID based on order number (`order_<orderId>`)
- *  • Idempotent script injection & Consent Mode v2 support
- *  • React StrictMode / navigation duplicate suppression
- *  • GA4 Ecommerce dataLayer lifecycle management
- *  • Zero exposure of server access tokens to the client
+ * Strict Single Source of Truth & Zero-Duplication Architecture:
+ *  1. When GTM is enabled, GTM has exclusive browser-tag ownership via dataLayer.
+ *     Direct window.fbq calls are suppressed to prevent double-firing with GTM tags.
+ *  2. When GTM is disabled, direct Meta Pixel (window.fbq) handles browser tracking.
+ *  3. Server-side CAPI always shares the exact same event_id pushed to dataLayer.
+ *  4. Deterministic Purchase Event ID based on order number (`order_<orderId>`).
+ *  5. React StrictMode / multi-click duplicate suppression windows.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -96,7 +95,7 @@ let _config: TrackingConfig | null = null;
 let _initPromise: Promise<TrackingConfig> | null = null;
 let _lastPageViewPath = '';
 
-// In-memory deduplication cache for preventing rapid duplicate triggers (e.g. React StrictMode / multi-clicks)
+// In-memory deduplication cache for preventing rapid duplicate triggers
 const _recentEvents = new Map<string, number>();
 
 function isDuplicateEvent(cacheKey: string, windowMs = 2500): boolean {
@@ -107,7 +106,6 @@ function isDuplicateEvent(cacheKey: string, windowMs = 2500): boolean {
   }
   _recentEvents.set(cacheKey, now);
 
-  // Periodic cleanup if cache grows
   if (_recentEvents.size > 200) {
     for (const [k, t] of _recentEvents.entries()) {
       if (now - t > 30000) _recentEvents.delete(k);
@@ -145,13 +143,13 @@ export async function loadTrackingConfig(): Promise<TrackingConfig> {
           injectDirectGA4(_config.ga4_measurement_id);
         }
 
-        // 3. Meta Pixel
-        if (_config.meta_enabled && _config.meta_pixel_id) {
+        // 3. Direct Meta Pixel (Only when GTM is NOT managing tags)
+        if (_config.meta_enabled && _config.meta_pixel_id && !_config.gtm_enabled) {
           injectMetaPixel(_config.meta_pixel_id);
         }
 
-        // 4. TikTok Pixel
-        if (_config.tiktok_enabled && _config.tiktok_pixel_id) {
+        // 4. Direct TikTok Pixel (Only when GTM is NOT managing tags)
+        if (_config.tiktok_enabled && _config.tiktok_pixel_id && !_config.gtm_enabled) {
           injectTikTokPixel(_config.tiktok_pixel_id);
         }
       }
@@ -183,6 +181,24 @@ export function getTrackingConfig(): TrackingConfig {
 export function isTrackingEnabled(): boolean {
   const cfg = getTrackingConfig();
   return cfg.ecommerce_tracking_enabled !== false;
+}
+
+/**
+ * Determine if direct Meta Pixel window.fbq calls should execute.
+ * When GTM is enabled, GTM container is the exclusive browser owner via dataLayer events.
+ * Direct window.fbq calls MUST NOT run when GTM is enabled to avoid 2x duplicate fires.
+ */
+function shouldFireDirectMeta(cfg: TrackingConfig): boolean {
+  if (cfg.gtm_enabled) return false;
+  return Boolean(typeof window !== 'undefined' && window.fbq && cfg.meta_enabled);
+}
+
+/**
+ * Determine if direct TikTok Pixel window.ttq calls should execute.
+ */
+function shouldFireDirectTikTok(cfg: TrackingConfig): boolean {
+  if (cfg.gtm_enabled) return false;
+  return Boolean(typeof window !== 'undefined' && window.ttq && cfg.tiktok_enabled);
 }
 
 // ── Google Consent Mode v2 ────────────────────────────────────────────────────
@@ -224,7 +240,7 @@ export function injectGTM(gtmId: string) {
   document.body.insertBefore(noscript, document.body.firstChild);
 }
 
-// ── 2. Direct GA4 Injection (Used only when GTM is not enabled) ───────────────
+// ── 2. Direct GA4 Injection ───────────────────────────────────────────────────
 export function injectDirectGA4(measurementId: string) {
   if (!measurementId || typeof window === 'undefined' || document.getElementById('ga4-script')) return;
 
@@ -398,7 +414,7 @@ async function dispatchServerConversion(params: {
         userData: mergedUserData,
         customData: params.customData,
       }),
-      keepalive: true, // Guarantees execution even during page unloads
+      keepalive: true,
     }).catch(err => {
       console.warn('[Tracking Engine] Server conversion API call failed:', err);
     });
@@ -415,9 +431,11 @@ function logDebugEvent(eventName: string, eventId: string, payload: any) {
     console.log('Payload:', payload);
     console.log('Active Providers:', {
       dataLayer: typeof window !== 'undefined' && Boolean(window.dataLayer),
-      metaPixel: typeof window !== 'undefined' && Boolean(window.fbq),
-      tiktokPixel: typeof window !== 'undefined' && Boolean(window.ttq),
+      metaPixelDirect: shouldFireDirectMeta(cfg),
+      metaPixelViaGTM: Boolean(cfg.gtm_enabled),
       metaCAPI: Boolean(cfg.meta_capi_enabled),
+      tiktokPixelDirect: shouldFireDirectTikTok(cfg),
+      tiktokViaGTM: Boolean(cfg.gtm_enabled),
       tiktokEventsAPI: Boolean(cfg.tiktok_events_api_enabled),
     });
     console.groupEnd();
@@ -430,9 +448,10 @@ function logDebugEvent(eventName: string, eventId: string, payload: any) {
 
 /**
  * 1. PageView
- * Fired on route changes and initial landing once tracking is ready.
+ * isVirtual = false on initial page load (GTM handles initial container pageview).
+ * isVirtual = true on SPA client-side route changes.
  */
-export function trackPageView() {
+export function trackPageView(isVirtual = false) {
   if (typeof window === 'undefined' || !isTrackingEnabled()) return;
   const currentPath = window.location.pathname;
 
@@ -443,26 +462,38 @@ export function trackPageView() {
   const eventId = generateEventId('pv');
   const cfg = getTrackingConfig();
 
-  // DataLayer / GA4
-  window.dataLayer = window.dataLayer || [];
-  window.dataLayer.push({
-    event: 'page_view',
-    event_id: eventId,
-    page_path: currentPath,
-    page_title: document.title,
-  });
+  if (cfg.gtm_enabled) {
+    // When GTM is enabled, container load already triggers initial PageView.
+    // We only push virtual 'page_view' for subsequent client-side navigation.
+    if (isVirtual) {
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({
+        event: 'page_view',
+        event_id: eventId,
+        page_path: currentPath,
+        page_title: document.title,
+      });
+    }
+  } else {
+    // Direct Tracking Mode (No GTM)
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: 'page_view',
+      event_id: eventId,
+      page_path: currentPath,
+      page_title: document.title,
+    });
 
-  // Meta Pixel (Direct browser tracking with eventID)
-  if (window.fbq && cfg.meta_enabled) {
-    window.fbq('track', 'PageView', {}, { eventID: eventId });
+    if (shouldFireDirectMeta(cfg)) {
+      window.fbq('track', 'PageView', {}, { eventID: eventId });
+    }
+
+    if (shouldFireDirectTikTok(cfg)) {
+      window.ttq.page();
+    }
   }
 
-  // TikTok Pixel
-  if (window.ttq && cfg.tiktok_enabled) {
-    window.ttq.page();
-  }
-
-  logDebugEvent('PageView', eventId, { path: currentPath });
+  logDebugEvent('PageView', eventId, { path: currentPath, isVirtual });
 }
 
 /**
@@ -475,13 +506,13 @@ export function trackViewContent(product: TrackingProduct) {
   const productId = String(product.id || '');
   if (!productId) return;
 
-  // Deduplicate rapid renders or StrictMode double-mount
   if (isDuplicateEvent(`vc_${productId}`, 3000)) return;
 
   const eventId = generateEventId('vc');
   const price = Number(product.price) || 0;
   const productName = product.name || 'Product';
   const category = product.category_name || product.category || 'General';
+  const cfg = getTrackingConfig();
 
   // 1. GA4 / GTM DataLayer
   pushEcommerceDataLayer('view_item', {
@@ -496,8 +527,8 @@ export function trackViewContent(product: TrackingProduct) {
     }],
   }, eventId);
 
-  // 2. Meta Pixel
-  if (window.fbq) {
+  // 2. Direct Meta Pixel (Only when GTM is NOT managing tags)
+  if (shouldFireDirectMeta(cfg)) {
     window.fbq('track', 'ViewContent', {
       content_ids: [productId],
       content_name: productName,
@@ -508,8 +539,8 @@ export function trackViewContent(product: TrackingProduct) {
     }, { eventID: eventId });
   }
 
-  // 3. TikTok Pixel
-  if (window.ttq) {
+  // 3. Direct TikTok Pixel (Only when GTM is NOT managing tags)
+  if (shouldFireDirectTikTok(cfg)) {
     window.ttq.track('ViewContent', {
       content_id: productId,
       content_name: productName,
@@ -546,6 +577,7 @@ export function trackSearch(query: string) {
   if (isDuplicateEvent(`search_${cleanQuery}`, 1500)) return;
 
   const eventId = generateEventId('search');
+  const cfg = getTrackingConfig();
 
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push({
@@ -554,11 +586,11 @@ export function trackSearch(query: string) {
     search_term: cleanQuery,
   });
 
-  if (window.fbq) {
+  if (shouldFireDirectMeta(cfg)) {
     window.fbq('track', 'Search', { search_string: cleanQuery }, { eventID: eventId });
   }
 
-  if (window.ttq) {
+  if (shouldFireDirectTikTok(cfg)) {
     window.ttq.track('Search', { query: cleanQuery }, { event_id: eventId });
   }
 
@@ -589,6 +621,7 @@ export function trackAddToCart(
   const productName = product.name || 'Product';
   const category = product.category_name || product.category || 'General';
   const variantStr = [color, size].filter(Boolean).join(' / ') || 'Default';
+  const cfg = getTrackingConfig();
 
   // 1. DataLayer
   pushEcommerceDataLayer('add_to_cart', {
@@ -604,8 +637,8 @@ export function trackAddToCart(
     }],
   }, eventId);
 
-  // 2. Meta Pixel
-  if (window.fbq) {
+  // 2. Direct Meta Pixel (Only when GTM is NOT managing tags)
+  if (shouldFireDirectMeta(cfg)) {
     window.fbq('track', 'AddToCart', {
       content_ids: [productId],
       content_name: productName,
@@ -616,8 +649,8 @@ export function trackAddToCart(
     }, { eventID: eventId });
   }
 
-  // 3. TikTok Pixel
-  if (window.ttq) {
+  // 3. Direct TikTok Pixel (Only when GTM is NOT managing tags)
+  if (shouldFireDirectTikTok(cfg)) {
     window.ttq.track('AddToCart', {
       content_id: productId,
       content_name: productName,
@@ -715,12 +748,12 @@ export function trackInitiateCheckout(
     ? generateCheckoutEventId(checkoutSessionId)
     : generateEventId('ic');
 
-  // Prevent duplicate firing for the same checkout session
   if (isDuplicateEvent(`ic_${eventId}`, 3000)) return;
 
   const numItems = items.reduce((s, i) => s + (i.quantity || 1), 0);
   const contentIds = items.map(i => String(i.product?.id || ''));
   const value = Number(total) || 0;
+  const cfg = getTrackingConfig();
 
   // 1. DataLayer
   pushEcommerceDataLayer('begin_checkout', {
@@ -735,8 +768,8 @@ export function trackInitiateCheckout(
     })),
   }, eventId);
 
-  // 2. Meta Pixel
-  if (window.fbq) {
+  // 2. Direct Meta Pixel (Only when GTM is NOT managing tags)
+  if (shouldFireDirectMeta(cfg)) {
     window.fbq('track', 'InitiateCheckout', {
       content_ids: contentIds,
       content_type: 'product',
@@ -746,8 +779,8 @@ export function trackInitiateCheckout(
     }, { eventID: eventId });
   }
 
-  // 3. TikTok Pixel
-  if (window.ttq) {
+  // 3. Direct TikTok Pixel (Only when GTM is NOT managing tags)
+  if (shouldFireDirectTikTok(cfg)) {
     window.ttq.track('InitiateCheckout', {
       contents: items.map(i => ({
         content_id: String(i.product?.id),
@@ -818,6 +851,7 @@ export function trackAddPaymentInfo(
 ) {
   if (!isTrackingEnabled() || items.length === 0) return;
   const eventId = generateEventId('api');
+  const cfg = getTrackingConfig();
 
   pushEcommerceDataLayer('add_payment_info', {
     currency: 'BDT',
@@ -831,7 +865,7 @@ export function trackAddPaymentInfo(
     })),
   }, eventId);
 
-  if (window.fbq) {
+  if (shouldFireDirectMeta(cfg)) {
     window.fbq('track', 'AddPaymentInfo', {
       value: Number(total) || 0,
       currency: 'BDT',
@@ -846,9 +880,10 @@ export function trackAddPaymentInfo(
  * 
  * Strict Deduplication Rules:
  *  1. event_id is strictly derived from the order ID: `order_<orderId>`
- *  2. Both Meta Pixel and Meta CAPI use this exact same event_id
- *  3. In-browser sessionStorage guard prevents re-firing on page refreshes or success screen returns
- *  4. Server-side conversion_events idempotency prevents duplicate CAPI delivery
+ *  2. GTM receives dataLayer push with event_id: `order_<orderId>`
+ *  3. Direct fbq only fires if GTM is disabled
+ *  4. In-browser sessionStorage guard prevents re-firing on page refreshes or success screen returns
+ *  5. Server-side conversion_events idempotency prevents duplicate CAPI delivery
  */
 export function trackPurchase(
   orderPayload: TrackingOrderPayload,
@@ -882,6 +917,7 @@ export function trackPurchase(
   const discount = Number(orderPayload.discount || 0);
   const numItems = items.reduce((s, i) => s + (Number(i.quantity) || 1), 0);
   const contentIds = items.map(i => String(i.id || i.product_id || ''));
+  const cfg = getTrackingConfig();
 
   // 3. GA4 / GTM DataLayer Standard
   pushEcommerceDataLayer('purchase', {
@@ -899,8 +935,8 @@ export function trackPurchase(
     })),
   }, eventId);
 
-  // 4. Meta Pixel (Exact matching eventID for deduplication)
-  if (window.fbq) {
+  // 4. Direct Meta Pixel (Only when GTM is NOT managing tags)
+  if (shouldFireDirectMeta(cfg)) {
     window.fbq('track', 'Purchase', {
       content_ids: contentIds,
       content_type: 'product',
@@ -911,8 +947,8 @@ export function trackPurchase(
     }, { eventID: eventId });
   }
 
-  // 5. TikTok Pixel
-  if (window.ttq) {
+  // 5. Direct TikTok Pixel (Only when GTM is NOT managing tags)
+  if (shouldFireDirectTikTok(cfg)) {
     window.ttq.track('CompletePayment', {
       contents: items.map(i => ({
         content_id: String(i.id || i.product_id),

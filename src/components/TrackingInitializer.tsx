@@ -27,7 +27,7 @@ export default function TrackingInitializer() {
         // Fire initial pageview on first load once tracking configuration is active
         if (lastTrackedPathRef.current !== pathname) {
           lastTrackedPathRef.current = pathname;
-          trackPageView();
+          trackPageView(false);
         }
       })
       .catch(err => {
@@ -45,7 +45,7 @@ export default function TrackingInitializer() {
     if (lastTrackedPathRef.current === pathname) return;
 
     lastTrackedPathRef.current = pathname;
-    trackPageView();
+    trackPageView(true);
   }, [pathname]);
 
   return null;
