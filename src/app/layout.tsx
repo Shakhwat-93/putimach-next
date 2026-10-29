@@ -5,6 +5,14 @@ import BrandInitializer from "@/components/BrandInitializer";
 export const metadata: Metadata = {
   title: "PutiMach | Timeless Style. Modern Soul.",
   description: "PutiMach Luxury Streetwear & Heritage E-Commerce Platform",
+  other: {
+    "facebook-domain-verification": "5y3nzmq1u9b2g0p9kifr4jlmlejrp7",
+  },
+  verification: {
+    other: {
+      "facebook-domain-verification": ["5y3nzmq1u9b2g0p9kifr4jlmlejrp7"],
+    },
+  },
   icons: {
     icon: "/api/media/uploads/img_1786602897193_2103.webp",
     shortcut: "/api/media/uploads/img_1786602897193_2103.webp",
