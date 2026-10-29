@@ -6,11 +6,11 @@ export const metadata: Metadata = {
   title: "PutiMach | Timeless Style. Modern Soul.",
   description: "PutiMach Luxury Streetwear & Heritage E-Commerce Platform",
   other: {
-    "facebook-domain-verification": "5y3nzmq1u9b2g0p9kifr4jlmlejrp7",
+    "facebook-domain-verification": "57gpl10g24f304hxjdjudadfd3kf8v",
   },
   verification: {
     other: {
-      "facebook-domain-verification": ["5y3nzmq1u9b2g0p9kifr4jlmlejrp7"],
+      "facebook-domain-verification": ["57gpl10g24f304hxjdjudadfd3kf8v"],
     },
   },
   icons: {
@@ -24,7 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        <meta name="facebook-domain-verification" content="5y3nzmq1u9b2g0p9kifr4jlmlejrp7" />
+        <meta name="facebook-domain-verification" content="57gpl10g24f304hxjdjudadfd3kf8v" />
         <link id="dynamic-favicon" rel="icon" type="image/webp" href="/api/media/uploads/img_1786602897193_2103.webp" />
         <link id="dynamic-shortcut-favicon" rel="shortcut icon" href="/api/media/uploads/img_1786602897193_2103.webp" />
         <link id="dynamic-apple-icon" rel="apple-touch-icon" href="/api/media/uploads/img_1786602897193_2103.webp" />
