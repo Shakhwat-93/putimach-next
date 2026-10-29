@@ -198,6 +198,25 @@ export default function TrackingSection({ supabase }) {
 
       if (tsData) {
         setCfg({ ...EMPTY_SETTINGS, ...tsData });
+        return;
+      }
+
+      // 4. Fallback: try site_settings (id = 'general')
+      const { data: genData } = await supabase
+        .from('site_settings')
+        .select('data')
+        .eq('id', 'general')
+        .maybeSingle();
+
+      if (genData?.data) {
+        const d = genData.data;
+        setCfg({
+          ...EMPTY_SETTINGS,
+          gtm_container_id: d.gtm_id || '',
+          gtm_enabled: Boolean(d.gtm_id),
+          meta_pixel_id: d.pixel_id || '',
+          meta_enabled: Boolean(d.pixel_id || d.pixel_enabled),
+        });
       }
     } catch (e) {
       console.error('Failed to load tracking settings:', e);

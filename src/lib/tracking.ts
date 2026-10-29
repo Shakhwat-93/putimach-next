@@ -1,27 +1,125 @@
 'use client';
-// @ts-nocheck
+
 /**
  * ─────────────────────────────────────────────────────────────────────────────
- * Centralized Marketing Tracking & Analytics Engine
+ * Centralized Enterprise Marketing Tracking & Analytics Engine
  * GTM + GA4 + Meta Pixel + Meta CAPI + TikTok Pixel + TikTok Events API
  * 
  * Features:
- *  • Single canonical tracking abstraction
- *  • Single Event ID shared between Client Browser & Server APIs (Deduplication)
- *  • Safe dynamic script injection with duplicate prevention
+ *  • Strict Single Source of Truth architecture
+ *  • Exact Event ID parity between Client Browser & Server APIs (Meta & TikTok deduplication)
+ *  • Deterministic Purchase Event ID based on order number (`order_<orderId>`)
+ *  • Idempotent script injection & Consent Mode v2 support
+ *  • React StrictMode / navigation duplicate suppression
  *  • GA4 Ecommerce dataLayer lifecycle management
  *  • Zero exposure of server access tokens to the client
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-let _config = null;
-let _initPromise = null;
+export interface TrackingProduct {
+  id?: string | number;
+  name?: string;
+  price?: number | string;
+  category?: string;
+  category_name?: string;
+  image?: string;
+  size?: string;
+  color?: string;
+  quantity?: number;
+}
+
+export interface TrackingCartItem {
+  key?: string;
+  product?: TrackingProduct;
+  quantity?: number;
+  size?: string;
+  color?: string;
+}
+
+export interface TrackingOrderPayload {
+  id?: string | number;
+  order_number?: string | number;
+  total?: number;
+  amount?: number;
+  subtotal?: number;
+  shipping_fee?: number;
+  delivery_charge?: number;
+  discount?: number;
+  phone?: string;
+  email?: string;
+  customer_name?: string;
+  city?: string;
+  ordered_items?: any[];
+}
+
+export interface TrackingUserData {
+  phone?: string;
+  email?: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  city?: string;
+  external_id?: string;
+}
+
+export interface TrackingConfig {
+  gtm_enabled?: boolean;
+  gtm_container_id?: string;
+  ga4_enabled?: boolean;
+  ga4_measurement_id?: string;
+  google_ads_enabled?: boolean;
+  google_ads_conversion_id?: string;
+  meta_enabled?: boolean;
+  meta_pixel_id?: string;
+  meta_capi_enabled?: boolean;
+  tiktok_enabled?: boolean;
+  tiktok_pixel_id?: string;
+  tiktok_events_api_enabled?: boolean;
+  ecommerce_tracking_enabled?: boolean;
+  debug_mode?: boolean;
+  consent_mode_enabled?: boolean;
+  advanced_matching_enabled?: boolean;
+}
+
+declare global {
+  interface Window {
+    dataLayer?: any[];
+    gtag?: (...args: any[]) => void;
+    fbq?: any;
+    _fbq?: any;
+    ttq?: any;
+    TiktokAnalyticsObject?: string;
+  }
+}
+
+let _config: TrackingConfig | null = null;
+let _initPromise: Promise<TrackingConfig> | null = null;
 let _lastPageViewPath = '';
+
+// In-memory deduplication cache for preventing rapid duplicate triggers (e.g. React StrictMode / multi-clicks)
+const _recentEvents = new Map<string, number>();
+
+function isDuplicateEvent(cacheKey: string, windowMs = 2500): boolean {
+  const now = Date.now();
+  const lastTime = _recentEvents.get(cacheKey) || 0;
+  if (now - lastTime < windowMs) {
+    return true;
+  }
+  _recentEvents.set(cacheKey, now);
+
+  // Periodic cleanup if cache grows
+  if (_recentEvents.size > 200) {
+    for (const [k, t] of _recentEvents.entries()) {
+      if (now - t > 30000) _recentEvents.delete(k);
+    }
+  }
+  return false;
+}
 
 /**
  * Fetch client-safe tracking configuration from /api/tracking/config
  */
-export async function loadTrackingConfig(): Promise<any> {
+export async function loadTrackingConfig(): Promise<TrackingConfig> {
   if (_config) return _config;
   if (_initPromise) return _initPromise;
 
@@ -29,18 +127,30 @@ export async function loadTrackingConfig(): Promise<any> {
     try {
       const res = await fetch('/api/tracking/config', { cache: 'no-store' });
       const json = await res.json();
-      _config = json?.config || {};
+      _config = (json?.config as TrackingConfig) || {};
 
       if (_config.ecommerce_tracking_enabled !== false) {
+        // Initialize Google Consent Mode v2 if enabled
+        if (_config.consent_mode_enabled) {
+          initConsentMode();
+        }
+
+        // 1. Google Tag Manager
         if (_config.gtm_enabled && _config.gtm_container_id) {
           injectGTM(_config.gtm_container_id);
         }
+
+        // 2. Direct GA4 (Only when GTM is NOT managing Google tags)
         if (_config.ga4_enabled && _config.ga4_measurement_id && !_config.gtm_enabled) {
           injectDirectGA4(_config.ga4_measurement_id);
         }
+
+        // 3. Meta Pixel
         if (_config.meta_enabled && _config.meta_pixel_id) {
           injectMetaPixel(_config.meta_pixel_id);
         }
+
+        // 4. TikTok Pixel
         if (_config.tiktok_enabled && _config.tiktok_pixel_id) {
           injectTikTokPixel(_config.tiktok_pixel_id);
         }
@@ -66,13 +176,27 @@ export async function loadTrackingConfig(): Promise<any> {
   return _initPromise;
 }
 
-export function getTrackingConfig() {
+export function getTrackingConfig(): TrackingConfig {
   return _config || {};
 }
 
-export function isTrackingEnabled() {
+export function isTrackingEnabled(): boolean {
   const cfg = getTrackingConfig();
   return cfg.ecommerce_tracking_enabled !== false;
+}
+
+// ── Google Consent Mode v2 ────────────────────────────────────────────────────
+function initConsentMode() {
+  if (typeof window === 'undefined') return;
+  window.dataLayer = window.dataLayer || [];
+  function gtag(...args: any[]) { window.dataLayer?.push(arguments); }
+  window.gtag = window.gtag || gtag;
+  gtag('consent', 'default', {
+    ad_storage: 'granted',
+    analytics_storage: 'granted',
+    ad_user_data: 'granted',
+    ad_personalization: 'granted',
+  });
 }
 
 // ── 1. GTM Injection ──────────────────────────────────────────────────────────
@@ -85,13 +209,13 @@ export function injectGTM(gtmId: string) {
   const script = document.createElement('script');
   script.id = 'gtm-script';
   script.async = true;
-  script.src = `https://www.googletagmanager.com/gtm.js?id=${gtmId}`;
+  script.src = `https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(gtmId)}`;
   document.head.appendChild(script);
 
   const noscript = document.createElement('noscript');
   noscript.id = 'gtm-noscript';
   const iframe = document.createElement('iframe');
-  iframe.src = `https://www.googletagmanager.com/ns.html?id=${gtmId}`;
+  iframe.src = `https://www.googletagmanager.com/ns.html?id=${encodeURIComponent(gtmId)}`;
   iframe.height = '0';
   iframe.width = '0';
   iframe.style.display = 'none';
@@ -107,11 +231,11 @@ export function injectDirectGA4(measurementId: string) {
   const script = document.createElement('script');
   script.id = 'ga4-script';
   script.async = true;
-  script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
+  script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`;
   document.head.appendChild(script);
 
   window.dataLayer = window.dataLayer || [];
-  function gtag() { window.dataLayer.push(arguments); }
+  function gtag(...args: any[]) { window.dataLayer?.push(arguments); }
   window.gtag = gtag;
   gtag('js', new Date());
   gtag('config', measurementId, { send_page_view: false });
@@ -121,7 +245,7 @@ export function injectDirectGA4(measurementId: string) {
 export function injectMetaPixel(pixelId: string) {
   if (!pixelId || typeof window === 'undefined' || window.fbq || document.getElementById('meta-pixel-script')) return;
 
-  (function(f, b, e, v, n, t, s) {
+  (function(f: any, b: any, e: any, v: any, n?: any, t?: any, s?: any) {
     if (f.fbq) return;
     n = f.fbq = function() {
       n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
@@ -146,70 +270,80 @@ export function injectMetaPixel(pixelId: string) {
 export function injectTikTokPixel(pixelId: string) {
   if (!pixelId || typeof window === 'undefined' || window.ttq || document.getElementById('tiktok-pixel-script')) return;
 
-  (function(w, d, t) {
+  (function(w: any, d: any, t: any) {
     w.TiktokAnalyticsObject = t;
-    var ttq = w[t] = w[t] || [];
+    const ttq = w[t] = w[t] || [];
     ttq.methods = [
       "page", "track", "identify", "instances", "debug", "on", "off", "once", "ready", "alias", "group", "enableCookie", "disableCookie"
     ];
-    ttq.setAndDefer = function(t, e) {
+    ttq.setAndDefer = function(t: any, e: any) {
       t[e] = function() {
         t.push([e].concat(Array.prototype.slice.call(arguments, 0)));
       };
     };
-    for (var i = 0; i < ttq.methods.length; i++) {
+    for (let i = 0; i < ttq.methods.length; i++) {
       ttq.setAndDefer(ttq, ttq.methods[i]);
     }
-    ttq.instance = function(t) {
-      for (var e = ttq._i[t] || [], n = 0; n < ttq.methods.length; n++) {
+    ttq.instance = function(t: any) {
+      for (let e = ttq._i[t] || [], n = 0; n < ttq.methods.length; n++) {
         ttq.setAndDefer(e, ttq.methods[n]);
       }
       return e;
     };
-    ttq.load = function(e, n) {
-      var i = "https://analytics.tiktok.com/i18n/pixel/events.js";
+    ttq.load = function(e: any, n: any) {
+      const i = "https://analytics.tiktok.com/i18n/pixel/events.js";
       ttq._i = ttq._i || {};
       ttq._i[e] = [];
       ttq._i[e]._u = i;
       ttq._t = ttq._t || {};
-      ttq._t[e] = +new Date;
+      ttq._t[e] = +new Date();
       ttq._o = ttq._o || {};
       ttq._o[e] = n || {};
-      var o = document.createElement("script");
+      const o = document.createElement("script");
       o.id = "tiktok-pixel-script";
       o.type = "text/javascript";
       o.async = true;
       o.src = i + "?sdkid=" + e + "&lib=" + t;
-      var a = document.getElementsByTagName("script")[0];
+      const a = document.getElementsByTagName("script")[0];
       a.parentNode.insertBefore(o, a);
     };
     ttq.load(pixelId);
   })(window, document, 'ttq');
 }
 
-// ── Event ID Generation ──────────────────────────────────────────────────────
-export function generateEventId(): string {
+// ── Event ID Generators (Guaranteed Parity) ──────────────────────────────────
+export function generateEventId(prefix = 'evt'): string {
   try {
-    return 'evt_' + crypto.randomUUID().replace(/-/g, '');
+    return `${prefix}_${crypto.randomUUID().replace(/-/g, '')}`;
   } catch {
-    return 'evt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+    return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   }
 }
 
+export function generatePurchaseEventId(orderId: string | number): string {
+  const cleanId = String(orderId).trim().replace(/[^a-zA-Z0-9_-]/g, '');
+  return `order_${cleanId}`;
+}
+
+export function generateCheckoutEventId(sessionId: string): string {
+  const cleanId = String(sessionId).trim().replace(/[^a-zA-Z0-9_-]/g, '');
+  return `ic_${cleanId}`;
+}
+
 // ── Cookie Helpers ───────────────────────────────────────────────────────────
-function getCookie(name: string) {
+function getCookie(name: string): string | null {
   if (typeof document === 'undefined') return null;
   const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
   return match ? decodeURIComponent(match[1]) : null;
 }
 
-function getFbClickId() {
+function getFbClickId(): string | null {
   if (typeof window === 'undefined') return null;
   const fbclid = new URLSearchParams(window.location.search).get('fbclid');
   return fbclid ? `fb.1.${Date.now()}.${fbclid}` : null;
 }
 
-function getTtClickId() {
+function getTtClickId(): string | null {
   if (typeof window === 'undefined') return null;
   return new URLSearchParams(window.location.search).get('ttclid') || null;
 }
@@ -219,10 +353,10 @@ function pushEcommerceDataLayer(event: string, ecommerceData: any, eventId: stri
   if (typeof window === 'undefined') return;
   window.dataLayer = window.dataLayer || [];
   
-  // Clear previous ecommerce state to prevent tag reuse
+  // Clear previous ecommerce state to prevent tag reuse in GA4
   window.dataLayer.push({ ecommerce: null });
   
-  // Push standard payload
+  // Push standard GA4 ecommerce payload
   window.dataLayer.push({
     event,
     event_id: eventId,
@@ -235,7 +369,7 @@ async function dispatchServerConversion(params: {
   eventName: string;
   eventId: string;
   orderId?: string;
-  userData?: any;
+  userData?: TrackingUserData;
   customData?: any;
 }) {
   const cfg = getTrackingConfig();
@@ -264,7 +398,7 @@ async function dispatchServerConversion(params: {
         userData: mergedUserData,
         customData: params.customData,
       }),
-      keepalive: true, // Guarantees execution during page unloads
+      keepalive: true, // Guarantees execution even during page unloads
     }).catch(err => {
       console.warn('[Tracking Engine] Server conversion API call failed:', err);
     });
@@ -296,6 +430,7 @@ function logDebugEvent(eventName: string, eventId: string, payload: any) {
 
 /**
  * 1. PageView
+ * Fired on route changes and initial landing once tracking is ready.
  */
 export function trackPageView() {
   if (typeof window === 'undefined' || !isTrackingEnabled()) return;
@@ -305,7 +440,7 @@ export function trackPageView() {
   if (_lastPageViewPath === currentPath) return;
   _lastPageViewPath = currentPath;
 
-  const eventId = generateEventId();
+  const eventId = generateEventId('pv');
   const cfg = getTrackingConfig();
 
   // DataLayer / GA4
@@ -317,8 +452,8 @@ export function trackPageView() {
     page_title: document.title,
   });
 
-  // Meta Pixel (Only if Pixel is set and GTM is NOT managing it)
-  if (window.fbq && cfg.meta_enabled && !cfg.gtm_enabled) {
+  // Meta Pixel (Direct browser tracking with eventID)
+  if (window.fbq && cfg.meta_enabled) {
     window.fbq('track', 'PageView', {}, { eventID: eventId });
   }
 
@@ -332,12 +467,19 @@ export function trackPageView() {
 
 /**
  * 2. ViewContent (Product Details View)
+ * Deduplicated per product ID within 3000ms.
  */
-export function trackViewContent(product: any) {
+export function trackViewContent(product: TrackingProduct) {
   if (!product || !isTrackingEnabled()) return;
-  const eventId = generateEventId();
-  const price = Number(product.price) || 0;
+
   const productId = String(product.id || '');
+  if (!productId) return;
+
+  // Deduplicate rapid renders or StrictMode double-mount
+  if (isDuplicateEvent(`vc_${productId}`, 3000)) return;
+
+  const eventId = generateEventId('vc');
+  const price = Number(product.price) || 0;
   const productName = product.name || 'Product';
   const category = product.category_name || product.category || 'General';
 
@@ -377,7 +519,7 @@ export function trackViewContent(product: any) {
     }, { event_id: eventId });
   }
 
-  // 4. Server-Side CAPI + Events API
+  // 4. Server-Side CAPI + Events API (Shared eventId for deduplication)
   dispatchServerConversion({
     eventName: 'ViewContent',
     eventId,
@@ -398,35 +540,52 @@ export function trackViewContent(product: any) {
  */
 export function trackSearch(query: string) {
   if (!query || !isTrackingEnabled()) return;
-  const eventId = generateEventId();
+  const cleanQuery = query.trim();
+  if (!cleanQuery) return;
+
+  if (isDuplicateEvent(`search_${cleanQuery}`, 1500)) return;
+
+  const eventId = generateEventId('search');
 
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push({
     event: 'search',
     event_id: eventId,
-    search_term: query,
+    search_term: cleanQuery,
   });
 
   if (window.fbq) {
-    window.fbq('track', 'Search', { search_string: query }, { eventID: eventId });
+    window.fbq('track', 'Search', { search_string: cleanQuery }, { eventID: eventId });
   }
 
   if (window.ttq) {
-    window.ttq.track('Search', { query }, { event_id: eventId });
+    window.ttq.track('Search', { query: cleanQuery }, { event_id: eventId });
   }
 
-  logDebugEvent('Search', eventId, { query });
+  logDebugEvent('Search', eventId, { query: cleanQuery });
 }
 
 /**
  * 4. AddToCart
+ * Debounces rapid accidental double-clicks (< 350ms) while preserving legitimate repeated additions.
  */
-export function trackAddToCart(product: any, quantity: number = 1, size: string = '', color: string = '') {
+export function trackAddToCart(
+  product: TrackingProduct,
+  quantity = 1,
+  size = '',
+  color = ''
+) {
   if (!product || !isTrackingEnabled()) return;
-  const eventId = generateEventId();
+
+  const productId = String(product.id || '');
+  if (!productId) return;
+
+  const clickKey = `atc_${productId}_${size}_${color}`;
+  if (isDuplicateEvent(clickKey, 350)) return;
+
+  const eventId = generateEventId('atc');
   const price = Number(product.price) || 0;
   const lineValue = price * quantity;
-  const productId = String(product.id || '');
   const productName = product.name || 'Product';
   const category = product.category_name || product.category || 'General';
   const variantStr = [color, size].filter(Boolean).join(' / ') || 'Default';
@@ -488,9 +647,14 @@ export function trackAddToCart(product: any, quantity: number = 1, size: string 
 /**
  * 5. RemoveFromCart
  */
-export function trackRemoveFromCart(product: any, quantity: number = 1, size: string = '', color: string = '') {
+export function trackRemoveFromCart(
+  product: TrackingProduct,
+  quantity = 1,
+  size = '',
+  color = ''
+) {
   if (!product || !isTrackingEnabled()) return;
-  const eventId = generateEventId();
+  const eventId = generateEventId('rfc');
   const price = Number(product.price) || 0;
   const lineValue = price * quantity;
   const productId = String(product.id || '');
@@ -515,9 +679,11 @@ export function trackRemoveFromCart(product: any, quantity: number = 1, size: st
 /**
  * 6. ViewCart
  */
-export function trackViewCart(items: any[] = [], total: number = 0) {
+export function trackViewCart(items: any[] = [], total = 0) {
   if (!isTrackingEnabled() || items.length === 0) return;
-  const eventId = generateEventId();
+  if (isDuplicateEvent('view_cart', 2000)) return;
+
+  const eventId = generateEventId('vc_cart');
 
   pushEcommerceDataLayer('view_cart', {
     currency: 'BDT',
@@ -536,10 +702,22 @@ export function trackViewCart(items: any[] = [], total: number = 0) {
 
 /**
  * 7. InitiateCheckout
+ * Deduplicated per checkoutSessionId so page reloads or zone toggles don't inflate events.
  */
-export function trackInitiateCheckout(items: any[] = [], total: number = 0) {
+export function trackInitiateCheckout(
+  items: any[] = [],
+  total = 0,
+  checkoutSessionId = ''
+) {
   if (!isTrackingEnabled() || items.length === 0) return;
-  const eventId = generateEventId();
+
+  const eventId = checkoutSessionId 
+    ? generateCheckoutEventId(checkoutSessionId)
+    : generateEventId('ic');
+
+  // Prevent duplicate firing for the same checkout session
+  if (isDuplicateEvent(`ic_${eventId}`, 3000)) return;
+
   const numItems = items.reduce((s, i) => s + (i.quantity || 1), 0);
   const contentIds = items.map(i => String(i.product?.id || ''));
   const value = Number(total) || 0;
@@ -582,7 +760,7 @@ export function trackInitiateCheckout(items: any[] = [], total: number = 0) {
     }, { event_id: eventId });
   }
 
-  // 4. Server-Side CAPI + Events API
+  // 4. Server-Side CAPI + Events API (Deterministic eventId parity)
   dispatchServerConversion({
     eventName: 'InitiateCheckout',
     eventId,
@@ -606,9 +784,14 @@ export function trackInitiateCheckout(items: any[] = [], total: number = 0) {
 /**
  * 8. AddShippingInfo
  */
-export function trackAddShippingInfo(items: any[] = [], shippingArea: string = '', fee: number = 0, total: number = 0) {
-  if (!isTrackingEnabled()) return;
-  const eventId = generateEventId();
+export function trackAddShippingInfo(
+  items: any[] = [],
+  shippingArea = '',
+  fee = 0,
+  total = 0
+) {
+  if (!isTrackingEnabled() || items.length === 0) return;
+  const eventId = generateEventId('asi');
 
   pushEcommerceDataLayer('add_shipping_info', {
     currency: 'BDT',
@@ -628,9 +811,13 @@ export function trackAddShippingInfo(items: any[] = [], shippingArea: string = '
 /**
  * 9. AddPaymentInfo
  */
-export function trackAddPaymentInfo(items: any[] = [], paymentMethod: string = 'COD', total: number = 0) {
-  if (!isTrackingEnabled()) return;
-  const eventId = generateEventId();
+export function trackAddPaymentInfo(
+  items: any[] = [],
+  paymentMethod = 'COD',
+  total = 0
+) {
+  if (!isTrackingEnabled() || items.length === 0) return;
+  const eventId = generateEventId('api');
 
   pushEcommerceDataLayer('add_payment_info', {
     currency: 'BDT',
@@ -656,13 +843,39 @@ export function trackAddPaymentInfo(items: any[] = [], paymentMethod: string = '
 
 /**
  * 10. Purchase (The Ultimate Conversion Event)
- * Generated only after successful order creation and database confirmation.
+ * 
+ * Strict Deduplication Rules:
+ *  1. event_id is strictly derived from the order ID: `order_<orderId>`
+ *  2. Both Meta Pixel and Meta CAPI use this exact same event_id
+ *  3. In-browser sessionStorage guard prevents re-firing on page refreshes or success screen returns
+ *  4. Server-side conversion_events idempotency prevents duplicate CAPI delivery
  */
-export function trackPurchase(orderPayload: any, userData: { phone?: string; email?: string; name?: string; city?: string } = {}) {
+export function trackPurchase(
+  orderPayload: TrackingOrderPayload,
+  userData: TrackingUserData = {}
+) {
   if (!orderPayload || !isTrackingEnabled()) return;
 
-  const eventId = generateEventId();
-  const orderId = String(orderPayload.order_number || orderPayload.id || '');
+  const orderId = String(orderPayload.order_number || orderPayload.id || '').trim();
+  if (!orderId) {
+    console.warn('[Tracking Engine] Purchase event aborted: Missing order identifier');
+    return;
+  }
+
+  // 1. In-browser deduplication guard
+  const sessionGuardKey = `putimach_purchase_tracked_${orderId}`;
+  if (typeof window !== 'undefined') {
+    try {
+      if (sessionStorage.getItem(sessionGuardKey)) {
+        console.log(`[Tracking Engine] Purchase already tracked for order #${orderId}. Skipping browser duplicate.`);
+        return;
+      }
+      sessionStorage.setItem(sessionGuardKey, 'true');
+    } catch (_) {}
+  }
+
+  // 2. Deterministic Event ID
+  const eventId = generatePurchaseEventId(orderId);
   const items = Array.isArray(orderPayload.ordered_items) ? orderPayload.ordered_items : [];
   const value = Number(orderPayload.total || orderPayload.amount || orderPayload.subtotal || 0);
   const shipping = Number(orderPayload.shipping_fee || orderPayload.delivery_charge || 0);
@@ -670,7 +883,7 @@ export function trackPurchase(orderPayload: any, userData: { phone?: string; ema
   const numItems = items.reduce((s, i) => s + (Number(i.quantity) || 1), 0);
   const contentIds = items.map(i => String(i.id || i.product_id || ''));
 
-  // 1. GA4 / GTM DataLayer Standard
+  // 3. GA4 / GTM DataLayer Standard
   pushEcommerceDataLayer('purchase', {
     transaction_id: orderId,
     value: value,
@@ -686,7 +899,7 @@ export function trackPurchase(orderPayload: any, userData: { phone?: string; ema
     })),
   }, eventId);
 
-  // 2. Meta Pixel
+  // 4. Meta Pixel (Exact matching eventID for deduplication)
   if (window.fbq) {
     window.fbq('track', 'Purchase', {
       content_ids: contentIds,
@@ -698,7 +911,7 @@ export function trackPurchase(orderPayload: any, userData: { phone?: string; ema
     }, { eventID: eventId });
   }
 
-  // 3. TikTok Pixel
+  // 5. TikTok Pixel
   if (window.ttq) {
     window.ttq.track('CompletePayment', {
       contents: items.map(i => ({
@@ -712,7 +925,7 @@ export function trackPurchase(orderPayload: any, userData: { phone?: string; ema
     }, { event_id: eventId });
   }
 
-  // 4. Server-Side CAPI + Events API (With SHA-256 hashed customer parameters)
+  // 6. Server-Side CAPI + Events API (Exact matching eventId)
   dispatchServerConversion({
     eventName: 'Purchase',
     eventId,
@@ -720,8 +933,11 @@ export function trackPurchase(orderPayload: any, userData: { phone?: string; ema
     userData: {
       phone: userData.phone || orderPayload.phone,
       email: userData.email || orderPayload.email,
-      firstName: userData.name || orderPayload.customer_name,
+      name: userData.name || orderPayload.customer_name,
+      firstName: userData.firstName,
+      lastName: userData.lastName,
       city: userData.city || orderPayload.city,
+      external_id: orderId,
     },
     customData: {
       currency: 'BDT',

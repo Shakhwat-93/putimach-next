@@ -12,6 +12,49 @@ function sha256(value: string | undefined | null): string | undefined {
   return crypto.createHash('sha256').update(normalized).digest('hex');
 }
 
+function normalizePhone(phone: string | undefined | null): string | undefined {
+  if (!phone) return undefined;
+  const digits = String(phone).replace(/\D/g, '');
+  if (!digits) return undefined;
+  if (digits.startsWith('880') && digits.length >= 13) {
+    return digits;
+  }
+  if (digits.startsWith('0') && digits.length === 11) {
+    return '88' + digits; // Bangladesh E.164 without plus: 88017...
+  }
+  if (digits.length === 10 && digits.startsWith('1')) {
+    return '880' + digits;
+  }
+  return digits;
+}
+
+function hashPhone(phone: string | undefined | null): string | undefined {
+  const norm = normalizePhone(phone);
+  return norm ? sha256(norm) : undefined;
+}
+
+function normalizeEmail(email: string | undefined | null): string | undefined {
+  if (!email) return undefined;
+  const clean = String(email).trim().toLowerCase();
+  return clean.includes('@') ? clean : undefined;
+}
+
+function hashEmail(email: string | undefined | null): string | undefined {
+  const norm = normalizeEmail(email);
+  return norm ? sha256(norm) : undefined;
+}
+
+function splitAndHashName(fullName: string | undefined | null): { fn?: string; ln?: string } {
+  if (!fullName) return {};
+  const parts = String(fullName).trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return {};
+  if (parts.length === 1) return { fn: sha256(parts[0]) };
+  return {
+    fn: sha256(parts[0]),
+    ln: sha256(parts.slice(1).join(' ')),
+  };
+}
+
 /**
  * Server-Side Conversion API Router
  * Dispatches events to Meta CAPI and TikTok Events API securely with SHA-256 hashed user data.
@@ -60,11 +103,14 @@ export async function POST(req: NextRequest) {
         }
 
         if (shouldSendMeta) {
-          const hashedPhone = sha256(userData.phone);
-          const hashedEmail = sha256(userData.email);
-          const hashedFirstName = sha256(userData.firstName);
-          const hashedLastName = sha256(userData.lastName);
+          const hashedPhone = hashPhone(userData.phone);
+          const hashedEmail = hashEmail(userData.email);
+          const nameParts = splitAndHashName(userData.name || userData.firstName || '');
+          const hashedFirstName = nameParts.fn || sha256(userData.firstName);
+          const hashedLastName = nameParts.ln || sha256(userData.lastName);
           const hashedCity = sha256(userData.city);
+          const hashedCountry = sha256('bd');
+          const hashedExternalId = (userData.external_id || orderId) ? sha256(String(userData.external_id || orderId)) : undefined;
 
           const metaPayload = {
             data: [{
@@ -79,6 +125,8 @@ export async function POST(req: NextRequest) {
                 ...(hashedFirstName && { fn: [hashedFirstName] }),
                 ...(hashedLastName && { ln: [hashedLastName] }),
                 ...(hashedCity && { ct: [hashedCity] }),
+                country: [hashedCountry],
+                ...(hashedExternalId && { external_id: [hashedExternalId] }),
                 client_ip_address: clientIp || undefined,
                 client_user_agent: userAgent || undefined,
                 fbp: userData.fbp || undefined,
@@ -144,8 +192,10 @@ export async function POST(req: NextRequest) {
         }
 
         if (shouldSendTikTok) {
-          const hashedPhone = sha256(userData.phone);
-          const hashedEmail = sha256(userData.email);
+          const normPhone = normalizePhone(userData.phone);
+          const hashedPhone = normPhone ? sha256(normPhone) : undefined;
+          const normEmail = normalizeEmail(userData.email);
+          const hashedEmail = normEmail ? sha256(normEmail) : undefined;
 
           // Map event name to TikTok standard if needed
           const tikTokEventName = eventName === 'InitiateCheckout' ? 'InitiateCheckout' :

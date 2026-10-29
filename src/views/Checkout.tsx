@@ -13,10 +13,11 @@ import {
 } from 'lucide-react';
 import useCartStore from '../store/cartStore';
 import { supabase } from '../lib/supabase';
-import { trackInitiateCheckout, trackPurchase } from '../lib/tracking';
+import { trackInitiateCheckout, trackAddShippingInfo, trackPurchase } from '../lib/tracking';
 import { recordDiscountUsage } from '../lib/discounts/db';
 import { 
-  getOrCreateCheckoutSessionId, 
+  getOrCreateCheckoutSessionId,
+  resetCheckoutSessionId, 
   trackIncompleteCheckout, 
   convertIncompleteCheckout 
 } from '../lib/checkout/session';
@@ -807,7 +808,7 @@ export default function Checkout() {
   useEffect(() => {
     if (items.length > 0 && !initiateCheckoutFired.current) {
       initiateCheckoutFired.current = true;
-      trackInitiateCheckout(items, subtotal);
+      trackInitiateCheckout(items, subtotal, checkoutSessionId);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items.length]);
@@ -1174,6 +1175,7 @@ export default function Checkout() {
 
       // 4. ONLY NOW CLEAR THE CART (Cart is preserved if anything above failed)
       clearCart();
+      resetCheckoutSessionId();
 
       // 5. Async side-effects (non-blocking)
       try {
@@ -1191,6 +1193,8 @@ export default function Checkout() {
           {
             ...orderPayload,
             id: confirmedOrderNumber,
+            order_number: confirmedOrderNumber,
+            total: Number(orderPayload.total || orderPayload.amount || total),
             ordered_items: orderedItemsSnapshot.map(i => ({
               id: i.product.id,
               name: i.product.name,
@@ -1200,7 +1204,13 @@ export default function Checkout() {
             })),
             shipping_fee: finalShipping,
           },
-          { phone: form.phone, email: form.email }
+          { 
+            phone: form.phone, 
+            email: form.email,
+            name: form.name,
+            city: form.city || (shippingArea === 'inside' ? 'Dhaka' : 'Bangladesh'),
+            external_id: confirmedOrderNumber,
+          }
         );
       } catch (_) {}
 
@@ -1484,7 +1494,10 @@ export default function Checkout() {
                       <button
                         type="button"
                         key={area.id}
-                        onClick={() => setShippingArea(area.id)}
+                        onClick={() => {
+                          setShippingArea(area.id);
+                          trackAddShippingInfo(items, area.label, area.fee, total);
+                        }}
                         className={`w-full text-left p-3.5 sm:p-4 rounded-2xl border-2 transition-all duration-150 flex sm:flex-col justify-between items-center sm:items-start gap-2.5 min-w-0 cursor-pointer select-none active:scale-[0.98] ${
                           isSelected
                             ? 'border-[#C5A880] bg-[#C5A880]/15 shadow-sm ring-2 ring-[#C5A880]/30'

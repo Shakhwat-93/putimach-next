@@ -80,6 +80,27 @@ export async function getTrackingSettings(client = supabase) {
     } catch (_) {}
   }
 
+  // 4. Fallback: Check site_settings (id = 'general') for legacy or global GTM/Pixel configs
+  if (!loadedData) {
+    try {
+      const { data: genData } = await client
+        .from('site_settings')
+        .select('data')
+        .eq('id', 'general')
+        .maybeSingle();
+
+      if (genData?.data) {
+        const d = genData.data;
+        loadedData = {
+          gtm_container_id: d.gtm_id || '',
+          gtm_enabled: Boolean(d.gtm_id),
+          meta_pixel_id: d.pixel_id || '',
+          meta_enabled: Boolean(d.pixel_id || d.pixel_enabled),
+        };
+      }
+    } catch (_) {}
+  }
+
   if (loadedData) {
     return {
       ...EMPTY_TRACKING_SETTINGS,
