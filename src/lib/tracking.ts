@@ -48,15 +48,31 @@ export interface TrackingCartItem {
 export interface TrackingOrderPayload {
   id?: string | number;
   order_number?: string | number;
-  total?: number;
+  customer_name?: string;
+  name?: string;
+  phone?: string;
+  customer_phone?: string;
+  email?: string;
+  customer_email?: string;
+  address?: string;
+  shipping_address?: string;
+  product_name?: string;
   amount?: number;
+  total?: number;
   subtotal?: number;
+  items?: number;
+  quantity?: number;
+  totalItems?: number;
+  shipping_zone?: string;
   shipping_fee?: number;
   delivery_charge?: number;
   discount?: number;
-  phone?: string;
-  email?: string;
-  customer_name?: string;
+  source?: string;
+  status?: string;
+  payment_status?: string;
+  ip_address?: string;
+  customerIp?: string;
+  traffic_source?: string;
   city?: string;
   ordered_items?: any[];
 }
@@ -404,7 +420,8 @@ function pushEcommerceDataLayer(
   event: string, 
   ecommerceData: any, 
   eventId: string, 
-  userData?: TrackingUserData
+  userData?: TrackingUserData,
+  extraOrderData?: Record<string, any>
 ) {
   if (typeof window === 'undefined') return;
 
@@ -439,6 +456,22 @@ function pushEcommerceDataLayer(
     ecommerce: ecommerceData,
   };
 
+  // If extra order data provided (from exact user order schema), inject to dataLayer root
+  if (extraOrderData) {
+    if (extraOrderData.id) payload.id = extraOrderData.id;
+    if (extraOrderData.customer_name) payload.customer_name = extraOrderData.customer_name;
+    if (extraOrderData.phone) payload.phone = extraOrderData.phone;
+    if (extraOrderData.address) payload.address = extraOrderData.address;
+    if (extraOrderData.product_name) payload.product_name = extraOrderData.product_name;
+    if (extraOrderData.amount !== undefined) payload.amount = extraOrderData.amount;
+    if (extraOrderData.items !== undefined) payload.items = extraOrderData.items;
+    if (extraOrderData.shipping_zone) payload.shipping_zone = extraOrderData.shipping_zone;
+    if (extraOrderData.source) payload.source = extraOrderData.source;
+    if (extraOrderData.status) payload.status = extraOrderData.status;
+    if (extraOrderData.ip_address) payload.ip_address = extraOrderData.ip_address;
+    if (extraOrderData.traffic_source) payload.traffic_source = extraOrderData.traffic_source;
+  }
+
   // If customer data is provided, attach all DataLayer variables expected by GTM and GA4
   if (phone || email || firstName || address) {
     payload.customerFirstName = firstName;
@@ -451,6 +484,7 @@ function pushEcommerceDataLayer(
     payload.customerBillingPostcode = postalCode;
     if (clientIp) {
       payload.customer_ip = clientIp;
+      payload.ip_address = clientIp;
     }
     payload.user_data = {
       email_address: email,
@@ -854,11 +888,42 @@ export function trackPurchase(
 ) {
   if (!orderPayload || !isTrackingEnabled()) return;
 
-  const orderId = String(orderPayload.order_number || orderPayload.id || '').trim();
+  const orderId = String(orderPayload.id || orderPayload.order_number || '').trim();
   if (!orderId) {
     console.warn('[Tracking Engine] Purchase event aborted: Missing order identifier');
     return;
   }
+
+  // Extract comprehensive customer & order information from orderPayload & userData
+  const customerName = String(orderPayload.customer_name || orderPayload.name || userData.name || '').trim();
+  const phone = String(orderPayload.phone || orderPayload.customer_phone || userData.phone || '').trim();
+  const email = String(orderPayload.email || orderPayload.customer_email || userData.email || '').trim();
+  const address = String(orderPayload.address || orderPayload.shipping_address || userData.address || userData.street || '').trim();
+  const ipAddress = String(orderPayload.ip_address || orderPayload.customerIp || userData.clientIp || '').trim();
+  const shippingZone = String(orderPayload.shipping_zone || '').trim();
+  const source = String(orderPayload.source || 'Website').trim();
+  const status = String(orderPayload.status || 'New').trim();
+  const trafficSource = String(orderPayload.traffic_source || '').trim();
+  const city = String(orderPayload.city || userData.city || (shippingZone.toLowerCase().includes('outside') ? 'Outside Dhaka' : 'Dhaka')).trim();
+
+  const nameParts = customerName.split(/\s+/).filter(Boolean);
+  const firstName = userData.firstName || nameParts[0] || customerName || '';
+  const lastName = userData.lastName || nameParts.slice(1).join(' ') || '';
+
+  const mergedUserData: TrackingUserData = {
+    name: customerName,
+    firstName,
+    lastName,
+    phone,
+    email,
+    address,
+    street: address,
+    city,
+    country: userData.country || 'BD',
+    postalCode: userData.postalCode || '1200',
+    clientIp: ipAddress || undefined,
+    external_id: orderId,
+  };
 
   // 1. In-browser deduplication guard (durable order-level idempotency)
   const sessionGuardKey = `putimach_purchase_tracked_${orderId}`;
@@ -875,39 +940,51 @@ export function trackPurchase(
   // 2. Deterministic Event ID (Identical across GTM dataLayer, Meta Pixel, and Meta CAPI)
   const eventId = generatePurchaseEventId(orderId);
   const items = Array.isArray(orderPayload.ordered_items) ? orderPayload.ordered_items : [];
-  const value = Number(orderPayload.total || orderPayload.amount || orderPayload.subtotal || 0);
+  const value = Number(orderPayload.amount || orderPayload.total || orderPayload.subtotal || 0);
   const shipping = Number(orderPayload.shipping_fee || orderPayload.delivery_charge || 0);
   const discount = Number(orderPayload.discount || 0);
-  const numItems = items.reduce((s, i) => s + (Number(i.quantity) || 1), 0);
+  const numItems = Number(orderPayload.items || orderPayload.quantity || orderPayload.totalItems || items.reduce((s, i) => s + (Number(i.quantity) || 1), 0));
+  const productName = String(orderPayload.product_name || items[0]?.name || items[0]?.product_name || 'Product').trim();
   const contentIds = items.map(i => String(i.id || i.product_id || ''));
   const cfg = getTrackingConfig();
 
-  // 3. GA4 / GTM DataLayer Standard
-  pushEcommerceDataLayer('purchase', {
-    transaction_id: orderId,
-    value: value,
-    currency: 'BDT',
-    shipping: shipping,
-    discount: discount,
-    items: items.map(i => ({
-      item_id: String(i.id || i.product_id),
-      item_name: i.name || i.product_name,
-      price: Number(i.price || i.unit_price || 0),
-      quantity: Number(i.quantity) || 1,
-      item_variant: [i.color || i.color_name, i.size].filter(Boolean).join(' / '),
-    })),
-  }, eventId);
+  // 3. GA4 / GTM DataLayer Standard with full customer & order fields
+  pushEcommerceDataLayer(
+    'purchase', 
+    {
+      transaction_id: orderId,
+      value: value,
+      currency: 'BDT',
+      shipping: shipping,
+      discount: discount,
+      items: items.map(i => ({
+        item_id: String(i.id || i.product_id || productIdFromName(i.name || i.product_name)),
+        item_name: i.name || i.product_name || productName,
+        price: Number(i.price || i.unit_price || 0),
+        quantity: Number(i.quantity) || 1,
+        item_variant: [i.color || i.color_name, i.size].filter(Boolean).join(' / '),
+      })),
+    }, 
+    eventId, 
+    mergedUserData,
+    {
+      id: orderId,
+      customer_name: customerName,
+      phone: phone,
+      address: address,
+      product_name: productName,
+      amount: value,
+      items: numItems,
+      shipping_zone: shippingZone,
+      source: source,
+      status: status,
+      ip_address: ipAddress || null,
+      traffic_source: trafficSource || null,
+    }
+  );
 
   // 4. Direct Meta Pixel (Only when GTM is NOT managing tags)
   if (shouldFireDirectMeta(cfg)) {
-    const nameParts = (userData.name || '').trim().split(/\s+/).filter(Boolean);
-    const firstName = userData.firstName || nameParts[0] || userData.name || '';
-    const lastName = userData.lastName || nameParts.slice(1).join(' ') || '';
-    const phone = userData.phone || orderPayload.phone || '';
-    const email = userData.email || orderPayload.email || '';
-    const address = userData.address || userData.street || '';
-    const city = userData.city || orderPayload.city || 'Dhaka';
-
     if (phone || email || firstName) {
       try {
         window.fbq('setUserProperties', cfg.meta_pixel_id, {
@@ -923,12 +1000,15 @@ export function trackPurchase(
     }
 
     window.fbq('track', 'Purchase', {
-      content_ids: contentIds,
+      content_ids: contentIds.length ? contentIds : [orderId],
+      content_name: productName,
       content_type: 'product',
       value: value,
       currency: 'BDT',
       num_items: numItems,
       order_id: orderId,
+      shipping_zone: shippingZone,
+      traffic_source: trafficSource,
     }, { eventID: eventId });
   }
 
@@ -946,18 +1026,23 @@ export function trackPurchase(
     }, { event_id: eventId });
   }
 
-  // 6. Server-Side CAPI + Events API (Exact matching eventId)
+  // 6. Server-Side CAPI + Events API (Exact matching eventId & complete customer profile)
   dispatchServerConversion({
     eventName: 'Purchase',
     eventId,
     orderId,
     userData: {
-      phone: userData.phone || orderPayload.phone,
-      email: userData.email || orderPayload.email,
-      name: userData.name || orderPayload.customer_name,
-      firstName: userData.firstName,
-      lastName: userData.lastName,
-      city: userData.city || orderPayload.city,
+      phone: phone,
+      email: email,
+      name: customerName,
+      firstName: firstName,
+      lastName: lastName,
+      address: address,
+      street: address,
+      city: city,
+      country: 'BD',
+      postalCode: '1200',
+      clientIp: ipAddress,
       external_id: orderId,
     },
     customData: {
@@ -965,17 +1050,21 @@ export function trackPurchase(
       value: value,
       num_items: numItems,
       order_id: orderId,
-      content_ids: contentIds,
+      content_name: productName,
+      content_ids: contentIds.length ? contentIds : [orderId],
+      shipping_zone: shippingZone,
+      source: source,
+      traffic_source: trafficSource,
       contents: items.map(i => ({
-        id: String(i.id || i.product_id),
-        name: i.name || i.product_name,
+        id: String(i.id || i.product_id || orderId),
+        name: i.name || i.product_name || productName,
         price: Number(i.price || i.unit_price || 0),
         quantity: Number(i.quantity) || 1,
       })),
     },
   });
 
-  logDebugEvent('Purchase', eventId, { orderId, value, items, userData });
+  logDebugEvent('Purchase', eventId, { orderId, value, items, userData: mergedUserData });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -997,3 +1086,7 @@ export function trackAddShippingInfo(..._args: any[]) {}
 
 /** @deprecated Disabled under strict 5-event architecture */
 export function trackAddPaymentInfo(..._args: any[]) {}
+
+function productIdFromName(name: string): string {
+  return String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'prod';
+}

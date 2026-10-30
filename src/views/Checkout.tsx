@@ -1189,34 +1189,45 @@ export default function Checkout() {
       } catch (_) {}
 
       try {
-        const capturedIp = await getClientIp().catch(() => null);
-        const nameParts = String(form.name || '').trim().split(/\s+/).filter(Boolean);
-        const firstName = nameParts[0] || form.name || '';
-        const lastName = nameParts.slice(1).join(' ') || '';
+        const capturedIp = await getClientIp().catch(() => null) || ipAddress || null;
+        const mainItem = orderedItemsSnapshot[0];
+        const productName = mainProduct?.name || mainItem?.product?.name || 'Product';
+        const totalItemsCount = orderedItemsSnapshot.reduce((s, i) => s + (i.quantity || 1), 0);
+        const shippingZoneLabel = shippingArea === 'inside' ? 'Inside dhaka' : (shippingArea === 'sub' ? 'Sub dhaka' : 'Outside dhaka');
+        const formattedAddress = `${form.address.trim()}${form.city.trim() ? ', ' + form.city.trim() : ''}`;
+        const trafficSourceVal = trafficSource || getTrafficSource() || null;
 
         trackPurchase(
           {
-            ...orderPayload,
             id: confirmedOrderNumber,
-            order_number: confirmedOrderNumber,
-            total: Number(orderPayload.total || orderPayload.amount || total),
+            customer_name: form.name.trim(),
+            phone: form.phone.trim(),
+            address: formattedAddress,
+            product_name: productName,
             ordered_items: orderedItemsSnapshot.map(i => ({
               id: i.product.id,
               name: i.product.name,
-              price: i.product.price,
-              quantity: i.quantity,
+              price: Number(i.product.price || 0),
+              quantity: Number(i.quantity || 1),
               size: i.size,
+              color: i.color || null,
             })),
+            amount: Number(orderPayload.amount || orderPayload.total || total),
+            items: totalItemsCount,
+            shipping_zone: shippingZoneLabel,
+            source: 'Website',
+            status: 'New',
+            ip_address: capturedIp || null,
+            traffic_source: trafficSourceVal,
+            email: form.email.trim() || undefined,
+            city: form.city || (shippingArea === 'inside' ? 'Dhaka' : 'Bangladesh'),
             shipping_fee: finalShipping,
           },
           { 
-            phone: form.phone, 
-            email: form.email,
-            name: form.name,
-            firstName,
-            lastName,
-            address: form.address,
-            street: form.address,
+            phone: form.phone.trim(), 
+            email: form.email.trim(),
+            name: form.name.trim(),
+            address: formattedAddress,
             city: form.city || (shippingArea === 'inside' ? 'Dhaka' : 'Bangladesh'),
             country: 'BD',
             postalCode: '1200',
