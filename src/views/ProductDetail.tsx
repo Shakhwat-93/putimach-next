@@ -28,6 +28,7 @@ export default function ProductDetailView() {
   const [selectedSize, setSelectedSize] = useState(null);
   const [selectedColor, setSelectedColor] = useState(null);
   const [adding, setAdding] = useState(false);
+  const hasTrackedViewContentRef = useRef<string | null>(null);
   const [added, setAdded] = useState(false);
   const [liked, setLiked] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -373,7 +374,12 @@ export default function ProductDetailView() {
           setProduct(prod);
           setSelectedSize(prod?.sizes?.[0] || null);
           setSelectedColor(prod?.colors?.[0] || null);
-          trackViewContent(prod);
+          // Strictly fire ViewContent ONCE per product page visit
+          const prodKey = String(prod?.id || slug || '').trim().toLowerCase();
+          if (prodKey && hasTrackedViewContentRef.current !== prodKey) {
+            hasTrackedViewContentRef.current = prodKey;
+            trackViewContent(prod);
+          }
           setLoading(false);
 
           if (prod?.category) {

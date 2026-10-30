@@ -1189,6 +1189,11 @@ export default function Checkout() {
       } catch (_) {}
 
       try {
+        const capturedIp = await getClientIp().catch(() => null);
+        const nameParts = String(form.name || '').trim().split(/\s+/).filter(Boolean);
+        const firstName = nameParts[0] || form.name || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
         trackPurchase(
           {
             ...orderPayload,
@@ -1208,7 +1213,14 @@ export default function Checkout() {
             phone: form.phone, 
             email: form.email,
             name: form.name,
+            firstName,
+            lastName,
+            address: form.address,
+            street: form.address,
             city: form.city || (shippingArea === 'inside' ? 'Dhaka' : 'Bangladesh'),
+            country: 'BD',
+            postalCode: '1200',
+            clientIp: capturedIp || undefined,
             external_id: confirmedOrderNumber,
           }
         );

@@ -67,8 +67,16 @@ export interface TrackingUserData {
   name?: string;
   firstName?: string;
   lastName?: string;
+  address?: string;
+  street?: string;
   city?: string;
+  postalCode?: string;
+  country?: string;
+  clientIp?: string;
   external_id?: string;
+  fbp?: string;
+  fbc?: string;
+  ttclid?: string;
 }
 
 export interface TrackingConfig {
@@ -392,7 +400,12 @@ function getTtClickId(): string | null {
 }
 
 // ── DataLayer Cleanup & Push (Strict 5-Event Enforcement) ────────────────────
-function pushEcommerceDataLayer(event: string, ecommerceData: any, eventId: string) {
+function pushEcommerceDataLayer(
+  event: string, 
+  ecommerceData: any, 
+  eventId: string, 
+  userData?: TrackingUserData
+) {
   if (typeof window === 'undefined') return;
 
   // STRICT ENFORCEMENT: Only 5 canonical events permitted
@@ -407,13 +420,54 @@ function pushEcommerceDataLayer(event: string, ecommerceData: any, eventId: stri
   
   // Clear previous ecommerce state to prevent tag reuse in GA4
   window.dataLayer.push({ ecommerce: null });
-  
-  // Push standard GA4 ecommerce payload
-  window.dataLayer.push({
+
+  // Prepare customer profile matching variables for GTM and GA4
+  const nameParts = (userData?.name || '').trim().split(/\s+/).filter(Boolean);
+  const firstName = userData?.firstName || nameParts[0] || userData?.name || '';
+  const lastName = userData?.lastName || nameParts.slice(1).join(' ') || '';
+  const phone = userData?.phone || '';
+  const email = userData?.email || '';
+  const address = userData?.address || userData?.street || '';
+  const city = userData?.city || 'Dhaka';
+  const country = userData?.country || 'BD';
+  const postalCode = userData?.postalCode || '1200';
+  const clientIp = userData?.clientIp || '';
+
+  const payload: Record<string, any> = {
     event,
     event_id: eventId,
     ecommerce: ecommerceData,
-  });
+  };
+
+  // If customer data is provided, attach all DataLayer variables expected by GTM and GA4
+  if (phone || email || firstName || address) {
+    payload.customerFirstName = firstName;
+    payload.customerLastName = lastName;
+    payload.customerBillingPhone = phone;
+    payload.customerBillingEmail = email;
+    payload.customerBillingAddress1 = address;
+    payload.customerBillingCity = city;
+    payload.customerBillingCountry = country;
+    payload.customerBillingPostcode = postalCode;
+    if (clientIp) {
+      payload.customer_ip = clientIp;
+    }
+    payload.user_data = {
+      email_address: email,
+      phone_number: phone,
+      address: {
+        first_name: firstName,
+        last_name: lastName,
+        street: address,
+        city: city,
+        postal_code: postalCode,
+        country: country,
+      },
+    };
+  }
+  
+  // Push standard payload with full customer matching parameters
+  window.dataLayer.push(payload);
 }
 
 // ── Server-side Conversion Dispatcher (Meta CAPI + TikTok Events API) ────────
@@ -551,10 +605,13 @@ export function trackPageView(isVirtual = false) {
 export function trackViewContent(product: TrackingProduct) {
   if (!product || !isTrackingEnabled()) return;
 
-  const productId = String(product.id || '');
+  const productId = String(product.id || '').trim();
   if (!productId) return;
 
-  if (isDuplicateEvent(`vc_${productId}`, 3000)) return;
+  // Session/Route-level deduplication: Exactly ONE ViewContent per product per 60 seconds
+  const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+  const dedupeKey = `vc_${productId}_${currentPath}`;
+  if (isDuplicateEvent(dedupeKey, 60000)) return;
 
   const eventId = generateEventId('vc');
   const price = Number(product.price) || 0;
@@ -843,6 +900,28 @@ export function trackPurchase(
 
   // 4. Direct Meta Pixel (Only when GTM is NOT managing tags)
   if (shouldFireDirectMeta(cfg)) {
+    const nameParts = (userData.name || '').trim().split(/\s+/).filter(Boolean);
+    const firstName = userData.firstName || nameParts[0] || userData.name || '';
+    const lastName = userData.lastName || nameParts.slice(1).join(' ') || '';
+    const phone = userData.phone || orderPayload.phone || '';
+    const email = userData.email || orderPayload.email || '';
+    const address = userData.address || userData.street || '';
+    const city = userData.city || orderPayload.city || 'Dhaka';
+
+    if (phone || email || firstName) {
+      try {
+        window.fbq('setUserProperties', cfg.meta_pixel_id, {
+          em: email,
+          ph: phone,
+          fn: firstName,
+          ln: lastName,
+          ct: city,
+          st: address,
+          country: 'bd',
+        });
+      } catch (_) {}
+    }
+
     window.fbq('track', 'Purchase', {
       content_ids: contentIds,
       content_type: 'product',

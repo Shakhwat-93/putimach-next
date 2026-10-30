@@ -87,7 +87,12 @@ export async function POST(req: NextRequest) {
 
     // 1. Fetch server-side tracking settings
     const cfg = await getTrackingSettings(supabase);
-    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || '';
+    const clientIp = 
+      req.headers.get('cf-connecting-ip') ||
+      req.headers.get('x-real-ip') ||
+      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      userData.clientIp ||
+      '';
     const userAgent = req.headers.get('user-agent') || '';
 
     const results: Record<string, any> = {};
@@ -118,7 +123,9 @@ export async function POST(req: NextRequest) {
           const nameParts = splitAndHashName(userData.name || userData.firstName || '');
           const hashedFirstName = nameParts.fn || sha256(userData.firstName);
           const hashedLastName = nameParts.ln || sha256(userData.lastName);
-          const hashedCity = sha256(userData.city);
+          const hashedCity = sha256(userData.city || 'dhaka');
+          const hashedStreet = sha256(userData.address || userData.street);
+          const hashedZip = sha256(userData.postalCode || '1200');
           const hashedCountry = sha256('bd');
           const hashedExternalId = (userData.external_id || orderId) ? sha256(String(userData.external_id || orderId)) : undefined;
 
@@ -134,6 +141,8 @@ export async function POST(req: NextRequest) {
                 ...(hashedEmail && { em: [hashedEmail] }),
                 ...(hashedFirstName && { fn: [hashedFirstName] }),
                 ...(hashedLastName && { ln: [hashedLastName] }),
+                ...(hashedStreet && { st: [hashedStreet] }),
+                ...(hashedZip && { zp: [hashedZip] }),
                 ...(hashedCity && { ct: [hashedCity] }),
                 country: [hashedCountry],
                 ...(hashedExternalId && { external_id: [hashedExternalId] }),
