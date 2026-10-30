@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCartStore } from '../../store/cartStore';
 import { formatPrice, cn } from '../../lib/utils';
-import { trackViewCart, trackRemoveFromCart } from '../../lib/tracking';
 
 export default function CartDrawer() {
   const { 
@@ -20,13 +19,6 @@ export default function CartDrawer() {
     revalidationNotice
   } = useCartStore();
   const router = useRouter();
-
-  // Track ViewCart when drawer opens with items
-  useEffect(() => {
-    if (isOpen && items && items.length > 0) {
-      trackViewCart(items, getSubtotal());
-    }
-  }, [isOpen]);
 
   const totalItemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const calculatedSubtotal = typeof getSubtotal === 'function' 
@@ -173,7 +165,6 @@ export default function CartDrawer() {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  trackRemoveFromCart(item.product, item.quantity, item.size, item.color);
                                   removeItem(item.key);
                                 }}
                                 className="text-gray-400 hover:text-red-500 p-1.5 -mr-1 -mt-1 rounded-lg hover:bg-red-50 transition-colors cursor-pointer shrink-0"
@@ -243,7 +234,6 @@ export default function CartDrawer() {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  trackRemoveFromCart(item.product, item.quantity, item.size, item.color);
                                   removeItem(item.key);
                                 }}
                                 className="text-xs font-bold text-rose-600 hover:underline px-2 py-1"

@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import useCartStore from '../store/cartStore';
 import { supabase } from '../lib/supabase';
-import { trackInitiateCheckout, trackAddShippingInfo, trackPurchase } from '../lib/tracking';
+import { trackInitiateCheckout, trackPurchase } from '../lib/tracking';
 import { recordDiscountUsage } from '../lib/discounts/db';
 import { 
   getOrCreateCheckoutSessionId,
@@ -1496,7 +1496,6 @@ export default function Checkout() {
                         key={area.id}
                         onClick={() => {
                           setShippingArea(area.id);
-                          trackAddShippingInfo(items, area.label, area.fee, total);
                         }}
                         className={`w-full text-left p-3.5 sm:p-4 rounded-2xl border-2 transition-all duration-150 flex sm:flex-col justify-between items-center sm:items-start gap-2.5 min-w-0 cursor-pointer select-none active:scale-[0.98] ${
                           isSelected

@@ -10,7 +10,6 @@ import {
 import { getProducts, getCategories } from '../lib/api';
 import ProductCard from '../components/shop/ProductCard';
 import ProductGridSkeleton from '@/components/skeletons/storefront/ProductGridSkeleton';
-import { trackSearch } from '../lib/tracking';
 import { subscribeToProductUpdates } from '../lib/productSync';
 
 const sortOptions = [
@@ -333,15 +332,6 @@ export default function Shop() {
       unsubscribe();
     };
   }, []);
-
-  // Fire Search tracking event when user searches
-  useEffect(() => {
-    if (!searchQuery) return;
-    const timer = setTimeout(() => {
-      trackSearch(searchQuery);
-    }, 800);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
 
   // Robust URL Search Params Updater
   const updateParam = (key, val) => {

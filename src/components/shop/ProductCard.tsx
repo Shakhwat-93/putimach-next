@@ -34,7 +34,7 @@ export function ProductCard({ product: rawProduct, index = 0 }: { product: any; 
     if (!inStock || adding) return;
     setAdding(true);
     addItem(product, product.sizes?.[0] || 'Free Size', product.colors?.[0] || 'Default', 1, e);
-    trackAddToCart(product, 1, product.sizes?.[0] || 'Free Size');
+    trackAddToCart(product, 1, product.sizes?.[0] || 'Free Size', product.colors?.[0] || 'Default');
     setTimeout(() => {
       setAdding(false);
     }, 700);
@@ -45,7 +45,7 @@ export function ProductCard({ product: rawProduct, index = 0 }: { product: any; 
     e.stopPropagation();
     if (!inStock) return;
     addItem(product, product.sizes?.[0] || 'Free Size', product.colors?.[0] || 'Default', 1);
-    trackAddToCart(product, 1, product.sizes?.[0] || 'Free Size');
+    trackAddToCart(product, 1, product.sizes?.[0] || 'Free Size', product.colors?.[0] || 'Default');
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     }

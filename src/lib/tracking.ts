@@ -2,16 +2,26 @@
 
 /**
  * ─────────────────────────────────────────────────────────────────────────────
- * Centralized Enterprise Marketing Tracking & Analytics Engine
- * GTM + GA4 + Meta Pixel + Meta CAPI + TikTok Pixel + TikTok Events API
+ * STRICT 5-EVENT ENTERPRISE TRACKING ARCHITECTURE
+ * GTM + GA4 + Meta Pixel + Meta CAPI
  * 
- * Strict Single Source of Truth & Zero-Duplication Architecture:
- *  1. When GTM is enabled, GTM has exclusive browser-tag ownership via dataLayer.
- *     Direct window.fbq calls are suppressed to prevent double-firing with GTM tags.
- *  2. When GTM is disabled, direct Meta Pixel (window.fbq) handles browser tracking.
- *  3. Server-side CAPI always shares the exact same event_id pushed to dataLayer.
- *  4. Deterministic Purchase Event ID based on order number (`order_<orderId>`).
- *  5. React StrictMode / multi-click duplicate suppression windows.
+ * STRICT CANONICAL 5-EVENT MAPPING:
+ *  1. PageView       -> Meta: `PageView`         | GA4: `page_view`
+ *  2. Product View   -> Meta: `ViewContent`      | GA4: `view_item`
+ *  3. Add To Cart    -> Meta: `AddToCart`        | GA4: `add_to_cart`
+ *  4. Begin Checkout -> Meta: `InitiateCheckout` | GA4: `begin_checkout`
+ *  5. Purchase       -> Meta: `Purchase`         | GA4: `purchase`
+ * 
+ * STRICT ZERO-DUPLICATION & OWNERSHIP RULES:
+ *  - Exclusive Browser Tag Ownership: When GTM is enabled, GTM container is the
+ *    sole owner of browser tags via dataLayer. Direct `window.fbq` is suppressed.
+ *  - Single Source of Truth: When GTM is disabled, Direct Meta Pixel fires.
+ *  - Server CAPI Parity: Server-side Meta CAPI receives identical `event_id` and
+ *    payload schema for deterministic browser/server deduplication.
+ *  - Order-Level Idempotency: Purchase `event_id` is strictly `order_<orderId>`
+ *    with browser sessionStorage guarding and database-backed CAPI deduplication.
+ *  - All other events (Search, RemoveFromCart, ViewCart, AddShippingInfo, 
+ *    AddPaymentInfo, Leads, Custom Timers) are strictly disabled.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -91,9 +101,28 @@ declare global {
   }
 }
 
+// Strict whitelist of allowed DataLayer events
+const ALLOWED_DATALAYER_EVENTS = new Set([
+  'page_view',
+  'view_item',
+  'add_to_cart',
+  'begin_checkout',
+  'purchase'
+]);
+
+// Strict whitelist of allowed Meta events
+const ALLOWED_META_EVENTS = new Set([
+  'PageView',
+  'ViewContent',
+  'AddToCart',
+  'InitiateCheckout',
+  'Purchase'
+]);
+
 let _config: TrackingConfig | null = null;
 let _initPromise: Promise<TrackingConfig> | null = null;
 let _lastPageViewPath = '';
+let _lastPageViewTimestamp = 0;
 
 // In-memory deduplication cache for preventing rapid duplicate triggers
 const _recentEvents = new Map<string, number>();
@@ -155,13 +184,11 @@ export async function loadTrackingConfig(): Promise<TrackingConfig> {
       }
 
       if (_config.debug_mode) {
-        console.log('[Tracking Engine] Initialized with config:', {
+        console.log('[Tracking Engine] Initialized (Strict 5-Event Architecture):', {
           gtm: _config.gtm_enabled ? _config.gtm_container_id : 'Disabled',
           ga4: _config.ga4_enabled ? _config.ga4_measurement_id : 'Disabled',
           meta: _config.meta_enabled ? _config.meta_pixel_id : 'Disabled',
-          tiktok: _config.tiktok_enabled ? _config.tiktok_pixel_id : 'Disabled',
           capi: _config.meta_capi_enabled,
-          tiktok_events_api: _config.tiktok_events_api_enabled,
         });
       }
     } catch (e) {
@@ -364,9 +391,18 @@ function getTtClickId(): string | null {
   return new URLSearchParams(window.location.search).get('ttclid') || null;
 }
 
-// ── DataLayer Cleanup & Push ─────────────────────────────────────────────────
+// ── DataLayer Cleanup & Push (Strict 5-Event Enforcement) ────────────────────
 function pushEcommerceDataLayer(event: string, ecommerceData: any, eventId: string) {
   if (typeof window === 'undefined') return;
+
+  // STRICT ENFORCEMENT: Only 5 canonical events permitted
+  if (!ALLOWED_DATALAYER_EVENTS.has(event)) {
+    if (getTrackingConfig().debug_mode) {
+      console.warn(`[Tracking Engine] Event "${event}" blocked by STRICT 5-EVENT POLICY.`);
+    }
+    return;
+  }
+
   window.dataLayer = window.dataLayer || [];
   
   // Clear previous ecommerce state to prevent tag reuse in GA4
@@ -388,6 +424,11 @@ async function dispatchServerConversion(params: {
   userData?: TrackingUserData;
   customData?: any;
 }) {
+  // STRICT ENFORCEMENT: Only canonical Meta events permitted
+  if (!ALLOWED_META_EVENTS.has(params.eventName)) {
+    return;
+  }
+
   const cfg = getTrackingConfig();
   if (!cfg.meta_capi_enabled && !cfg.tiktok_events_api_enabled) return;
 
@@ -443,27 +484,32 @@ function logDebugEvent(eventName: string, eventId: string, payload: any) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CANONICAL ECOMMERCE EVENT APIS
+// CANONICAL 5 STANDARD E-COMMERCE EVENT IMPLEMENTATIONS
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * 1. PageView
- * isVirtual = false on initial page load (GTM handles initial container pageview).
- * isVirtual = true on SPA client-side route changes.
+ * 1. PAGE VIEW
+ * Event: `PageView` (Meta) / `page_view` (GA4)
+ * Fire on every page load and every successful internal route navigation.
+ * Exactly 1 PageView per logical page visit.
  */
 export function trackPageView(isVirtual = false) {
   if (typeof window === 'undefined' || !isTrackingEnabled()) return;
   const currentPath = window.location.pathname;
+  const now = Date.now();
 
-  // Prevent duplicate pageview on identical route state
-  if (_lastPageViewPath === currentPath) return;
+  // Deduplication Rule 1: Prevent duplicate pageview on identical route within 1500ms
+  if (_lastPageViewPath === currentPath && (now - _lastPageViewTimestamp < 1500)) {
+    return;
+  }
   _lastPageViewPath = currentPath;
+  _lastPageViewTimestamp = now;
 
   const eventId = generateEventId('pv');
   const cfg = getTrackingConfig();
 
   if (cfg.gtm_enabled) {
-    // When GTM is enabled, container load already triggers initial PageView.
+    // When GTM is enabled, container load already triggers initial PageView via All Pages trigger.
     // We only push virtual 'page_view' for subsequent client-side navigation.
     if (isVirtual) {
       window.dataLayer = window.dataLayer || [];
@@ -497,7 +543,9 @@ export function trackPageView(isVirtual = false) {
 }
 
 /**
- * 2. ViewContent (Product Details View)
+ * 2. PRODUCT VIEW
+ * Event: `ViewContent` (Meta) / `view_item` (GA4)
+ * Fire only when a user actually opens/views a product details page.
  * Deduplicated per product ID within 3000ms.
  */
 export function trackViewContent(product: TrackingProduct) {
@@ -567,39 +615,10 @@ export function trackViewContent(product: TrackingProduct) {
 }
 
 /**
- * 3. Search
- */
-export function trackSearch(query: string) {
-  if (!query || !isTrackingEnabled()) return;
-  const cleanQuery = query.trim();
-  if (!cleanQuery) return;
-
-  if (isDuplicateEvent(`search_${cleanQuery}`, 1500)) return;
-
-  const eventId = generateEventId('search');
-  const cfg = getTrackingConfig();
-
-  window.dataLayer = window.dataLayer || [];
-  window.dataLayer.push({
-    event: 'search',
-    event_id: eventId,
-    search_term: cleanQuery,
-  });
-
-  if (shouldFireDirectMeta(cfg)) {
-    window.fbq('track', 'Search', { search_string: cleanQuery }, { eventID: eventId });
-  }
-
-  if (shouldFireDirectTikTok(cfg)) {
-    window.ttq.track('Search', { query: cleanQuery }, { event_id: eventId });
-  }
-
-  logDebugEvent('Search', eventId, { query: cleanQuery });
-}
-
-/**
- * 4. AddToCart
- * Debounces rapid accidental double-clicks (< 350ms) while preserving legitimate repeated additions.
+ * 3. ADD TO CART
+ * Event: `AddToCart` (Meta) / `add_to_cart` (GA4)
+ * Fire only after a product is successfully added to the cart.
+ * Debounces rapid accidental double-clicks (< 350ms) per item variant.
  */
 export function trackAddToCart(
   product: TrackingProduct,
@@ -678,71 +697,17 @@ export function trackAddToCart(
 }
 
 /**
- * 5. RemoveFromCart
- */
-export function trackRemoveFromCart(
-  product: TrackingProduct,
-  quantity = 1,
-  size = '',
-  color = ''
-) {
-  if (!product || !isTrackingEnabled()) return;
-  const eventId = generateEventId('rfc');
-  const price = Number(product.price) || 0;
-  const lineValue = price * quantity;
-  const productId = String(product.id || '');
-  const productName = product.name || 'Product';
-  const variantStr = [color, size].filter(Boolean).join(' / ') || 'Default';
-
-  pushEcommerceDataLayer('remove_from_cart', {
-    currency: 'BDT',
-    value: lineValue,
-    items: [{
-      item_id: productId,
-      item_name: productName,
-      item_variant: variantStr,
-      price: price,
-      quantity: quantity,
-    }],
-  }, eventId);
-
-  logDebugEvent('RemoveFromCart', eventId, { product, quantity });
-}
-
-/**
- * 6. ViewCart
- */
-export function trackViewCart(items: any[] = [], total = 0) {
-  if (!isTrackingEnabled() || items.length === 0) return;
-  if (isDuplicateEvent('view_cart', 2000)) return;
-
-  const eventId = generateEventId('vc_cart');
-
-  pushEcommerceDataLayer('view_cart', {
-    currency: 'BDT',
-    value: Number(total) || 0,
-    items: items.map(i => ({
-      item_id: String(i.product?.id),
-      item_name: i.product?.name,
-      price: Number(i.product?.price || 0),
-      quantity: i.quantity || 1,
-      item_variant: [i.color, i.size].filter(Boolean).join(' / '),
-    })),
-  }, eventId);
-
-  logDebugEvent('ViewCart', eventId, { items, total });
-}
-
-/**
- * 7. InitiateCheckout
- * Deduplicated per checkoutSessionId so page reloads or zone toggles don't inflate events.
+ * 4. BEGIN CHECKOUT
+ * Event: `InitiateCheckout` (Meta) / `begin_checkout` (GA4)
+ * Fire only when user successfully enters the checkout flow.
+ * Deduplicated per checkoutSessionId so component re-renders or shipping zone changes don't inflate events.
  */
 export function trackInitiateCheckout(
   items: any[] = [],
   total = 0,
   checkoutSessionId = ''
 ) {
-  if (!isTrackingEnabled() || items.length === 0) return;
+  if (!isTrackingEnabled() || !items || items.length === 0) return;
 
   const eventId = checkoutSessionId 
     ? generateCheckoutEventId(checkoutSessionId)
@@ -750,8 +715,8 @@ export function trackInitiateCheckout(
 
   if (isDuplicateEvent(`ic_${eventId}`, 3000)) return;
 
-  const numItems = items.reduce((s, i) => s + (i.quantity || 1), 0);
-  const contentIds = items.map(i => String(i.product?.id || ''));
+  const numItems = items.reduce((s, i) => s + (Number(i.quantity) || 1), 0);
+  const contentIds = items.map(i => String(i.product?.id || i.id || ''));
   const value = Number(total) || 0;
   const cfg = getTrackingConfig();
 
@@ -760,10 +725,10 @@ export function trackInitiateCheckout(
     currency: 'BDT',
     value,
     items: items.map(i => ({
-      item_id: String(i.product?.id),
-      item_name: i.product?.name,
-      price: Number(i.product?.price || 0),
-      quantity: i.quantity || 1,
+      item_id: String(i.product?.id || i.id),
+      item_name: i.product?.name || i.name,
+      price: Number(i.product?.price || i.price || 0),
+      quantity: Number(i.quantity) || 1,
       item_variant: [i.color, i.size].filter(Boolean).join(' / '),
     })),
   }, eventId);
@@ -783,10 +748,10 @@ export function trackInitiateCheckout(
   if (shouldFireDirectTikTok(cfg)) {
     window.ttq.track('InitiateCheckout', {
       contents: items.map(i => ({
-        content_id: String(i.product?.id),
-        content_name: i.product?.name,
-        quantity: i.quantity || 1,
-        price: Number(i.product?.price || 0),
+        content_id: String(i.product?.id || i.id),
+        content_name: i.product?.name || i.name,
+        quantity: Number(i.quantity) || 1,
+        price: Number(i.product?.price || i.price || 0),
       })),
       value,
       currency: 'BDT',
@@ -803,10 +768,10 @@ export function trackInitiateCheckout(
       num_items: numItems,
       content_ids: contentIds,
       contents: items.map(i => ({
-        id: String(i.product?.id),
-        name: i.product?.name,
-        price: Number(i.product?.price || 0),
-        quantity: i.quantity || 1,
+        id: String(i.product?.id || i.id),
+        name: i.product?.name || i.name,
+        price: Number(i.product?.price || i.price || 0),
+        quantity: Number(i.quantity) || 1,
       })),
     },
   });
@@ -815,68 +780,9 @@ export function trackInitiateCheckout(
 }
 
 /**
- * 8. AddShippingInfo
- */
-export function trackAddShippingInfo(
-  items: any[] = [],
-  shippingArea = '',
-  fee = 0,
-  total = 0
-) {
-  if (!isTrackingEnabled() || items.length === 0) return;
-  const eventId = generateEventId('asi');
-
-  pushEcommerceDataLayer('add_shipping_info', {
-    currency: 'BDT',
-    value: Number(total) || 0,
-    shipping_tier: shippingArea,
-    items: items.map(i => ({
-      item_id: String(i.product?.id),
-      item_name: i.product?.name,
-      price: Number(i.product?.price || 0),
-      quantity: i.quantity || 1,
-    })),
-  }, eventId);
-
-  logDebugEvent('AddShippingInfo', eventId, { shippingArea, fee, total });
-}
-
-/**
- * 9. AddPaymentInfo
- */
-export function trackAddPaymentInfo(
-  items: any[] = [],
-  paymentMethod = 'COD',
-  total = 0
-) {
-  if (!isTrackingEnabled() || items.length === 0) return;
-  const eventId = generateEventId('api');
-  const cfg = getTrackingConfig();
-
-  pushEcommerceDataLayer('add_payment_info', {
-    currency: 'BDT',
-    value: Number(total) || 0,
-    payment_type: paymentMethod,
-    items: items.map(i => ({
-      item_id: String(i.product?.id),
-      item_name: i.product?.name,
-      price: Number(i.product?.price || 0),
-      quantity: i.quantity || 1,
-    })),
-  }, eventId);
-
-  if (shouldFireDirectMeta(cfg)) {
-    window.fbq('track', 'AddPaymentInfo', {
-      value: Number(total) || 0,
-      currency: 'BDT',
-    }, { eventID: eventId });
-  }
-
-  logDebugEvent('AddPaymentInfo', eventId, { paymentMethod, total });
-}
-
-/**
- * 10. Purchase (The Ultimate Conversion Event)
+ * 5. PURCHASE
+ * Event: `Purchase` (Meta) / `purchase` (GA4)
+ * Fire only after the order/payment reaches verified successful purchase state.
  * 
  * Strict Deduplication Rules:
  *  1. event_id is strictly derived from the order ID: `order_<orderId>`
@@ -897,19 +803,19 @@ export function trackPurchase(
     return;
   }
 
-  // 1. In-browser deduplication guard
+  // 1. In-browser deduplication guard (durable order-level idempotency)
   const sessionGuardKey = `putimach_purchase_tracked_${orderId}`;
   if (typeof window !== 'undefined') {
     try {
       if (sessionStorage.getItem(sessionGuardKey)) {
-        console.log(`[Tracking Engine] Purchase already tracked for order #${orderId}. Skipping browser duplicate.`);
+        console.log(`[Tracking Engine] Purchase already tracked for order #${orderId}. Skipping duplicate.`);
         return;
       }
       sessionStorage.setItem(sessionGuardKey, 'true');
     } catch (_) {}
   }
 
-  // 2. Deterministic Event ID
+  // 2. Deterministic Event ID (Identical across GTM dataLayer, Meta Pixel, and Meta CAPI)
   const eventId = generatePurchaseEventId(orderId);
   const items = Array.isArray(orderPayload.ordered_items) ? orderPayload.ordered_items : [];
   const value = Number(orderPayload.total || orderPayload.amount || orderPayload.subtotal || 0);
@@ -992,3 +898,23 @@ export function trackPurchase(
 
   logDebugEvent('Purchase', eventId, { orderId, value, items, userData });
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DISABLED UNWANTED EVENTS (STRICT 5-EVENT ENFORCEMENT)
+// Neutralized as safe no-op stubs to prevent runtime errors in any stale callers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** @deprecated Disabled under strict 5-event architecture */
+export function trackSearch(_query: string) {}
+
+/** @deprecated Disabled under strict 5-event architecture */
+export function trackRemoveFromCart(..._args: any[]) {}
+
+/** @deprecated Disabled under strict 5-event architecture */
+export function trackViewCart(..._args: any[]) {}
+
+/** @deprecated Disabled under strict 5-event architecture */
+export function trackAddShippingInfo(..._args: any[]) {}
+
+/** @deprecated Disabled under strict 5-event architecture */
+export function trackAddPaymentInfo(..._args: any[]) {}

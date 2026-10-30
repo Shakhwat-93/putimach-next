@@ -479,7 +479,7 @@ export default function ProductDetailView() {
       image: itemImage,
     };
     addItem(cartProduct, selectedSize || 'One Size', selectedColor || 'None', 1, e);
-    trackAddToCart(cartProduct, 1, selectedSize || 'One Size');
+    trackAddToCart(cartProduct, 1, selectedSize || 'One Size', selectedColor || 'None');
     
     setTimeout(() => {
       setAdding(false);
@@ -503,7 +503,7 @@ export default function ProductDetailView() {
       image: itemImage,
     };
     addItem(cartProduct, selectedSize || 'One Size', selectedColor || 'None', 1);
-    trackAddToCart(cartProduct, 1, selectedSize || 'One Size');
+    trackAddToCart(cartProduct, 1, selectedSize || 'One Size', selectedColor || 'None');
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     }

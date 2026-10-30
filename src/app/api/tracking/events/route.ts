@@ -75,6 +75,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Missing eventName or eventId' }, { status: 400 });
     }
 
+    // STRICT 5-EVENT POLICY: Only allowed ecommerce events reach Conversions API
+    const ALLOWED_CAPI_EVENTS = new Set(['ViewContent', 'AddToCart', 'InitiateCheckout', 'Purchase']);
+    if (!ALLOWED_CAPI_EVENTS.has(eventName)) {
+      return NextResponse.json({
+        success: true,
+        status: 'ignored_unwanted_event',
+        message: `Event "${eventName}" is blocked by STRICT 5-EVENT POLICY.`
+      });
+    }
+
     // 1. Fetch server-side tracking settings
     const cfg = await getTrackingSettings(supabase);
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || '';
